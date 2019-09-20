@@ -13,6 +13,19 @@ Git master branch
   rhombohedral, and orthorhombic lattices.
 
 
+Version 3.18.1
+==============
+
+20 September 2019: :git:`3.18.1 <../3.18.1>`
+
+* Multiple bugfixes.  Most importantly, deprecate ``atoms.cell.pbc``
+  in order to avoid complexities from dealing with two
+  ways of manipulating this piece of information.
+  Use ``atoms.pbc`` instead; this works the same as always.
+  Also, the :class:`~ase.cell.Cell` object now exposes almost the entire
+  ``ndarray`` interface.  For a list of smaller bugfixes, see the git log.
+
+
 Version 3.18.0
 ==============
 
