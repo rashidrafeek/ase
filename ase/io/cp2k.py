@@ -159,7 +159,7 @@ class DCDImageIterator:
 iread_cp2k_dcd = DCDImageIterator(idcdchunks)
 
 
-def read_cp2k_dcd(fileobj, index=-1, ref_atoms=None, aligned=False):
+def read_cp2k_dcd(fileobj, index=-1, ref_atoms=None, aligned=True):
     """ Read a DCD file created by CP2K.
 
     To yield one Atoms object at a time use ``iread_cp2k_dcd``.
