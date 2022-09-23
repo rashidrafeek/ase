@@ -42,3 +42,8 @@ def test_surface():
     assert (list(surface_fcc.pbc) == [True, True, True])
     expected_length = 4.05 * 3**0.5  # for FCC with a=4.05
     assert math.isclose(surface_fcc.cell[2][2], expected_length)
+
+    # This test checks the tags
+    print(surface_fcc.get_tags())
+    tags = np.array([3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1])
+    np.testing.assert_array_equal(surface_fcc.get_tags(), tags)
