@@ -12,6 +12,7 @@ from ase.calculators.calculator import kpts2mp
 from ase.calculators.singlepoint import SinglePointDFTCalculator
 from ase.constraints import FixAtoms, FixCartesian
 from ase.data import atomic_numbers
+from ase.io import ParseError
 from ase.units import Ang, fs
 from ase.utils import lazymethod, lazyproperty, reader, writer
 
@@ -1339,6 +1340,7 @@ class AimsOutCalcChunk(AimsOutChunk):
                 "What follows are estimated values for band gap, "
                 "HOMO, LUMO, etc.",
                 "Current spin moment of the entire structure :",
+                "Highest occupied state (VBM)"
             ],
             line_start,
         )
@@ -1363,10 +1365,12 @@ class AimsOutCalcChunk(AimsOutChunk):
         )
         kpt_def = self.search_for_all("K-point: ", line_start, line_end)
 
-        if self.n_k_points:
+        if len(kpt_def) > 0:
             kpt_inds = [int(self.lines[ll].split()[1]) - 1 for ll in kpt_def]
-        else:
+        elif (self.n_k_points is None) or (self.n_k_points == 1):
             kpt_inds = [0]
+        else:
+            raise ParseError("Cannot find k-point definitions")
 
         assert len(kpt_inds) == len(occupation_block_start)
         spins = [0] * len(occupation_block_start)
@@ -1574,7 +1578,10 @@ def get_header_chunk(fd):
         try:
             line = next(fd).strip()  # Raises StopIteration on empty file
         except StopIteration:
-            return
+            raise ParseError(
+                "No SCF steps present, calculation failed at setup."
+            )
+
         header.append(line)
     return AimsOutHeaderChunk(header)
 
@@ -1640,7 +1647,7 @@ def check_convergence(chunks, non_convergence_ok=False):
         True if the calculation is converged
     """
     if not non_convergence_ok and not chunks[-1].converged:
-        raise ValueError("The calculation did not complete successfully")
+        raise ParseError("The calculation did not complete successfully")
     return True
 
 
