@@ -49,8 +49,9 @@ def get_phases(reactant, refs, T, conc, counter, normalize=True):
     reac_elem = [-reactant._count_array(reactant.elements)]
 
     for products in get_product_combos(reactant.elements, refs):
+
         if len(np.unique(products)) < len(products):
-            continue
+            products = (products[0],)
 
         prod_elem = [p._count_array(reactant.elements) for p in products]
         elem_matrix = np.array(reac_elem + prod_elem).T
@@ -181,9 +182,9 @@ def add_redox_lines(axes, pH, color='k'):
     return 0
 
 
-class Surface(Species):
-    def __init__(self, formula, bulk_conc
-
+#class Surface(Species):
+#    def __init__(self, formula, bulk_conc
+#
 
 class Species:
     '''
@@ -307,7 +308,7 @@ class RedOx:
                 conc_const_corr, conc_U_corr = alpha * np.log10(conc), 0
 
             const_term += coef * ( \
-                spec.mu + spec.aq * const_conc_corr)
+                spec.mu + spec.aq * conc_const_corr)
             pH_term += - coef * alpha * amounts[1]
             U_term += - coef * (amounts[2] + spec.aq * conc_U_corr)
 
