@@ -1,18 +1,17 @@
-import os
 import copy
+import os
 from collections.abc import Iterable
-from shutil import which
 from typing import Dict, Optional
 
+from ase.calculators.calculator import FileIOCalculator
 from ase.io import read, write
-from ase.calculators.calculator import FileIOCalculator, EnvironmentError
 
 
 class GaussianDynamics:
     calctype = 'optimizer'
     delete = ['force']
     keyword: Optional[str] = None
-    special_keywords: Dict[str, str] = dict()
+    special_keywords: Dict[str, str] = {}
 
     def __init__(self, atoms, calc=None):
         self.atoms = atoms
@@ -96,27 +95,13 @@ class GaussianIRC(GaussianDynamics):
 
 class Gaussian(FileIOCalculator):
     implemented_properties = ['energy', 'forces', 'dipole']
-    command = 'GAUSSIAN < PREFIX.com > PREFIX.log'
     discard_results_on_any_change = True
 
     def __init__(self, *args, label='Gaussian', **kwargs):
-        FileIOCalculator.__init__(self, *args, label=label, **kwargs)
-
-    def calculate(self, *args, **kwargs):
-        gaussians = ('g16', 'g09', 'g03')
-        if 'GAUSSIAN' in self.command:
-            for gau in gaussians:
-                if which(gau):
-                    self.command = self.command.replace('GAUSSIAN', gau)
-                    break
-            else:
-                raise EnvironmentError('Missing Gaussian executable {}'
-                                       .format(gaussians))
-
-        FileIOCalculator.calculate(self, *args, **kwargs)
+        super().__init__(*args, label=label, **kwargs)
 
     def write_input(self, atoms, properties=None, system_changes=None):
-        FileIOCalculator.write_input(self, atoms, properties, system_changes)
+        super().write_input(atoms, properties, system_changes)
         write(self.label + '.com', atoms, properties=properties,
               format='gaussian-in', parallel=False, **self.parameters)
 

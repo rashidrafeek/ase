@@ -1,11 +1,12 @@
 import os
 import subprocess
-from warnings import warn
 from pathlib import Path
+from warnings import warn
 
 import numpy as np
-from ase.calculators.calculator import (BaseCalculator, FileIOCalculator,
-                                        Calculator)
+
+from ase.calculators.calculator import (BaseCalculator, Calculator,
+                                        FileIOCalculator)
 from ase.io import write
 from ase.io.vasp import write_vasp
 from ase.parallel import world
@@ -130,7 +131,6 @@ class PureDFTD3(FileIOCalculator):
     This class is an implementation detail."""
 
     name = 'puredftd3'
-    command = 'dftd3'
 
     dftd3_properties = {'energy', 'free_energy', 'forces', 'stress'}
     implemented_properties = list(dftd3_properties)
@@ -148,6 +148,10 @@ class PureDFTD3(FileIOCalculator):
                          command=command,
                          **kwargs)
 
+        # TARP: This is done because the calculator does not call
+        # FileIOCalculator.calculate, but Calculator.calculate and does not
+        # use the profile defined in FileIOCalculator.__init__
+        self.command = command or "dftd3"
         self.comm = comm
 
     def set(self, **kwargs):
@@ -279,7 +283,7 @@ class PureDFTD3(FileIOCalculator):
                 errorcode = subprocess.call(command,
                                             cwd=self.directory, stdout=fd)
 
-        errorcode = self.comm.sum(errorcode)
+        errorcode = self.comm.sum_scalar(errorcode)
 
         if errorcode:
             raise RuntimeError('%s returned an error: %d' %
@@ -316,13 +320,13 @@ class PureDFTD3(FileIOCalculator):
     def _actually_write_input(self, directory, prefix, atoms, properties,
                               damppars, pbc):
         if pbc:
-            fname = directory / '{}.POSCAR'.format(prefix)
+            fname = directory / f'{prefix}.POSCAR'
             # We sort the atoms so that the atomtypes list becomes as
             # short as possible.  The dftd3 program can only handle 10
             # atomtypes
             write_vasp(fname, atoms, sort=True)
         else:
-            fname = directory / '{}.xyz'.format(prefix)
+            fname = directory / f'{prefix}.xyz'
             write(fname, atoms, format='xyz', parallel=False)
 
         # Generate custom damping parameters file. This is kind of ugly, but

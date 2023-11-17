@@ -7,12 +7,13 @@ Implemented:
 """
 
 import numpy as np
-
-from ase import io
-from ase import build
-from ase.io.espresso import parse_position_line
-
 from pytest import approx
+
+from ase import build, io
+from ase.io.espresso import (parse_position_line,
+                             get_atomic_species,
+                             read_fortran_namelist,
+                             write_espresso_in)
 
 # This file is parsed correctly by pw.x, even though things are
 # scattered all over the place with some namelist edge cases
@@ -37,7 +38,7 @@ pw_input_text = """
 nat              = 8,   ntyp             = 2,  occupations      = 'smearing',
 smearing         = 'marzari-vanderbilt',
 degauss          = 0.01,   nspin            = 2,  !  nosym     = .true. ,
-    starting_magnetization(2) = 0.32 /
+    starting_magnetization(2) = 5.12 /
 &ELECTRONS
    electron_maxstep = 300
    mixing_beta      = 0.1
@@ -285,11 +286,10 @@ def test_pw_input():
 
 def test_get_atomic_species():
     """Parser for atomic species section"""
-    from ase.io.espresso import get_atomic_species, read_fortran_namelist
 
     with open('pw_input.pwi', 'w') as pw_input_f:
         pw_input_f.write(pw_input_text)
-    with open('pw_input.pwi', 'r') as pw_input_f:
+    with open('pw_input.pwi') as pw_input_f:
         data, card_lines = read_fortran_namelist(pw_input_f)
         species_card = get_atomic_species(card_lines,
                                           n_species=data['system']['ntyp'])
@@ -370,16 +370,18 @@ def test_pw_input_write():
     bulk.set_initial_magnetic_moments([2.2 if atom.symbol == 'Ni' else 0.0
                                        for atom in bulk])
 
-    bulk.write('espresso_test.pwi')
+    pseudos = {'Ni': 'potato', 'O': 'orange'}
+
+    bulk.write('espresso_test.pwi', pseudopotentials=pseudos)
     readback = io.read('espresso_test.pwi')
     assert np.allclose(bulk.positions, readback.positions)
-    #
-    from ase.io.espresso import write_espresso_in
+
     sections = {'system': {
         'lda_plus_u': True,
         'Hubbard_U(1)': 4.0,
         'Hubbard_U(2)': 0.0}}
     with open('espresso_test.pwi', 'w') as fh:
-        write_espresso_in(fh, bulk, sections)
+        write_espresso_in(fh, bulk, sections,
+                          pseudopotentials=pseudos)
     readback = io.read('espresso_test.pwi')
     assert np.allclose(bulk.positions, readback.positions)

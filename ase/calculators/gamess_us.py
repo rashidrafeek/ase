@@ -1,13 +1,13 @@
 import warnings
 
+from ase.calculators.calculator import FileIOCalculator
 from ase.io import read, write
 from ase.io.gamess_us import clean_userscr, get_userscr
-from ase.calculators.calculator import FileIOCalculator
 
 
 class GAMESSUS(FileIOCalculator):
     implemented_properties = ['energy', 'forces', 'dipole']
-    command = 'rungms PREFIX.inp > PREFIX.log 2> PREFIX.err'
+    _legacy_default_command = 'rungms PREFIX.inp > PREFIX.log 2> PREFIX.err'
     discard_results_on_any_change = True
 
     def __init__(self, restart=None,

@@ -1,10 +1,11 @@
 # Refactor of DOS-like data objects
 # towards replacing ase.dft.dos and ase.dft.pdos
-from abc import ABCMeta, abstractmethod
 import warnings
+from abc import ABCMeta, abstractmethod
 from typing import Any, Dict, Sequence, Tuple, TypeVar, Union
 
 import numpy as np
+
 from ase.utils.plotting import SimplePlottingAxes
 
 # This import is for the benefit of type-checking / mypy
@@ -23,6 +24,7 @@ class DOSData(metaclass=ABCMeta):
     """Abstract base class for a single series of DOS-like data
 
     Only the 'info' is a mutable attribute; DOS data is set at init"""
+
     def __init__(self,
                  info: Info = None) -> None:
         if info is None:
@@ -193,7 +195,7 @@ class DOSData(metaclass=ABCMeta):
         if 'label' in info:
             return info['label']
         else:
-            return '; '.join(map(lambda x: '{}: {}'.format(x[0], x[1]),
+            return '; '.join(map(lambda x: f'{x[0]}: {x[1]}',
                                  info.items()))
 
 
@@ -206,6 +208,7 @@ class GeneralDOSData(DOSData):
     "energies" and "weights" sequences of equal length at init.
 
     """
+
     def __init__(self,
                  energies: Floats,
                  weights: Floats,
@@ -347,6 +350,7 @@ class GridDOSData(GeneralDOSData):
       GridDOSData([0.1, 0.2, 0.3], [y1+y4, y2+y5, y3+y6], info={'symbol': 'O'})
 
     """
+
     def __init__(self,
                  energies: Floats,
                  weights: Floats,

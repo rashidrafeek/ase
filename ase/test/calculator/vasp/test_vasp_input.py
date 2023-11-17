@@ -1,12 +1,12 @@
-import pytest
 from unittest import mock
 
 import numpy as np
-from ase.calculators.vasp.create_input import GenerateVaspInput
-from ase.calculators.vasp.create_input import _args_without_comment
-from ase.calculators.vasp.create_input import _to_vasp_bool, _from_vasp_bool
+import pytest
 
 from ase.build import bulk
+from ase.calculators.vasp.create_input import (GenerateVaspInput,
+                                               _args_without_comment,
+                                               _from_vasp_bool, _to_vasp_bool)
 
 
 def dict_is_subset(d1, d2):
@@ -41,7 +41,9 @@ def vaspinput_factory(nacl):
         mocker = mock.Mock()
         inputs = GenerateVaspInput()
         inputs.set(**kwargs)
-        inputs._build_pp_list = mocker(return_value=None)  # type: ignore
+        inputs._build_pp_list = mocker(  # type: ignore[method-assign]
+            return_value=None
+        )
         inputs.initialize(atoms)
         return inputs
 
@@ -221,14 +223,45 @@ def test_vasp_xc(vaspinput_factory):
     assert calc_hse.bool_params['lhfcalc'] is True
     assert dict_is_subset({'gga': 'RE'}, calc_hse.string_params)
 
-    calc_pw91 = vaspinput_factory(xc='pw91',
-                                  kpts=(2, 2, 2),
-                                  gamma=True,
-                                  lreal='Auto')
-    assert dict_is_subset(
-        {
-            'pp': 'PW91',
-            'kpts': (2, 2, 2),
-            'gamma': True,
-            'reciprocal': False
-        }, calc_pw91.input_params)
+    with pytest.warns(FutureWarning):
+        calc_pw91 = vaspinput_factory(xc='pw91',
+                                      kpts=(2, 2, 2),
+                                      gamma=True,
+                                      lreal='Auto')
+        assert dict_is_subset(
+            {
+                'pp': 'PW91',
+                'kpts': (2, 2, 2),
+                'gamma': True,
+                'reciprocal': False
+            }, calc_pw91.input_params)
+
+
+def test_ichain(vaspinput_factory):
+
+    with pytest.warns(UserWarning):
+        calc_warn = vaspinput_factory(ichain=1, ediffg=-0.01)
+        calc_warn.write_incar(nacl)
+        calc_warn.read_incar('INCAR')
+        assert calc_warn.int_params['iopt'] == 1
+        assert calc_warn.exp_params['ediffg'] == -0.01
+        assert calc_warn.int_params['ibrion'] == 1
+        assert calc_warn.float_params['potim'] == 0.0
+
+    with pytest.raises(RuntimeError):
+        calc_wrong = vaspinput_factory(ichain=1, ediffg=0.0001, iopt=1)
+        calc_wrong.write_incar(nacl)
+        calc_wrong.read_incar('INCAR')
+        assert calc_wrong.int_params['iopt'] == 1
+
+    calc = vaspinput_factory(ichain=1,
+                             ediffg=-0.01,
+                             iopt=1,
+                             potim=0.0,
+                             ibrion=1)
+    calc.write_incar(nacl)
+    calc.read_incar('INCAR')
+    assert calc.int_params['iopt'] == 1
+    assert calc.exp_params['ediffg'] == -0.01
+    assert calc.int_params['ibrion'] == 1
+    assert calc.float_params['potim'] == 0.0

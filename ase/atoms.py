@@ -8,15 +8,17 @@ object.
 """
 import copy
 import numbers
-from math import cos, sin, pi
+import warnings
+
+from math import cos, pi, sin
 
 import numpy as np
 
 import ase.units as units
 from ase.atom import Atom
 from ase.cell import Cell
-from ase.stress import voigt_6_to_full_3x3_stress, full_3x3_to_voigt_6_stress
 from ase.data import atomic_masses, atomic_masses_common
+from ase.stress import full_3x3_to_voigt_6_stress, voigt_6_to_full_3x3_stress
 from ase.symbols import Symbols, symbols2numbers
 from ase.utils import deprecated
 
@@ -102,6 +104,8 @@ class Atoms:
     Examples:
 
     These three are equivalent:
+
+    >>> from ase import Atom
 
     >>> d = 1.104  # N2 bondlength
     >>> a = Atoms('N2', [(0, 0, 0), (0, 0, d)])
@@ -266,20 +270,22 @@ class Atoms:
         new_symbols = Symbols.fromsymbols(obj)
         self.numbers[:] = new_symbols.numbers
 
-    @deprecated(DeprecationWarning('Please use atoms.calc = calc'))
+    @deprecated("Please use atoms.calc = calc", DeprecationWarning)
     def set_calculator(self, calc=None):
         """Attach calculator object.
 
         Please use the equivalent atoms.calc = calc instead of this
         method."""
+
         self.calc = calc
 
-    @deprecated(DeprecationWarning('Please use atoms.calc'))
+    @deprecated("Please use atoms.calc", DeprecationWarning)
     def get_calculator(self):
         """Get currently attached calculator object.
 
         Please use the equivalent atoms.calc instead of
         atoms.get_calculator()."""
+
         return self.calc
 
     @property
@@ -293,13 +299,13 @@ class Atoms:
         if hasattr(calc, 'set_atoms'):
             calc.set_atoms(self)
 
-    @calc.deleter  # type: ignore
-    @deprecated(DeprecationWarning('Please use atoms.calc = None'))
+    @calc.deleter
+    @deprecated('Please use atoms.calc = None', DeprecationWarning)
     def calc(self):
         self._calc = None
 
-    @property  # type: ignore
-    @deprecated('Please use atoms.cell.rank instead')
+    @property
+    @deprecated('Please use atoms.cell.rank instead', DeprecationWarning)
     def number_of_lattice_vectors(self):
         """Number of (non-zero) lattice vectors."""
         return self.cell.rank
@@ -406,7 +412,7 @@ class Atoms:
 
         return cell
 
-    @deprecated('Please use atoms.cell.cellpar() instead')
+    @deprecated('Please use atoms.cell.cellpar() instead', DeprecationWarning)
     def get_cell_lengths_and_angles(self):
         """Get unit cell parameters. Sequence of 6 numbers.
 
@@ -419,13 +425,12 @@ class Atoms:
         """
         return self.cell.cellpar()
 
-    @deprecated('Please use atoms.cell.reciprocal()')
+    @deprecated('Please use atoms.cell.reciprocal()', DeprecationWarning)
     def get_reciprocal_cell(self):
         """Get the three reciprocal lattice vectors as a 3x3 ndarray.
 
         Note that the commonly used factor of 2 pi for Fourier
         transforms is not included here."""
-
         return self.cell.reciprocal()
 
     @property
@@ -461,7 +466,7 @@ class Atoms:
                 a = a.copy()
 
         if name in self.arrays:
-            raise RuntimeError('Array {} already present'.format(name))
+            raise RuntimeError(f'Array {name} already present')
 
         for b in self.arrays.values():
             if len(a) != len(b):
@@ -470,8 +475,9 @@ class Atoms:
             break
 
         if shape is not None and a.shape[1:] != shape:
-            raise ValueError('Array "%s" has wrong shape %s != %s.' %
-                             (name, a.shape, (a.shape[0:1] + shape)))
+            raise ValueError(
+                f'Array "{name}" has wrong shape {a.shape} != '
+                f'{(a.shape[0:1] + shape)}.')
 
         self.arrays[name] = a
 
@@ -501,8 +507,9 @@ class Atoms:
             else:
                 a = np.asarray(a)
                 if a.shape != b.shape:
-                    raise ValueError('Array "%s" has wrong shape %s != %s.' %
-                                     (name, a.shape, b.shape))
+                    raise ValueError(
+                        f'Array "{name}" has wrong shape '
+                        f'{a.shape} != {b.shape}.')
                 b[:] = a
 
     def has(self, name):
@@ -962,7 +969,6 @@ class Atoms:
 
         You probably want len(atoms).  Or if your atoms are distributed,
         use (and see) get_global_number_of_atoms()."""
-        import warnings
         warnings.warn('Use get_global_number_of_atoms() instead',
                       np.VisibleDeprecationWarning)
         return len(self)
@@ -990,12 +996,12 @@ class Atoms:
             symbols = self.get_chemical_formula('reduce')
         else:
             symbols = self.get_chemical_formula('hill')
-        tokens.append("symbols='{0}'".format(symbols))
+        tokens.append(f"symbols='{symbols}'")
 
         if self.pbc.any() and not self.pbc.all():
-            tokens.append('pbc={0}'.format(self.pbc.tolist()))
+            tokens.append(f'pbc={self.pbc.tolist()}')
         else:
-            tokens.append('pbc={0}'.format(self.pbc[0]))
+            tokens.append(f'pbc={self.pbc[0]}')
 
         cell = self.cell
         if cell:
@@ -1003,25 +1009,25 @@ class Atoms:
                 cell = cell.lengths().tolist()
             else:
                 cell = cell.tolist()
-            tokens.append('cell={0}'.format(cell))
+            tokens.append(f'cell={cell}')
 
         for name in sorted(self.arrays):
             if name in ['numbers', 'positions']:
                 continue
-            tokens.append('{0}=...'.format(name))
+            tokens.append(f'{name}=...')
 
         if self.constraints:
             if len(self.constraints) == 1:
                 constraint = self.constraints[0]
             else:
                 constraint = self.constraints
-            tokens.append('constraint={0}'.format(repr(constraint)))
+            tokens.append(f'constraint={repr(constraint)}')
 
         if self._calc is not None:
-            tokens.append('calculator={0}(...)'
+            tokens.append('calculator={}(...)'
                           .format(self._calc.__class__.__name__))
 
-        return '{0}({1})'.format(self.__class__.__name__, ', '.join(tokens))
+        return '{}({})'.format(self.__class__.__name__, ', '.join(tokens))
 
     def __add__(self, other):
         atoms = self.copy()
@@ -1173,7 +1179,7 @@ class Atoms:
                 raise ValueError('Cannot repeat along undefined lattice '
                                  'vector')
 
-        M = np.product(m)
+        M = np.prod(m)
         n = len(self)
 
         for name, a in self.arrays.items():
@@ -1928,7 +1934,7 @@ class Atoms:
         """Get volume of unit cell."""
         if self.cell.rank != 3:
             raise ValueError(
-                'You have {0} lattice vectors: volume not defined'
+                'You have {} lattice vectors: volume not defined'
                 .format(self.cell.rank))
         return self.cell.volume
 
@@ -1975,6 +1981,10 @@ class Atoms:
     def iterimages(self):
         yield self
 
+    def __ase_optimizable__(self):
+        from ase.optimize.optimize import OptimizableAtoms
+        return OptimizableAtoms(self)
+
     def edit(self):
         """Modify atoms interactively through ASE's GUI viewer.
 
@@ -1985,8 +1995,8 @@ class Atoms:
         please set matplotlib.use('gtk') before calling this
         method.
         """
-        from ase.gui.images import Images
         from ase.gui.gui import GUI
+        from ase.gui.images import Images
         images = Images([self])
         gui = GUI(images)
         gui.run()
