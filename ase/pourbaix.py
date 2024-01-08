@@ -50,7 +50,7 @@ def get_phases(reactant, refs, T, conc, counter, normalize=True):
 
     for products in get_product_combos(reactant, refs):
         if len(np.unique(products)) < len(products):
-            continue
+            products = (products[0],)
 
         prod_elem = [p._count_array(reactant.elements) for p in products]
         elem_matrix = np.array(reac_elem + prod_elem).T
@@ -372,13 +372,10 @@ class Pourbaix:
             figsize=[12, 6],
             cmap="RdYlGn_r"):
 
-        ratio = np.ptp(Urange) / np.ptp(pHrange)
-        ratio = figsize[1] / figsize[0]
         pH = np.linspace(*pHrange, num=npoints)
         U = np.linspace(*Urange, num=npoints)
 
         pour, meta, text = self.get_diagrams(U, pH)
-        levels = np.unique(pour)
 
         if normalize:
             meta /= self.natoms
@@ -394,7 +391,7 @@ class Pourbaix:
         colorplot = ax.imshow(
             meta, cmap=cmap,
             extent=extent,
-            vmin= 0.0, vmax=cap,
+            vmin=0.0, vmax=cap,
             origin='lower', aspect='auto',
             interpolation='gaussian'
         )
