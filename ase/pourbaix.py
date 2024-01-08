@@ -420,7 +420,7 @@ class Pourbaix:
         ax.set_xlim(*pHrange)
         ax.set_ylim(*Urange)
         ax.set_xlabel('pH', fontsize=18)
-        ax.set_ylabel(f'Potential vs. {self.counter} (V)', fontsize=18)
+        ax.set_ylabel(r'$\it{U}$' + f' vs. {self.counter} (V)', fontsize=18)
         ax.set_xticks(np.arange(pHrange[0], pHrange[1] + 1, 2))
         ax.set_yticks(np.arange(Urange[0], Urange[1] + 1, 1))
         plt.xticks(fontsize=18)
@@ -435,14 +435,15 @@ class Pourbaix:
         return ax
 
     def plot(self,
-             Urange, pHrange,
+             Urange=[-2, 2],
+             pHrange=[0, 14],
              npoints=300,
              normalize=True,
              cap=1.0,
              figsize=[12, 6],
              cmap="RdYlGn_r",
-             savefig="pourbaix.png",
-             show=False):
+             savefig=None,
+             show=True):
 
         ax = self.draw_diagram_axes(
              Urange, pHrange,
