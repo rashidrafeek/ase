@@ -107,7 +107,7 @@ def add_numbers(ax, text):
 
 
 def add_text(ax, text, offset=0):
-    # Adding text on the diagram
+    '''Adding phase labels to the right of the diagram'''
     import textwrap
     import re
 
@@ -365,11 +365,9 @@ class Pourbaix:
     def draw_diagram_axes(
             self,
             Urange, pHrange,
-            npoints=300,
-            normalize=True,
-            cap=1.0,
-            figsize=[12, 6],
-            cmap="RdYlGn_r"):
+            npoints, cap,
+            figsize, normalize,
+            include_text, cmap):
 
         pH = np.linspace(*pHrange, num=npoints)
         U = np.linspace(*Urange, num=npoints)
@@ -383,7 +381,7 @@ class Pourbaix:
         extent = [*pHrange, *Urange]
 
         plt.subplots_adjust(
-            left=0.1, right=0.75,
+            left=0.1, right=0.97,
             top=0.97, bottom=0.14
         )
 
@@ -412,8 +410,11 @@ class Pourbaix:
                 color='k'
             )
 
+        if include_text:
+            plt.subplots_adjust(right=0.75)
+            add_text(ax, text, offset=0.05)
+
         add_numbers(ax, text)
-        add_text(ax, text, offset=0.05)
         add_redox_lines(ax, pH, 'w')
 
         ax.set_xlim(*pHrange)
@@ -425,9 +426,9 @@ class Pourbaix:
         plt.xticks(fontsize=18)
         plt.yticks(fontsize=18)
 
-        ticks = np.linspace(0, cap, num=6)
+        ticks = np.linspace(-cap, cap, num=9)
         cbar.set_ticks(ticks)
-        cbar.set_ticklabels([f'{tick:.1f}' for tick in ticks])
+        cbar.set_ticklabels(ticks)
         cbar.ax.tick_params(labelsize=18)
         cbar.ax.set_ylabel(r'$E_{pbx}$ (eV/atom)', fontsize=18)
 
@@ -437,17 +438,19 @@ class Pourbaix:
              Urange=[-2, 2],
              pHrange=[0, 14],
              npoints=300,
-             normalize=True,
              cap=1.0,
              figsize=[12, 6],
+             normalize=True,
+             include_text=True,
              cmap="RdYlGn_r",
              savefig=None,
              show=True):
 
         ax = self.draw_diagram_axes(
              Urange, pHrange,
-             npoints, normalize,
-             cap, figsize, cmap)
+             npoints, cap,
+             figsize, normalize,
+             include_text, cmap)
 
         if savefig:
             plt.savefig(savefig)
