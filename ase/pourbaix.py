@@ -8,6 +8,7 @@ from sympy import Matrix
 
 from ase.units import kB
 from ase.formula import Formula
+import time
 
 
 CONST = kB * np.log(10)
@@ -44,8 +45,11 @@ def get_phases(reactant, refs, T, conc, counter, normalize=True):
 
     # Initialize phases with the special case where our reactant is stable
     reactant_stable = NoReaction(reactant)
-    phases = [reactant_stable]
-    phase_matrix = [reactant_stable._vector]
+    #phases = [reactant_stable]
+    #phase_matrix = [reactant_stable._vector]
+    #reac_elem = [-reactant._count_array(reactant.elements)]
+    phases = []
+    phase_matrix = []
     reac_elem = [-reactant._count_array(reactant.elements)]
 
     for products in get_product_combos(reactant, refs):
@@ -306,12 +310,11 @@ class NoReaction(RedOx):
 class Pourbaix:
     def __init__(self, material_name, refs_dct, T=298.15, conc=1.0e-6, counter='SHE'):
         refs = initialize_refs(refs_dct)
-        material = refs.pop(material_name)
-        self.natoms = material.natoms
+        self.material = refs.pop(material_name)
         self.counter = counter
 
         self.phases, phase_matrix = get_phases(
-            material, refs, T, conc, counter
+            self.material, refs, T, conc, counter
         )
         self._const = phase_matrix[:, 0]
         self._var = phase_matrix[:, 1:]
@@ -345,6 +348,7 @@ class Pourbaix:
         return energy, phase
 
     def get_diagrams(self, U, pH):
+        '''Actual evaluation of the complete diagram'''
 
         pour = np.zeros((len(U), len(pH)))
         meta = pour.copy()
@@ -353,13 +357,23 @@ class Pourbaix:
             for j, p in enumerate(pH):
                 meta[i, j], pour[i, j] = self._get_pourbaix_energy(u, p)
 
+        # Identifying the region where the target material
+        # is stable and updating the diagram accordingly
+        where_stable = (meta <= 0)
+        pour[where_stable] = -1
+
         text = []
         for phase_id in np.unique(pour):
-            phase = self.phases[int(phase_id)]
-            where = (pour == phase_id)
+            if phase_id == -1:
+                where = where_stable
+                txt = [self.material.name]
+            else:
+                where = (pour == phase_id)
+                phase = self.phases[int(phase_id)]
+                txt = phase.get_main_products()
             x = np.dot(where.sum(1), U) / where.sum()
             y = np.dot(where.sum(0), pH) / where.sum()
-            text.append((x, y, phase.get_main_products()))
+            text.append((x, y, txt))
 
         return pour, meta, text
 
@@ -378,7 +392,7 @@ class Pourbaix:
         pour, meta, text = self.get_diagrams(U, pH)
 
         if normalize:
-            meta /= self.natoms
+            meta /= self.material.natoms
 
         ax = plt.figure(figsize=figsize).add_subplot(111)
         extent = [*pHrange, *Urange]
@@ -391,7 +405,7 @@ class Pourbaix:
         colorplot = ax.imshow(
             meta, cmap=cmap,
             extent=extent,
-            vmin=0.0, vmax=cap,
+            vmin=-cap, vmax=cap,
             origin='lower', aspect='auto',
             interpolation='gaussian'
         )
