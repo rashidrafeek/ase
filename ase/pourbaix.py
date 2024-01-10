@@ -293,7 +293,52 @@ class RedOx:
 
 
 class Pourbaix:
-    def __init__(self, material_name, refs_dct, T=298.15, conc=1.0e-6, counter='SHE'):
+    '''Pourbaix object for acqueous stability evaluations.
+
+    Allows to determine the most stable phase in a given set
+    of pH and potential conditions and to evaluate a complete diagram.
+
+    Initialization
+    --------------
+    material_name: str
+        The formula of the target material.
+    refs_dct: dict
+        A dictionary containing the formula of the target material
+        and its competing phases (solid and/or ionic) as keys,
+        and their (formation) energies as values.
+    T: float
+        Temperature in Kelvin. Default: 298.15 K.
+    conc: float
+        Concentration of the ionic species. Default: 1e-6 mol/l.
+    counter: str
+        The counter electrode. Default: SHE.
+        available options: SHE, RHE, AgCl, Pt.
+
+    Relevant methods
+    ----------------
+    get_pourbaix_energy(U, pH)
+        obtain the energy of the target material
+        relative to the most stable phase at a given potential U and pH.
+        If negative, the target material can be regarded as stable.
+    plot(**kwargs)
+        plot a complete Pourbaix diagram in a given pH and potential window.
+
+    Relevant attributes
+    -------------------
+    material: Species
+        the target material as a Species object
+    phases: list[RedOx]
+        the available decomposition pathways of the target material
+        into its competing phases as a list of RedOx objects
+    '''
+    def __init__(self,
+            material_name:str, 
+            refs_dct:dict,
+            T:float=298.15,
+            conc:float=1.0e-6,
+            counter:str='SHE'
+        ):
+
         refs = initialize_refs(refs_dct)
         self.material = refs.pop(material_name)
         self.counter = counter
