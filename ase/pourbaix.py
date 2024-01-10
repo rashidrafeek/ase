@@ -43,11 +43,6 @@ def get_phases(reactant, refs, T, conc, counter, normalize=True):
     """Obtain all the possible decomposition pathways
        for a given reactant."""
 
-    # Initialize phases with the special case where our reactant is stable
-    reactant_stable = NoReaction(reactant)
-    #phases = [reactant_stable]
-    #phase_matrix = [reactant_stable._vector]
-    #reac_elem = [-reactant._count_array(reactant.elements)]
     phases = []
     phase_matrix = []
     reac_elem = [-reactant._count_array(reactant.elements)]
@@ -295,16 +290,6 @@ class RedOx:
     def get_main_products(self):
         return [spec for spec, coef in self.species.items() 
                 if coef > 0 and spec not in ['H+', 'H2O', 'e-']]
-
-
-class NoReaction(RedOx):
-    def __init__(self, reactant):
-        self.name = reactant.name
-        self.species = {reactant.name: 1}
-        self._vector = [0.0, 0.0, 0.0]
-
-    def equation(self):
-        return self.name
 
 
 class Pourbaix:
