@@ -19,6 +19,8 @@ PREDEF_ENERGIES = {
     'H2O': -2.4583
 }
 
+U_STD_AGCL = 0.222
+
 
 def initialize_refs(refs_dct):
     """Convert dictionary entries to Species instances"""
@@ -146,11 +148,29 @@ def add_text(ax, text, offset=0):
     return 0
 
 
-def add_redox_lines(axes, pH, color='k'):
-    """Add water redox potentials"""
-    slope = -59.2e-3
-    axes.plot(pH, slope*pH, c=color, ls='--', zorder=2)
-    axes.plot(pH, slope*pH + 1.229, c=color, ls='--', zorder=2)
+def add_redox_lines(axes, pH, counter, color='k'):
+    """Add water redox potentials to a Pourbaix diagram"""
+    const = - 0.5 * PREDEF_ENERGIES['H2O']
+    corr = {
+        'SHE': 0,
+        'RHE': 0,
+        'Pt': 0,
+        'AgCl': -U_STD_AGCL,
+    }
+    kwargs = {
+        'c': color,
+        'ls': '--',
+        'zorder': 2
+    }
+    if counter in ['SHE', 'AgCl']:    
+        slope = -59.2e-3
+        axes.plot(pH, slope*pH + corr[counter], **kwargs)
+        axes.plot(pH, slope*pH + const + corr[counter], **kwargs)
+    elif counter in ['Pt', 'RHE']:
+        axes.axhline(0 + corr[counter], **kwargs)
+        axes.axhline(const + corr[counter], **kwargs)
+    else:
+        raise ValueError('The specified counter electrode doesnt exist')
     return 0
 
 
@@ -337,7 +357,7 @@ class RedOx:
             if counter == 'Pt' and n_e < 0:
                 gibbs_corr +=  n_e * 0.5 * PREDEF_ENERGIES['H2O']
         if counter == 'AgCl':
-            gibbs_corr -= n_e * 0.222
+            gibbs_corr -= n_e * U_STD_AGCL
 
         return gibbs_corr, pH_corr
 
@@ -563,7 +583,7 @@ class Pourbaix:
             add_text(ax, text, offset=0.05)
 
         add_numbers(ax, text)
-        add_redox_lines(ax, pH, 'w')
+        add_redox_lines(ax, pH, self.counter, 'w')
 
         ax.set_xlim(*pHrange)
         ax.set_ylim(*Urange)
