@@ -31,6 +31,9 @@ def initialize_refs(refs_dct):
 
 
 def get_product_combos(reactant, refs):
+    """Obtain, from the available references, different combinations
+       of products that are compatible with valid (electro)chemical reactions.
+    """
     array = [[] for i in range(len(reactant.elements))]
     for ref in refs.values():
         contained = ref.contains(reactant.elements)
@@ -41,8 +44,7 @@ def get_product_combos(reactant, refs):
 
 def get_phases(reactant, refs, T, conc, counter, normalize=True):
     """Obtain all the possible decomposition pathways
-       for a given reactant."""
-
+       for a given reactant as a collection of RedOx objects."""
     phases = []
     phase_matrix = []
     reac_elem = [-reactant._count_array(reactant.elements)]
@@ -70,6 +72,7 @@ def get_phases(reactant, refs, T, conc, counter, normalize=True):
 
 
 def edge_detection(array):
+    """Add phase boundaries to a Pourbaix diagram."""
     from collections import defaultdict
     edges_raw = defaultdict(list)
     edges = defaultdict(list)
@@ -95,6 +98,7 @@ def edge_detection(array):
 
 
 def add_numbers(ax, text):
+    """Add phase indexes to the different domains of a Pourbaix diagram."""
     import matplotlib.patheffects as pfx
     for i, (x, y, prod) in enumerate(text):
         txt = ax.text(
@@ -107,7 +111,7 @@ def add_numbers(ax, text):
 
 
 def add_text(ax, text, offset=0):
-    '''Adding phase labels to the right of the diagram'''
+    """Add phase labels to the right of the diagram"""
     import textwrap
     import re
 
@@ -143,7 +147,7 @@ def add_text(ax, text, offset=0):
 
 
 def add_redox_lines(axes, pH, color='k'):
-    # Add water redox potentials
+    """Add water redox potentials"""
     slope = -59.2e-3
     axes.plot(pH, slope*pH, c=color, ls='--', zorder=2)
     axes.plot(pH, slope*pH + 1.229, c=color, ls='--', zorder=2)
@@ -151,9 +155,23 @@ def add_redox_lines(axes, pH, color='k'):
 
 
 class Species:
-    '''
-    Groups relevant quantities for a single chemical species
-    '''
+    """Class representing an individual chemical species, grouping relevant properties.
+
+    Initialization
+    --------------
+
+    formula: str
+        The chemical formula of the species (e.g. ``ZnO``).
+        For solid species, the formula is reduced to the unit formula.
+        Acqueous species are specified without parentheses, by expliciting
+        all the positive or negative charges and by appending ``(aq)``.
+            e.g. 
+                Be3(OH)3[3+]   ➜  wrong
+                Be3O3H3+++(aq) ➜  correct
+    fmt: str
+        Formula format according to the available options in ase.formula.Formula
+
+    """
     def __init__(self, formula, fmt='metal'):
         self.aq = formula.endswith('(aq)')
         formula_strip = formula.replace('(aq)', '').rstrip('+-')
@@ -177,6 +195,9 @@ class Species:
         self.mu = None
 
     def get_chemsys(self):
+        """Get the possible combinations of elements based on the stoichiometry.
+           Useful for database queries.
+        """
         elements = set(self.count.keys())
         elements.update(['H', 'O'])
         chemsys = list(
@@ -187,8 +208,9 @@ class Species:
         return chemsys
 
     def balance_electrochemistry(self):
-        '''Obtain number of H2O, H+, e- "carried" by the species'''
-
+        """Obtain number of H2O, H+, e- "carried" by the species
+           in electrochemical reactions.
+        """
         n_H2O = -self.count.get('O', 0)
         n_H = -2 * n_H2O - self.count.get('H', 0)
         n_e = n_H + self.charge
@@ -201,16 +223,30 @@ class Species:
         return [True if elem in self.elements else False for elem in elements]
 
     def get_fractional_composition(self, elements):
+        """Obtain the fractional content of each element."""
         N_all = sum(self.count.values())
         N_elem = sum([self.count.get(e, 0) for e in elements])
         return N_elem / N_all
 
     def get_formation_energy(self, energy, refs):
+        """Evaluate the formation energy.
+
+        Requires the material chemical potential (e.g. DFT total energy)
+        and a dictionary with the elemental references and corresponding
+        chemical potentials.
+        """
         elem_energy = sum([refs[s] * n for s, n in self._count.items()])
         hof = (energy - elem_energy) / self.n_fu
         return hof
 
     def set_chemical_potential(self, energy, refs=None):
+        """Set the chemical potential of the species.
+
+        If a reference dictionary with the elements and their chemical potentials
+        is provided, the chemical potential will be calculated by as a formation
+        energy. Otherwise the provided energy will be used directly as the
+        chemical potential.
+        """
         self.energy = energy
         if refs is None:
             self.mu = energy / self.n_fu
@@ -231,7 +267,7 @@ class RedOx:
     def __init__(self, species, coeffs,
                  T=298.15, conc=1e-6,
                  counter='SHE'):
-        '''RedOx class representing an (electro)chemical reaction.
+        """RedOx class representing an (electro)chemical reaction.
 
         Initialization
         --------------
@@ -260,7 +296,7 @@ class RedOx:
         get_free_energy(U, pH):
             Obtain the reaction free energy at a given applied potential U and pH
 
-        '''
+        """
 
         alpha = CONST * T   # 0.059 eV @ T=298.15K
         const_term = 0
@@ -289,10 +325,10 @@ class RedOx:
         ]
 
     def get_counter_correction(self, counter, alpha):
-        '''Correct the constant and pH contributions to the reaction free energy
+        """Correct the constant and pH contributions to the reaction free energy
            based on the counter electrode of choice and the temperature
            (alpha=k_B*T*ln(10))
-        '''
+        """
         n_e = self.species['e-']
         gibbs_corr = 0.0
         pH_corr = 0.0
@@ -306,7 +342,7 @@ class RedOx:
         return gibbs_corr, pH_corr
 
     def equation(self):
-        '''Print the chemical reaction.'''
+        """Print the chemical reaction."""
         reactants = []
         products = []
         for s, n in self.species.items():
@@ -323,17 +359,17 @@ class RedOx:
         return "  ➜  ".join([" + ".join(reactants), " + ".join(products)])
 
     def get_main_products(self):
-        '''Obtain the reaction products excluded protons, water and electrons.'''
+        """Obtain the reaction products excluded protons, water and electrons."""
         return [spec for spec, coef in self.species.items() 
                 if coef > 0 and spec not in ['H+', 'H2O', 'e-']]
 
     def get_free_energy(self, U, pH):
-        '''Evaluate the reaction free energy at a given applied potential U and pH'''
+        """Evaluate the reaction free energy at a given applied potential U and pH"""
         return self._vector[0] + self._vector[1]*U + self._vector[2]*pH
 
 
 class Pourbaix:
-    '''Pourbaix class for acqueous stability evaluations.
+    """Pourbaix class for acqueous stability evaluations.
 
     Allows to determine the most stable phase in a given set
     of pH and potential conditions and to evaluate a complete diagram.
@@ -382,7 +418,7 @@ class Pourbaix:
         the available decomposition pathways of the target material
         into its competing phases as a list of RedOx objects
 
-    '''
+    """
     def __init__(self,
             material_name:str, 
             refs_dct:dict,
@@ -402,27 +438,27 @@ class Pourbaix:
         self._var = phase_matrix[:, 1:]
 
     def _decompose(self, U, pH):
-        '''Evaluate the reaction energy for decomposing
+        """Evaluate the reaction energy for decomposing
            the target material into each of the available products
            at a given pH and applied potential.
-        '''
+        """
         return self._const + np.dot(self._var, [U, pH])
 
     def _get_pourbaix_energy(self, U, pH):
-        '''Evaluate the Pourbaix energy'''
+        """Evaluate the Pourbaix energy"""
         energies = self._decompose(U, pH)
         i_min = np.argmin(energies)
         return -energies[i_min], i_min
 
     def get_pourbaix_energy(self, U, pH, verbose=True):
-        '''Evaluate the Pourbaix energy and print info
+        """Evaluate the Pourbaix energy and print info
            about the most stable phase, decomposition pathway
            and corresponding energy.
         
         The Pourbaix energy represents the energy of the target material
         relative to the most stable competing phase. If negative,
         the target material can be considered as stable.
-        '''
+        """
         energy, index = self._get_pourbaix_energy(U, pH)
         phase = self.phases[index]
         if verbose:
@@ -431,7 +467,7 @@ class Pourbaix:
         return energy, phase
 
     def get_diagrams(self, U, pH):
-        '''Actual evaluation of the complete diagram
+        """Actual evaluation of the complete diagram
         
         Returns
         -------
@@ -444,7 +480,7 @@ class Pourbaix:
         meta:
             the Pourbaix energy on the pH vs. U grid. 
 
-        '''
+        """
 
         pour = np.zeros((len(U), len(pH)))
         meta = pour.copy()
@@ -479,7 +515,7 @@ class Pourbaix:
             npoints, cap,
             figsize, normalize,
             include_text, cmap):
-        '''Backend for drawing Pourbaix diagrams'''
+        """Backend for drawing Pourbaix diagrams"""
 
         pH = np.linspace(*pHrange, num=npoints)
         U = np.linspace(*Urange, num=npoints)
@@ -557,7 +593,7 @@ class Pourbaix:
              cmap="RdYlGn_r",
              savefig=None,
              show=True):
-        '''Plot a complete Pourbaix diagram.
+        """Plot a complete Pourbaix diagram.
 
         Keyword arguments
         -----------------
@@ -593,7 +629,7 @@ class Pourbaix:
         show: bool
             Spawn a window showing the diagram.
 
-        '''
+        """
         ax = self._draw_diagram_axes(
              Urange, pHrange,
              npoints, cap,
