@@ -300,36 +300,48 @@ class Pourbaix:
 
     Initialization
     --------------
+
     material_name: str
         The formula of the target material.
+
     refs_dct: dict
         A dictionary containing the formula of the target material
         and its competing phases (solid and/or ionic) as keys,
         and their (formation) energies as values.
+
     T: float
         Temperature in Kelvin. Default: 298.15 K.
+
     conc: float
         Concentration of the ionic species. Default: 1e-6 mol/l.
+
     counter: str
         The counter electrode. Default: SHE.
         available options: SHE, RHE, AgCl, Pt.
 
+
     Relevant methods
     ----------------
+
     get_pourbaix_energy(U, pH)
         obtain the energy of the target material
         relative to the most stable phase at a given potential U and pH.
         If negative, the target material can be regarded as stable.
+
     plot(**kwargs)
         plot a complete Pourbaix diagram in a given pH and potential window.
 
+
     Relevant attributes
     -------------------
+
     material: Species
         the target material as a Species object
+
     phases: list[RedOx]
         the available decomposition pathways of the target material
         into its competing phases as a list of RedOx objects
+
     '''
     def __init__(self,
             material_name:str, 
@@ -351,24 +363,25 @@ class Pourbaix:
 
     def _decompose(self, U, pH):
         '''Evaluate the reaction energy for decomposing
-           the target material into the most stable phase
+           the target material into each of the available products
            at a given pH and applied potential.
-
-           if zero, the target material IS the most stable phase.
         '''
         return self._const + np.dot(self._var, [U, pH])
 
     def _get_pourbaix_energy(self, U, pH):
-        '''Evaluate the energy of the target material
-           relative to the most stable phase
-        '''
+        '''Evaluate the Pourbaix energy'''
         energies = self._decompose(U, pH)
         i_min = np.argmin(energies)
         return -energies[i_min], i_min
 
     def get_pourbaix_energy(self, U, pH, verbose=True):
-        '''Evaluate Pourbaix energy and obtain info
-           about the most stable phase
+        '''Evaluate the Pourbaix energy and print info
+           about the most stable phase, decomposition pathway
+           and corresponding energy.
+        
+        The Pourbaix energy represents the energy of the target material
+        relative to the most stable competing phase. If negative,
+        the target material can be considered as stable.
         '''
         energy, index = self._get_pourbaix_energy(U, pH)
         phase = self.phases[index]
@@ -378,7 +391,20 @@ class Pourbaix:
         return energy, phase
 
     def get_diagrams(self, U, pH):
-        '''Actual evaluation of the complete diagram'''
+        '''Actual evaluation of the complete diagram
+        
+        Returns
+        -------
+
+        pour: 
+            the stability domains of the diagram on the pH vs. U grid.
+            domains are represented by indexes (as integers)
+            that map to Pourbaix.phases
+
+        meta:
+            the Pourbaix energy on the pH vs. U grid. 
+
+        '''
 
         pour = np.zeros((len(U), len(pH)))
         meta = pour.copy()
@@ -407,12 +433,13 @@ class Pourbaix:
 
         return pour, meta, text
 
-    def draw_diagram_axes(
+    def _draw_diagram_axes(
             self,
             Urange, pHrange,
             npoints, cap,
             figsize, normalize,
             include_text, cmap):
+        '''Backend for drawing Pourbaix diagrams'''
 
         pH = np.linspace(*pHrange, num=npoints)
         U = np.linspace(*Urange, num=npoints)
@@ -490,8 +517,44 @@ class Pourbaix:
              cmap="RdYlGn_r",
              savefig=None,
              show=True):
+        '''Plot a complete Pourbaix diagram.
 
-        ax = self.draw_diagram_axes(
+        Keyword arguments
+        -----------------
+
+        Urange: list
+            The potential range onto which to draw the diagram.
+
+        pHrange: list
+            The pH range onto which to draw the diagram.
+
+        npoints: int
+            The resolution of the diagram. Higher values
+            mean higher resolution and thus higher compute times.
+
+        cap: float
+            The limit (in both the positive and negative direction)
+            of the Pourbaix energy colormap. 
+
+        figsize: list
+            The horizontal and vertical size of the graph.
+
+        normalize: bool
+            Normalize energies by the number of
+            atoms in the target material unit formula.
+
+        include_text: bool
+            Report to the right of the diagram the main products
+            associated with the stability domains.
+
+        savefig: Union[None, str]
+            If passed as a string, the figure will be saved with that name.
+
+        show: bool
+            Spawn a window showing the diagram.
+
+        '''
+        ax = self._draw_diagram_axes(
              Urange, pHrange,
              npoints, cap,
              figsize, normalize,
