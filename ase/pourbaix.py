@@ -231,6 +231,36 @@ class RedOx:
     def __init__(self, species, coeffs,
                  T=298.15, conc=1e-6,
                  counter='SHE'):
+        '''RedOx class representing an (electro)chemical reaction.
+
+        Initialization
+        --------------
+
+        species
+            The reactant and products excluded H2O, protons and electrons.
+
+        coeffs
+            The stoichiometric coefficients of the species.
+            Positive coefficients are associated with the products,
+            negative coefficients with the reactants.
+
+        T
+            The temperature in Kelvin.
+
+        conc
+            The concentration of ionic species.
+            
+
+        Relevant methods
+        ----------------
+
+        equation()
+            Print the chemical equation of the reaction.
+
+        get_free_energy(U, pH):
+            Obtain the reaction free energy at a given applied potential U and pH
+
+        '''
 
         alpha = CONST * T   # 0.059 eV @ T=298.15K
         const_term = 0
@@ -259,6 +289,10 @@ class RedOx:
         ]
 
     def get_counter_correction(self, counter, alpha):
+        '''Correct the constant and pH contributions to the reaction free energy
+           based on the counter electrode of choice and the temperature
+           (alpha=k_B*T*ln(10))
+        '''
         n_e = self.species['e-']
         gibbs_corr = 0.0
         pH_corr = 0.0
@@ -272,6 +306,7 @@ class RedOx:
         return gibbs_corr, pH_corr
 
     def equation(self):
+        '''Print the chemical reaction.'''
         reactants = []
         products = []
         for s, n in self.species.items():
@@ -288,12 +323,17 @@ class RedOx:
         return "  ➜  ".join([" + ".join(reactants), " + ".join(products)])
 
     def get_main_products(self):
+        '''Obtain the reaction products excluded protons, water and electrons.'''
         return [spec for spec, coef in self.species.items() 
                 if coef > 0 and spec not in ['H+', 'H2O', 'e-']]
 
+    def get_free_energy(self, U, pH):
+        '''Evaluate the reaction free energy at a given applied potential U and pH'''
+        return self._vector[0] + self._vector[1]*U + self._vector[2]*pH
+
 
 class Pourbaix:
-    '''Pourbaix object for acqueous stability evaluations.
+    '''Pourbaix class for acqueous stability evaluations.
 
     Allows to determine the most stable phase in a given set
     of pH and potential conditions and to evaluate a complete diagram.
