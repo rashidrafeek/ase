@@ -1,6 +1,7 @@
 from collections import Counter
 from itertools import product, chain, combinations
 from typing import Union
+import re
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,7 +9,6 @@ from sympy import Matrix
 
 from ase.units import kB
 from ase.formula import Formula
-import time
 
 
 CONST = kB * np.log(10)
@@ -112,31 +112,50 @@ def add_numbers(ax, text):
     return
 
 
+def add_labels(ax, text):
+    """Add phase indexes to the different domains of a Pourbaix diagram."""
+    import matplotlib.patheffects as pfx
+    for i, (x, y, prod) in enumerate(text):
+        label = format_label(prod)
+        annotation = ax.annotate(
+                label, xy=(y, x), color='w',
+                fontsize=14, horizontalalignment='center'
+        )
+        annotation.draggable()
+        ax.add_artist(annotation)
+    return
+
+
+def format_label(products):
+    formatted = []
+    for p in products:
+        label = re.sub(r'(\S)([+-]+)', r'\1$^{\2}$', p)
+        label = re.sub(r'(\d+)', r'$_{\1}$', label)
+        for symbol in ['+', '-']:
+            count = label.count(symbol)
+            if count > 1:
+                label = label.replace(count*symbol, f'{count}{symbol}')
+            if count == 1:
+                label = label.replace(count*symbol, symbol)
+        formatted.append(label)
+    label = ', '.join(f for f in formatted)
+    return label
+
+
 def add_text(ax, text, offset=0):
     """Add phase labels to the right of the diagram"""
     import textwrap
-    import re
 
     textlines = []
     for i, (x, y, prod) in enumerate(text):
         formatted = []
-        for p in prod:
-        #label = ', '.join(p for p in prod
-            label = re.sub(r'(\S)([+-]+)', r'\1$^{\2}$', p)
-            label = re.sub(r'(\d+)', r'$_{\1}$', label)
-            for symbol in ['+', '-']:
-                count = label.count('+')
-                if count > 1:
-                    label = label.replace(count*symbol, f'{count}{symbol}')
-                if count == 1:
-                    label = label.replace(count*symbol, symbol)
-            formatted.append(label)
-
-        label = ', '.join(f for f in formatted)
+        label = format_label(prod)
         textlines.append(
-            textwrap.fill(f'({i})  {label}',
-                          width=40,
-                          subsequent_indent='      ')
+            textwrap.fill(
+                f'({i})  {label}',
+                width=40,
+                subsequent_indent='      '
+            )
         )
     text = "\n".join(textlines)
     plt.gcf().text(
@@ -493,12 +512,16 @@ class Pourbaix:
         -------
 
         pour: 
-            the stability domains of the diagram on the pH vs. U grid.
+            The stability domains of the diagram on the pH vs. U grid.
             domains are represented by indexes (as integers)
             that map to Pourbaix.phases
 
         meta:
-            the Pourbaix energy on the pH vs. U grid. 
+            The Pourbaix energy on the pH vs. U grid. 
+
+        text:
+            The coordinates and phases information for
+            text placement on the diagram.
 
         """
 
@@ -534,7 +557,8 @@ class Pourbaix:
             Urange, pHrange,
             npoints, cap,
             figsize, normalize,
-            include_text, cmap):
+            include_text, 
+            labeltype, cmap):
         """Backend for drawing Pourbaix diagrams"""
 
         pH = np.linspace(*pHrange, num=npoints)
@@ -582,7 +606,15 @@ class Pourbaix:
             plt.subplots_adjust(right=0.75)
             add_text(ax, text, offset=0.05)
 
-        add_numbers(ax, text)
+        if labeltype == 'numbers':
+            add_numbers(ax, text)
+        elif labeltype == 'phases':
+            add_labels(ax, text)
+        elif labeltype == None:
+            pass
+        else: 
+            raise ValueError("The provided label type doesn't exist")
+            
         add_redox_lines(ax, pH, self.counter, 'w')
 
         ax.set_xlim(*pHrange)
@@ -610,6 +642,7 @@ class Pourbaix:
              figsize=[12, 6],
              normalize=True,
              include_text=True,
+             labeltype='numbers',
              cmap="RdYlGn_r",
              savefig=None,
              show=True):
@@ -643,7 +676,16 @@ class Pourbaix:
             Report to the right of the diagram the main products
             associated with the stability domains.
 
-        savefig: Union[None, str]
+        labeltype: str/None
+            The labeling style of the diagram domains. Options:
+                'numbers': just add numbers associated with the different phases,
+                           the latter shown on the right if include_text=True.
+                'phases':  Write the main products directly on the diagram.
+                           These labels can be dragged around if the placement
+                           is unsatisfactory. Redundant if include_text=True.
+                 None:     Don't draw any labels.
+
+        savefig: str/None
             If passed as a string, the figure will be saved with that name.
 
         show: bool
@@ -654,7 +696,8 @@ class Pourbaix:
              Urange, pHrange,
              npoints, cap,
              figsize, normalize,
-             include_text, cmap)
+             include_text,
+             labeltype, cmap)
 
         if savefig:
             plt.savefig(savefig)
