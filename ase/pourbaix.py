@@ -119,8 +119,9 @@ def add_labels(ax, text):
         label = format_label(prod)
         annotation = ax.annotate(
                 label, xy=(y, x), color='w',
-                fontsize=14, horizontalalignment='center'
+                fontsize=16, horizontalalignment='center'
         )
+        annotation.set_path_effects([pfx.withStroke(linewidth=2.0, foreground='k')])
         annotation.draggable()
         ax.add_artist(annotation)
     return
@@ -589,10 +590,17 @@ class Pourbaix:
             top=0.97, bottom=0.14
         )
 
+        if isinstance(cap, list):
+            vmin = cap[0]
+            vmax = cap[1]
+        else:
+            vmin = -cap
+            vmax = cap
+
         colorplot = ax.imshow(
             meta, cmap=cmap,
             extent=extent,
-            vmin=-cap, vmax=cap,
+            vmin=vmin, vmax=vmax,
             origin='lower', aspect='auto',
             interpolation='gaussian'
         )
@@ -639,7 +647,7 @@ class Pourbaix:
         plt.xticks(fontsize=18)
         plt.yticks(fontsize=18)
 
-        ticks = np.linspace(-cap, cap, num=9)
+        ticks = np.linspace(vmin, vmax, num=9)
         cbar.set_ticks(ticks)
         cbar.set_ticklabels(ticks)
         cbar.ax.tick_params(labelsize=18)
@@ -675,9 +683,10 @@ class Pourbaix:
             The resolution of the diagram. Higher values
             mean higher resolution and thus higher compute times.
 
-        cap: float
-            The limit (in both the positive and negative direction)
+        cap: float/list
+            If float, the limit (in both the positive and negative direction)
             of the Pourbaix energy colormap. 
+            If list, the first and second value determine the colormap limits.
 
         figsize: list
             The horizontal and vertical size of the graph.
