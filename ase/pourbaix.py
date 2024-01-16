@@ -569,6 +569,7 @@ class Pourbaix:
             npoints, cap,
             figsize, normalize,
             include_text, 
+            include_h2o,
             labeltype, cmap):
         """Backend for drawing Pourbaix diagrams"""
 
@@ -626,7 +627,8 @@ class Pourbaix:
         else: 
             raise ValueError("The provided label type doesn't exist")
             
-        add_redox_lines(ax, pH, self.counter, 'w')
+        if include_h2o:
+            add_redox_lines(ax, pH, self.counter, 'w')
 
         ax.set_xlim(*pHrange)
         ax.set_ylim(*Urange)
@@ -653,6 +655,7 @@ class Pourbaix:
              figsize=[12, 6],
              normalize=True,
              include_text=True,
+             include_h2o=True,
              labeltype='numbers',
              cmap="RdYlGn_r",
              savefig=None,
@@ -687,6 +690,9 @@ class Pourbaix:
             Report to the right of the diagram the main products
             associated with the stability domains.
 
+        include_h20: bool
+            Include in the diagram the stability domain of water.
+
         labeltype: str/None
             The labeling style of the diagram domains. Options:
                 'numbers': just add numbers associated with the different phases,
@@ -708,6 +714,7 @@ class Pourbaix:
              npoints, cap,
              figsize, normalize,
              include_text,
+             include_h2o,
              labeltype, cmap)
 
         if savefig:
