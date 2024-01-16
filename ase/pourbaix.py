@@ -28,7 +28,7 @@ def initialize_refs(refs_dct):
     for name, energy in refs_dct.items():
         spec = Species(name)
         spec.set_chemical_potential(energy, None)
-        refs[name] = spec
+        refs[spec.name] = spec
     return refs
 
 
@@ -201,14 +201,19 @@ class Species:
 
     formula: str
         The chemical formula of the species (e.g. ``ZnO``).
-        For solid species, the formula is reduced to the unit formula.
-        Acqueous species are specified without parentheses, by expliciting
+        For solid species, the formula is automatically reduced to the unit formula,
+        and the chemical potential normalized accordingly.
+        Acqueous species are specified by expliciting
         all the positive or negative charges and by appending ``(aq)``.
+        Parentheses for grouping functional groups are acceptable.
             e.g. 
-                Be3(OH)3[3+]   ➜  wrong
-                Be3O3H3+++(aq) ➜  correct
+                Be3(OH)3[3+]    ➜  wrong
+                Be3(OH)3+++     ➜  wrong
+                Be3(OH)3+++(aq) ➜  correct
+                Be3O3H3+++(aq)  ➜  correct
     fmt: str
-        Formula format according to the available options in ase.formula.Formula
+        Formula formatting according to the available options in 
+        ase.formula.Formula
 
     """
     def __init__(self, formula, fmt='metal'):
@@ -417,7 +422,8 @@ class Pourbaix:
     --------------
 
     material_name: str
-        The formula of the target material.
+        The formula of the target material. It is preferrable
+        to provide the reduced formula (e.g. RuO2 instad of Ru2O4).
 
     refs_dct: dict
         A dictionary containing the formula of the target material
@@ -467,9 +473,14 @@ class Pourbaix:
         ):
 
         refs = initialize_refs(refs_dct)
-        self.material = refs.pop(material_name)
-        self.counter = counter
 
+        try:
+            self.material = refs.pop(material_name)
+        except KeyError:
+            material_name = str(Formula(material_name).reduce()[0])
+            self.material = refs.pop(material_name)
+
+        self.counter = counter
         self.phases, phase_matrix = get_phases(
             self.material, refs, T, conc, counter
         )
