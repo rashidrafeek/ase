@@ -11,15 +11,15 @@ from ase.units import kB
 from ase.formula import Formula
 
 
-CONST = kB * np.log(10)
+CONST = kB * np.log(10) # Nernst constant
 
-PREDEF_ENERGIES = {
-    'H+': 0.0,
+PREDEF_ENERGIES = {     # Default chemical potentials
+    'H+': 0.0,          # for water, protons and electrons
     'e-': 0.0,
     'H2O': -2.4583
 }
 
-U_STD_AGCL = 0.222
+U_STD_AGCL = 0.222  # Standard redox potential of AgCl electrode
 
 
 def initialize_refs(refs_dct):
@@ -46,7 +46,8 @@ def get_product_combos(reactant, refs):
 
 def get_phases(reactant, refs, T, conc, counter, normalize=True):
     """Obtain all the possible decomposition pathways
-       for a given reactant as a collection of RedOx objects."""
+       for a given reactant as a collection of RedOx objects.
+    """
     phases = []
     phase_matrix = []
     reac_elem = [-reactant._count_array(reactant.elements)]
@@ -128,6 +129,7 @@ def add_labels(ax, text):
 
 
 def format_label(products):
+    """Obtain phase labels formatted in LaTeX style."""
     formatted = []
     for p in products:
         label = re.sub(r'(\S)([+-]+)', r'\1$^{\2}$', p)
@@ -449,7 +451,7 @@ class Pourbaix:
         obtain the energy of the target material
         relative to the most stable phase at a given potential U and pH.
         If negative, the target material can be regarded as stable.
-
+pbx.plot(cap=1.0, include_text=False, figsize=[12, 8], include_h2o=False, labeltype='phases')
     plot(**kwargs)
         plot a complete Pourbaix diagram in a given pH and potential window.
 
