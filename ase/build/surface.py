@@ -309,7 +309,6 @@ def _surface(symbol, structure, face, size, a, c, vacuum, periodic,
 
     slab = Atoms(numbers,
                  tags=create_tags(size),
-                 #tags=tags.ravel(),
                  pbc=(True, True, periodic),
                  cell=size)
 
