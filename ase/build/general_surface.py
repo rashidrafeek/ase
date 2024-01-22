@@ -80,7 +80,7 @@ def build(lattice, basis, layers, tol, periodic):
     #tags = np.empty((layers, len(lattice)), int)
     #tags[:] = np.arange(layers, 0, -1).reshape((-1, 1))
     #surf.set_tags(tags.ravel())
-    surf.set_tags(create_tags(layers, len(lattice)))
+    surf.set_tags(create_tags((layers, len(lattice), 0)))
 
     a1, a2, a3 = surf.cell
     surf.set_cell([a1, a2,
