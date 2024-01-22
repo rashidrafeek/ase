@@ -267,11 +267,10 @@ def add_vacuum(atoms, vacuum):
     uc[2] *= newlength / length
     atoms.set_cell(uc)
 
+
 def create_tags(size) -> np.array:
     """ Function to create layer tags. """
     # tag atoms by layer
-    #tags = np.empty((n_layers, lattice_length), int)
-    #tags[:] = np.arange(n_layers, 0, -1).reshape((-1, 1))
     tags = np.empty((size[2], size[1], size[0]), int)
     tags[:] = np.arange(size[2], 0, -1).reshape((-1, 1, 1))
     return tags.ravel()

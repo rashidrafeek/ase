@@ -76,11 +76,7 @@ def build(lattice, basis, layers, tol, periodic):
     surf.set_scaled_positions(scaled)
     surf.set_cell(np.dot(basis, surf.cell), scale_atoms=True)
     surf *= (1, 1, layers)
-    # tag atoms by layer
-    #tags = np.empty((layers, len(lattice)), int)
-    #tags[:] = np.arange(layers, 0, -1).reshape((-1, 1))
-    #surf.set_tags(tags.ravel())
-    surf.set_tags(create_tags((layers, len(lattice), 0)))
+    surf.set_tags(create_tags((1, len(lattice), layers)))
 
     a1, a2, a3 = surf.cell
     surf.set_cell([a1, a2,
