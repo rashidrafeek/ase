@@ -267,6 +267,13 @@ def add_vacuum(atoms, vacuum):
     uc[2] *= newlength / length
     atoms.set_cell(uc)
 
+def create_tags(n_layers, lattice_length) -> np.array:
+    """ Function to create layer tags. """
+    # tag atoms by layer
+    tags = np.empty((n_layers, lattice_length), int)
+    tags[:] = np.arange(n_layers, 0, -1).reshape((-1, 1))
+    return tags.ravel()
+
 
 def _surface(symbol, structure, face, size, a, c, vacuum, periodic,
              orthogonal=True):

@@ -3,6 +3,7 @@ import numpy as np
 from numpy.linalg import norm, solve
 
 from ase.build import bulk
+from ase.build.surface import create_tags
 
 
 def surface(lattice, indices, layers, vacuum=None, tol=1e-10, periodic=False):
@@ -76,9 +77,10 @@ def build(lattice, basis, layers, tol, periodic):
     surf.set_cell(np.dot(basis, surf.cell), scale_atoms=True)
     surf *= (1, 1, layers)
     # tag atoms by layer
-    tags = np.empty((layers, len(lattice)), int)
-    tags[:] = np.arange(layers, 0, -1).reshape((-1, 1))
-    surf.set_tags(tags.ravel())
+    #tags = np.empty((layers, len(lattice)), int)
+    #tags[:] = np.arange(layers, 0, -1).reshape((-1, 1))
+    #surf.set_tags(tags.ravel())
+    surf.set_tags(create_tags(layers, len(lattice)))
 
     a1, a2, a3 = surf.cell
     surf.set_cell([a1, a2,
