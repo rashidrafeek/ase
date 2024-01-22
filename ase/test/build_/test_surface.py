@@ -1,10 +1,16 @@
+"""Tests for `surface`"""
+import math
+
+import numpy as np
+import pytest
+
+from ase import Atom, Atoms
+from ase.build import (add_adsorbate, bulk, fcc111, fcc211, graphene, mx2,
+                       surface)
+
+
 def test_surface():
-    import numpy as np
-
-    from ase import Atoms, Atom
-    from ase.build import fcc111, fcc211, add_adsorbate, bulk, surface
-    import math
-
+    """Test general"""
     atoms = fcc211('Au', (3, 5, 8), vacuum=10.)
     assert len(atoms) == 120
 
@@ -23,9 +29,9 @@ def test_surface():
     failed = False
     try:
         add_adsorbate(atoms, 'CN', 1, 'ontop')
-    except KeyError as e:
+    except KeyError as err:
         failed = True
-        assert e.args[0] == 'CN'
+        assert err.args[0] == 'CN'
     assert failed
 
     # This test ensures that the default periodic behavior remains unchanged
@@ -47,3 +53,11 @@ def test_surface():
     print(surface_fcc.get_tags())
     tags = np.array([3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1])
     np.testing.assert_array_equal(surface_fcc.get_tags(), tags)
+
+@pytest.mark.parametrize("vacuum", [None, 10.0])
+def test_others(vacuum):
+    """Test if other types of `surface` functions (at least) run."""
+    mx2(kind='2H', vacuum=vacuum)
+    mx2(kind='1T', vacuum=vacuum)
+    graphene(vacuum=vacuum)
+    graphene(thickness=0.5, vacuum=vacuum)

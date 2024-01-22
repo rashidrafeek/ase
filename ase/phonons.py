@@ -1,20 +1,20 @@
 """Module for calculating phonons of periodic systems."""
 
-from math import pi, sqrt
 import warnings
+from math import pi, sqrt
 from pathlib import Path
 
 import numpy as np
-import numpy.linalg as la
 import numpy.fft as fft
+import numpy.linalg as la
 
 import ase
 import ase.units as units
-from ase.parallel import world
 from ase.dft import monkhorst_pack
 from ase.io.trajectory import Trajectory
-from ase.utils.filecache import MultiFileJSONCache
+from ase.parallel import world
 from ase.utils import deprecated
+from ase.utils.filecache import MultiFileJSONCache
 
 
 class Displacement:
@@ -88,7 +88,7 @@ class Displacement:
                            N_c[2] // 2)
         return self.offset
 
-    @property  # type: ignore
+    @property
     @ase.utils.deprecated('Please use phonons.supercell instead of .N_c')
     def N_c(self):
         return self._supercell
@@ -287,10 +287,12 @@ class Phonons(Displacement):
     >>> from ase.build import bulk
     >>> from ase.phonons import Phonons
     >>> from gpaw import GPAW, FermiDirac
+
     >>> atoms = bulk('Si', 'diamond', a=5.4)
-    >>> calc = GPAW(kpts=(5, 5, 5),
-                    h=0.2,
-                    occupations=FermiDirac(0.))
+    >>> calc = GPAW(mode='fd',
+    ...             kpts=(5, 5, 5),
+    ...             h=0.2,
+    ...             occupations=FermiDirac(0.))
     >>> ph = Phonons(atoms, calc, supercell=(5, 5, 5))
     >>> ph.run()
     >>> ph.read(method='frederiksen', acoustic=True)
@@ -369,6 +371,9 @@ class Phonons(Displacement):
             Key used to identify the file with Born charges for the unit cell
             in the JSON cache.
 
+        .. deprecated:: 3.22.1
+            Current implementation of non-analytical correction is likely
+            incorrect, see :issue:`941`
         """
 
         # Load file with Born charges and dielectric tensor for atoms in the
@@ -570,14 +575,59 @@ class Phonons(Displacement):
         return self.C_N
 
     def get_band_structure(self, path, modes=False, born=False, verbose=True):
-        omega_kl = self.band_structure(path.kpts, modes, born, verbose)
+        """Calculate and return the phonon band structure.
+
+        This method computes the phonon band structure for a given path
+        in reciprocal space. It is a wrapper around the internal
+        `band_structure` method of the `Phonons` class. The method can
+        optionally calculate and return phonon modes.
+
+        Parameters:
+
+        path : BandPath object
+            The BandPath object defining the path in the reciprocal
+            space over which the phonon band structure is calculated.
+        modes : bool, optional
+            If True, phonon modes will also be calculated and returned.
+            Defaults to False.
+        born : bool, optional
+            If True, includes the effect of Born effective charges in
+            the phonon calculations.
+            Defaults to False.
+        verbose : bool, optional
+            If True, enables verbose output during the calculation.
+            Defaults to True.
+
+        Returns:
+
+        BandStructure or tuple of (BandStructure, ndarray)
+            If `modes` is False, returns a `BandStructure` object
+            containing the phonon band structure. If `modes` is True,
+            returns a tuple, where the first element is the
+            `BandStructure` object and the second element is an ndarray
+            of phonon modes.
+
+        Example:
+
+        >>> from ase.dft.kpoints import BandPath
+        >>> path = BandPath(...)  # Define the band path
+        >>> phonons = Phonons(...)
+        >>> bs, modes = phonons.get_band_structure(path, modes=True)
+        """
+        result = self.band_structure(path.kpts,
+                                     modes=modes,
+                                     born=born,
+                                     verbose=verbose)
         if modes:
-            assert 0
-            omega_kl, modes = omega_kl
+            omega_kl, omega_modes = result
+        else:
+            omega_kl = result
 
         from ase.spectrum.band_structure import BandStructure
         bs = BandStructure(path, energies=omega_kl[None])
-        return bs
+
+        # Return based on the modes flag
+        return (bs, omega_modes) if modes else bs
 
     def compute_dynamical_matrix(self, q_scaled: np.ndarray, D_N: np.ndarray):
         """ Computation of the dynamical matrix in momentum space D_ab(q).
@@ -713,6 +763,7 @@ class Phonons(Displacement):
 
     def get_dos(self, kpts=(10, 10, 10), npts=1000, delta=1e-3, indices=None):
         from ase.spectrum.dosdata import RawDOSData
+
         # dos = self.dos(kpts, npts, delta, indices)
         kpts_kc = monkhorst_pack(kpts)
         omega_w = self.band_structure(kpts_kc).ravel()

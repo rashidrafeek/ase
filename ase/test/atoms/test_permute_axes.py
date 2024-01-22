@@ -1,8 +1,11 @@
+import numpy as np
+from numpy.testing import assert_allclose
+
+from ase import Atoms
+from ase.geometry import permute_axes
+
+
 def test_permute_axes():
-    import numpy as np
-    from numpy.testing import assert_allclose
-    from ase import Atoms
-    from ase.geometry import permute_axes
 
     TOL = 1E-10
 

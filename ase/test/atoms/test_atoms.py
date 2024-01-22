@@ -4,12 +4,11 @@ import pytest
 from ase import Atoms
 
 
-def array_almost_equal(a1, a2, tol=np.finfo(type(1.0)).eps):
+def array_almost_equal(a1, a2, tol=np.finfo(float).eps):
     return (np.abs(a1 - a2) < tol).all()
 
 
 def test_atoms():
-    from ase import Atoms
     print(Atoms())
     print(Atoms('H2O'))
     # ...

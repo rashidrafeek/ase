@@ -1,7 +1,7 @@
 import pytest
-from ase.build import bulk
-from ase.calculators.espresso import EspressoProfile, Espresso
 
+from ase.build import bulk, molecule
+from ase.calculators.espresso import Espresso, EspressoProfile
 
 espresso_versions = [
     ('6.4.1', """
@@ -23,8 +23,7 @@ def test_version(version, txt):
 
 
 def test_version_integration(espresso_factory):
-    profile = EspressoProfile([espresso_factory.executable])
-    version = profile.version()
+    version = espresso_factory.profile.version()
     assert version[0].isdigit()
 
 
@@ -55,7 +54,28 @@ def test_smearing(espresso_factory):
     verify(atoms.calc)
 
 
-def test_warn_label():
+@pytest.mark.calculator_lite
+def test_dipole(espresso_factory):
+    atoms = molecule('H2O', cell=[10, 10, 10])
+    atoms.center()
+    input_data = {'control': {'tefield': True,
+                              'dipfield': True},
+                  'system': {'occupations': 'smearing',
+                             'smearing': 'fermi-dirac',
+                             'degauss': 0.02,
+                             'edir': 3,
+                             'eamp': 0.00,
+                             'eopreg': 0.0001,
+                             'emaxpos': 0.0001}}
+    atoms.calc = espresso_factory.calc(input_data=input_data)
+    atoms.get_potential_energy()
+    verify(atoms.calc)
+    dipol_arr = atoms.get_dipole_moment().tolist()
+    expected_dipol_arr = [0, 0, -0.36991972]
+    assert dipol_arr == pytest.approx(expected_dipol_arr, abs=0.02)
+
+
+def test_warn_label(config_file):
     with pytest.warns(FutureWarning):
         Espresso(label='hello')
 

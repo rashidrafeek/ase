@@ -1,9 +1,10 @@
 import pytest
-from ase.spacegroup import crystal
-from ase.data import atomic_numbers, atomic_masses
-from ase.optimize import QuasiNewton
-from ase.constraints import UnitCellFilter
 from numpy.testing import assert_allclose
+
+from ase.data import atomic_masses, atomic_numbers
+from ase.filters import UnitCellFilter
+from ase.optimize import QuasiNewton
+from ase.spacegroup import crystal
 
 
 @pytest.mark.calculator_lite
@@ -48,7 +49,7 @@ def test_NaCl_minimize(factory):
         nacl.get_potential_energy()
 
         ucf = UnitCellFilter(nacl)
-        with QuasiNewton(ucf, force_consistent=False) as dyn:
+        with QuasiNewton(ucf) as dyn:
             dyn.run(fmax=1.0E-2)
 
         assert_allclose(nacl.get_potential_energy(), -1897.208861729178,

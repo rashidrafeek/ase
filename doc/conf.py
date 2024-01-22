@@ -4,7 +4,6 @@ import sys
 import sphinx_rtd_theme
 
 sys.path.append('.')
-assert sys.version_info >= (3, 6)
 
 extensions = ['ext',
               'sphinx.ext.autodoc',
@@ -14,8 +13,12 @@ extensions = ['ext',
               'sphinx.ext.viewcode',
               'sphinx.ext.napoleon',
               'sphinx.ext.intersphinx']
-extlinks = {'doi': ('https://doi.org/%s', 'doi: %s'),
-            'arxiv': ('https://arxiv.org/abs/%s', 'arXiv: %s')}
+extlinks = {
+    'doi': ('https://doi.org/%s', 'doi: %s'),
+    'arxiv': ('https://arxiv.org/abs/%s', 'arXiv: %s'),
+    'mr': ('https://gitlab.com/ase/ase/-/merge_requests/%s', 'MR: !%s'),
+    'issue': ('https://gitlab.com/ase/ase/-/issues/%s', 'issue: #%s'),
+}
 source_suffix = '.rst'
 master_doc = 'index'
 project = 'ASE'

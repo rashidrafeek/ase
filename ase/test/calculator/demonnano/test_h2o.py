@@ -1,10 +1,12 @@
-def test_h2o():
-    from ase.calculators.demonnano import DemonNano
-    from ase import Atoms
-    from ase.optimize import BFGS
-    from ase.units import Bohr, Hartree
-    import numpy as np
+import numpy as np
 
+from ase import Atoms
+from ase.calculators.demonnano import DemonNano
+from ase.optimize import BFGS
+from ase.units import Bohr, Hartree
+
+
+def test_h2o(demonnano_factory):
     d = 0.9775
     t = np.pi / 180 * 110.51
     atoms = Atoms('H2O',
