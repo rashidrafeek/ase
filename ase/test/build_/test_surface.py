@@ -54,6 +54,7 @@ def test_surface():
     tags = np.array([3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1])
     np.testing.assert_array_equal(surface_fcc.get_tags(), tags)
 
+
 @pytest.mark.parametrize("vacuum", [None, 10.0])
 def test_others(vacuum):
     """Test if other types of `surface` functions (at least) run."""
