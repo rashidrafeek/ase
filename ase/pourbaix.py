@@ -451,7 +451,6 @@ class Pourbaix:
         obtain the energy of the target material
         relative to the most stable phase at a given potential U and pH.
         If negative, the target material can be regarded as stable.
-pbx.plot(cap=1.0, include_text=False, figsize=[12, 8], include_h2o=False, labeltype='phases')
     plot(**kwargs)
         plot a complete Pourbaix diagram in a given pH and potential window.
 
