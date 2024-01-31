@@ -1,11 +1,11 @@
 from collections import Counter
 from itertools import product, chain, combinations
 from typing import Union
+from fractions import Fraction
 import re
 
 import numpy as np
 import matplotlib.pyplot as plt
-from sympy import Matrix
 
 from ase.units import kB
 from ase.formula import Formula
@@ -41,35 +41,32 @@ def get_product_combos(reactant, refs):
         contained = ref.contains(reactant.elements)
         for w in np.argwhere(contained).flatten():
             array[w].append(ref)
-    return product(*array)
+    return [np.unique(combo) for combo in product(*array)]
 
 
 def get_phases(reactant, refs, T, conc, counter, normalize=True):
     """Obtain all the possible decomposition pathways
        for a given reactant as a collection of RedOx objects.
     """
+    from scipy.linalg import null_space
+
     phases = []
     phase_matrix = []
     reac_elem = [-reactant._count_array(reactant.elements)]
 
     for products in get_product_combos(reactant, refs):
-        if len(np.unique(products)) < len(products):
-            products = (products[0],)
-
         prod_elem = [p._count_array(reactant.elements) for p in products]
         elem_matrix = np.array(reac_elem + prod_elem).T
-        solutions = Matrix(elem_matrix).nullspace()
+        coeffs = null_space(elem_matrix).flatten()
 
-        for solution in solutions:
-            coeffs = np.array(solution).flatten()
-            if all(coeffs > 0):
-                if normalize:
-                    coeffs /= abs(coeffs[0])
-                coeffs[0] = -coeffs[0]
-                species = (reactant, *products)
-                phase = RedOx(species, coeffs, T, conc, counter)
-                phases.append(phase)
-                phase_matrix.append(phase._vector)
+        if all(coeffs > 0) and len(coeffs) > 0:
+            if normalize:
+                coeffs /= abs(coeffs[0])
+            coeffs[0] = -coeffs[0]
+            species = (reactant, *products)
+            phase = RedOx(species, coeffs, T, conc, counter)
+            phases.append(phase)
+            phase_matrix.append(phase._vector)
 
     return phases, np.array(phase_matrix).astype('float64')
 
@@ -103,7 +100,7 @@ def edge_detection(array):
 def add_numbers(ax, text):
     """Add phase indexes to the different domains of a Pourbaix diagram."""
     import matplotlib.patheffects as pfx
-    for i, (x, y, prod) in enumerate(text):
+    for i, (x, y, prod, _) in enumerate(text):
         txt = ax.text(
             y, x, f'{i}', 
             fontsize=20,
@@ -116,7 +113,7 @@ def add_numbers(ax, text):
 def add_labels(ax, text):
     """Add phase indexes to the different domains of a Pourbaix diagram."""
     import matplotlib.patheffects as pfx
-    for i, (x, y, prod) in enumerate(text):
+    for i, (x, y, prod, _) in enumerate(text):
         label = format_label(prod)
         annotation = ax.annotate(
                 label, xy=(y, x), color='w',
@@ -145,12 +142,12 @@ def format_label(products):
     return label
 
 
-def add_text(ax, text, offset=0):
+def add_text(ax, text, offset=0.0):
     """Add phase labels to the right of the diagram"""
     import textwrap
 
     textlines = []
-    for i, (x, y, prod) in enumerate(text):
+    for i, (x, y, prod, _) in enumerate(text):
         formatted = []
         label = format_label(prod)
         textlines.append(
@@ -388,21 +385,26 @@ class RedOx:
 
         return gibbs_corr, pH_corr
 
-    def equation(self):
+    def equation(self, max_denom=50):
         """Print the chemical reaction."""
+
+        def make_coeff_nice(coeff, max_denom):
+            frac = abs(Fraction(coeff).limit_denominator(max_denom))
+            if frac.numerator == frac.denominator:
+                return ''
+            return str(frac)
+
         reactants = []
         products = []
         for s, n in self.species.items():
             if n == 0:
                 continue
-            if abs(n) == 1:
-                substr = s
-            else:
-                substr = f'{abs(n)}{s}'
+            substr = f'{make_coeff_nice(n, max_denom)}{s}'
             if n > 0:
                 products.append(substr)
             else:
                 reactants.append(substr)
+
         return "  ➜  ".join([" + ".join(reactants), " + ".join(products)])
 
     def get_main_products(self):
@@ -561,7 +563,7 @@ class Pourbaix:
                 txt = phase.get_main_products()
             x = np.dot(where.sum(1), U) / where.sum()
             y = np.dot(where.sum(0), pH) / where.sum()
-            text.append((x, y, txt))
+            text.append((x, y, txt, int(phase_id)))
 
         return pour, meta, text
 
