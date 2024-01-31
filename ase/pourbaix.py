@@ -97,6 +97,34 @@ def edge_detection(array):
     return edges
 
 
+def add_numbers(ax, text):
+    """Add phase indexes to the different domains of a Pourbaix diagram."""
+    import matplotlib.patheffects as pfx
+    for i, (x, y, prod, _) in enumerate(text):
+        txt = ax.text(
+            y, x, f'{i}', 
+            fontsize=20,
+            horizontalalignment='center'
+        )
+        txt.set_path_effects([pfx.withStroke(linewidth=2.0, foreground='w')])
+    return
+
+
+def add_labels(ax, text):
+    """Add phase indexes to the different domains of a Pourbaix diagram."""
+    import matplotlib.patheffects as pfx
+    for i, (x, y, prod, _) in enumerate(text):
+        label = format_label(prod)
+        annotation = ax.annotate(
+                label, xy=(y, x), color='w',
+                fontsize=16, horizontalalignment='center'
+        )
+        annotation.set_path_effects([pfx.withStroke(linewidth=2.0, foreground='k')])
+        annotation.draggable()
+        ax.add_artist(annotation)
+    return
+
+
 def format_label(products):
     """Obtain phase labels formatted in LaTeX style."""
     formatted = []
@@ -114,43 +142,17 @@ def format_label(products):
     return label
 
 
-def add_numbers(ax, text):
-    """Add phase indexes to the different domains of a Pourbaix diagram."""
-    import matplotlib.patheffects as pfx
-    for i, (x, y, _, _) in enumerate(text):
-        txt = ax.text(
-            y, x, f'{i}', 
-            fontsize=20,
-            horizontalalignment='center'
-        )
-        txt.set_path_effects([pfx.withStroke(linewidth=2.0, foreground='w')])
-    return
-
-
-def add_labels(ax, text):
-    """Add phase indexes to the different domains of a Pourbaix diagram."""
-    import matplotlib.patheffects as pfx
-    for i, (x, y, txt, _) in enumerate(text):
-        annotation = ax.annotate(
-                txt, xy=(y, x), color='w',
-                fontsize=16, horizontalalignment='center'
-        )
-        annotation.set_path_effects([pfx.withStroke(linewidth=2.0, foreground='k')])
-        annotation.draggable()
-        ax.add_artist(annotation)
-    return
-
-
 def add_text(ax, text, offset=0.0):
     """Add phase labels to the right of the diagram"""
     import textwrap
 
     textlines = []
-    for i, (x, y, txt, _) in enumerate(text):
+    for i, (x, y, prod, _) in enumerate(text):
         formatted = []
+        label = format_label(prod)
         textlines.append(
             textwrap.fill(
-                f'({i})  {txt}',
+                f'({i})  {label}',
                 width=40,
                 subsequent_indent='      '
             )
@@ -405,14 +407,10 @@ class RedOx:
 
         return "  ➜  ".join([" + ".join(reactants), " + ".join(products)])
 
-    def _get_main_products(self):
+    def get_main_products(self):
         """Obtain the reaction products excluded protons, water and electrons."""
         return [spec for spec, coef in self.species.items() 
                 if coef > 0 and spec not in ['H+', 'H2O', 'e-']]
-
-    def get_main_products(self):
-        prod = self._get_main_products()
-        return format_label(prod)
 
     def get_free_energy(self, U, pH):
         """Evaluate the reaction free energy at a given applied potential U and pH"""
@@ -558,7 +556,7 @@ class Pourbaix:
         for phase_id in np.unique(pour):
             if phase_id == -1:
                 where = where_stable
-                txt = format_label([self.material.name])
+                txt = [self.material.name]
             else:
                 where = (pour == phase_id)
                 phase = self.phases[int(phase_id)]
