@@ -97,39 +97,19 @@ def edge_detection(array):
     return edges
 
 
-def add_numbers(ax, text):
-    """Add phase indexes to the different domains of a Pourbaix diagram."""
-    import matplotlib.patheffects as pfx
-    for i, (x, y, prod, _) in enumerate(text):
-        txt = ax.text(
-            y, x, f'{i}', 
-            fontsize=20,
-            horizontalalignment='center'
-        )
-        txt.set_path_effects([pfx.withStroke(linewidth=2.0, foreground='w')])
-    return
+def get_main_products(species):
+    """Obtain the reaction products excluded protons,
+       water and electrons.
+    """
+    return [spec for spec, coef in species.items() 
+            if coef > 0 and spec not in ['H+', 'H2O', 'e-']]
 
 
-def add_labels(ax, text):
-    """Add phase indexes to the different domains of a Pourbaix diagram."""
-    import matplotlib.patheffects as pfx
-    for i, (x, y, prod, _) in enumerate(text):
-        label = format_label(prod)
-        annotation = ax.annotate(
-                label, xy=(y, x), color='w',
-                fontsize=16, horizontalalignment='center'
-        )
-        annotation.set_path_effects([pfx.withStroke(linewidth=2.0, foreground='k')])
-        annotation.draggable()
-        ax.add_artist(annotation)
-    return
-
-
-def format_label(products):
+def format_label(species):
     """Obtain phase labels formatted in LaTeX style."""
     formatted = []
-    for p in products:
-        label = re.sub(r'(\S)([+-]+)', r'\1$^{\2}$', p)
+    for prod in get_main_products(species):
+        label = re.sub(r'(\S)([+-]+)', r'\1$^{\2}$', prod)
         label = re.sub(r'(\d+)', r'$_{\1}$', label)
         for symbol in ['+', '-']:
             count = label.count(symbol)
@@ -142,14 +122,41 @@ def format_label(products):
     return label
 
 
-def add_text(ax, text, offset=0.0):
+def add_numbers(ax, text):
+    """Add phase indexes to the different domains of a Pourbaix diagram."""
+    import matplotlib.patheffects as pfx
+    for i, (x, y, _) in enumerate(text):
+        txt = ax.text(
+            y, x, f'{i}', 
+            fontsize=20,
+            horizontalalignment='center'
+        )
+        txt.set_path_effects([pfx.withStroke(linewidth=2.0, foreground='w')])
+    return
+
+
+def add_labels(ax, text):
+    """Add phase indexes to the different domains of a Pourbaix diagram."""
+    import matplotlib.patheffects as pfx
+    for i, (x, y, species) in enumerate(text):
+        label = format_label(species)
+        annotation = ax.annotate(
+                label, xy=(y, x), color='w',
+                fontsize=16, horizontalalignment='center'
+        )
+        annotation.set_path_effects([pfx.withStroke(linewidth=2.0, foreground='k')])
+        annotation.draggable()
+        ax.add_artist(annotation)
+    return
+
+
+def add_text(text, offset=0.0):
     """Add phase labels to the right of the diagram"""
     import textwrap
 
     textlines = []
-    for i, (x, y, prod, _) in enumerate(text):
-        formatted = []
-        label = format_label(prod)
+    for i, (_, _, species) in enumerate(text):
+        label = format_label(species)
         textlines.append(
             textwrap.fill(
                 f'({i})  {label}',
@@ -407,11 +414,6 @@ class RedOx:
 
         return "  ➜  ".join([" + ".join(reactants), " + ".join(products)])
 
-    def get_main_products(self):
-        """Obtain the reaction products excluded protons, water and electrons."""
-        return [spec for spec, coef in self.species.items() 
-                if coef > 0 and spec not in ['H+', 'H2O', 'e-']]
-
     def get_free_energy(self, U, pH):
         """Evaluate the reaction free energy at a given applied potential U and pH"""
         return self._vector[0] + self._vector[1]*U + self._vector[2]*pH
@@ -553,17 +555,18 @@ class Pourbaix:
         pour[where_stable] = -1
 
         text = []
-        for phase_id in np.unique(pour):
+        ids = sorted(np.unique(pour))
+        for phase_id in ids:
             if phase_id == -1:
                 where = where_stable
-                txt = [self.material.name]
+                species = {self.material.name: 1}
             else:
                 where = (pour == phase_id)
                 phase = self.phases[int(phase_id)]
-                txt = phase.get_main_products()
+                species = phase.species
             x = np.dot(where.sum(1), U) / where.sum()
             y = np.dot(where.sum(0), pH) / where.sum()
-            text.append((x, y, txt, int(phase_id)))
+            text.append((x, y, species))
 
         return pour, meta, text
 
@@ -627,7 +630,7 @@ class Pourbaix:
 
         if include_text:
             plt.subplots_adjust(right=0.75)
-            add_text(ax, text, offset=0.05)
+            add_text(text, offset=0.05)
 
         if labeltype == 'numbers':
             add_numbers(ax, text)
