@@ -5,6 +5,7 @@ from fractions import Fraction
 import re
 
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 from ase.units import kB
@@ -44,7 +45,7 @@ def get_product_combos(reactant, refs):
     return [np.unique(combo) for combo in product(*array)]
 
 
-def get_phases(reactant, refs, T, conc, counter, normalize=True):
+def get_phases(reactant, refs, T, conc, counter, tol=1e-3):
     """Obtain all the possible decomposition pathways
        for a given reactant as a collection of RedOx objects.
     """
@@ -58,15 +59,19 @@ def get_phases(reactant, refs, T, conc, counter, normalize=True):
         prod_elem = [p._count_array(reactant.elements) for p in products]
         elem_matrix = np.array(reac_elem + prod_elem).T
         coeffs = null_space(elem_matrix).flatten()
-
-        if all(coeffs > 0) and len(coeffs) > 0:
-            if normalize:
-                coeffs /= abs(coeffs[0])
+        if len(coeffs) > 0 and all(coeffs > tol):
+            coeffs /= coeffs[0]
             coeffs[0] = -coeffs[0]
             species = (reactant, *products)
             phase = RedOx(species, coeffs, T, conc, counter)
             phases.append(phase)
             phase_matrix.append(phase._vector)
+
+    if len(phase_matrix) == 0:
+        raise ValueError(
+            "No valid decomposition pathways have been found" + \
+            " given this set of references."
+        )
 
     return phases, np.array(phase_matrix).astype('float64')
 
@@ -104,7 +109,6 @@ def get_main_products(species):
     return [spec for spec, coef in species.items() 
             if coef > 0 and spec not in ['H+', 'H2O', 'e-']]
 
-
 def format_label(species):
     """Obtain phase labels formatted in LaTeX style."""
     formatted = []
@@ -120,6 +124,13 @@ def format_label(species):
         formatted.append(label)
     label = ', '.join(f for f in formatted)
     return label
+
+
+def make_coeff_nice(coeff, max_denom):
+    frac = abs(Fraction(coeff).limit_denominator(max_denom))
+    if frac.numerator == frac.denominator:
+        return ''
+    return str(frac)
 
 
 def add_numbers(ax, text):
@@ -395,16 +406,10 @@ class RedOx:
     def equation(self, max_denom=50):
         """Print the chemical reaction."""
 
-        def make_coeff_nice(coeff, max_denom):
-            frac = abs(Fraction(coeff).limit_denominator(max_denom))
-            if frac.numerator == frac.denominator:
-                return ''
-            return str(frac)
-
         reactants = []
         products = []
         for s, n in self.species.items():
-            if n == 0:
+            if abs(n) <= 1e-6:
                 continue
             substr = f'{make_coeff_nice(n, max_denom)}{s}'
             if n > 0:
@@ -433,15 +438,15 @@ class Pourbaix:
         to provide the reduced formula (e.g. RuO2 instad of Ru2O4).
 
     refs_dct: dict
-        A dictionary containing the formula of the target material
+        A dictionary containing the formulae of the target material
         and its competing phases (solid and/or ionic) as keys,
-        and their (formation) energies as values.
+        and their formation energies as values.
 
     T: float
         Temperature in Kelvin. Default: 298.15 K.
 
     conc: float
-        Concentration of the ionic species. Default: 1e-6 mol/l.
+        Concentration of the ionic species. Default: 1e-6 mol/L.
 
     counter: str
         The counter electrode. Default: SHE.
@@ -483,8 +488,7 @@ class Pourbaix:
         try:
             self.material = refs.pop(material_name)
         except KeyError:
-            material_name = str(Formula(material_name).reduce()[0])
-            self.material = refs.pop(material_name)
+            self.material = refs.pop(Species(material_name).name)
 
         self.counter = counter
         self.phases, phase_matrix = get_phases(
@@ -532,6 +536,7 @@ class Pourbaix:
             The stability domains of the diagram on the pH vs. U grid.
             domains are represented by indexes (as integers)
             that map to Pourbaix.phases
+            the target material is stable (index=-1)
 
         meta:
             The Pourbaix energy on the pH vs. U grid. 
@@ -541,7 +546,6 @@ class Pourbaix:
             text placement on the diagram.
 
         """
-
         pour = np.zeros((len(U), len(pH)))
         meta = pour.copy()
 
@@ -555,20 +559,107 @@ class Pourbaix:
         pour[where_stable] = -1
 
         text = []
-        ids = sorted(np.unique(pour))
-        for phase_id in ids:
+        domains = [int(i) for i in np.unique(pour)]
+        for phase_id in domains:
             if phase_id == -1:
                 where = where_stable
-                species = {self.material.name: 1}
+                txt = {self.material.name: 1}
             else:
                 where = (pour == phase_id)
                 phase = self.phases[int(phase_id)]
-                species = phase.species
+                txt = phase.species
             x = np.dot(where.sum(1), U) / where.sum()
             y = np.dot(where.sum(0), pH) / where.sum()
-            text.append((x, y, species))
+            text.append((x, y, txt))
 
-        return pour, meta, text
+        return pour, meta, text, domains
+
+    def get_phase_boundaries(self, phrange, urange, domains, tol=1e-6):
+        """Plane intersection method for finding phases boundaries."""
+        from itertools import combinations
+        from collections import defaultdict
+
+        # Planes identifying the diagram frame
+        planes = [(np.array([0.0, 1.0, 0.0]), min(urange),  'b'),  # Bottom
+                  (np.array([0.0, 1.0, 0.0]), max(urange),  't'),  # Top
+                  (np.array([1.0, 0.0, 0.0]), min(phrange), 'l'),  # Left
+                  (np.array([1.0, 0.0, 0.0]), max(phrange), 'r')]  # Right
+
+        # Planes associated with the stable domains of the diagram.
+        # Given x=pH, y=U, z=E_pbx=-DeltaG, each plane has expression:
+        # _vector[2]*x + _vector[1]*y + z = -_vector[0]
+        # The region where the target material is stable
+        # (id=-1, if present) is delimited by the xy plane (z=0)
+        for d in domains:
+            if d == -1:
+                plane = np.array([0.0, 0.0, 1.0])
+                const = 0.0
+            else:
+                pvec = self.phases[d]._vector
+                plane = np.array([pvec[2], pvec[1], 1])
+                const = -pvec[0]
+            planes.append((plane, const, d))
+
+        # The simplices are found from the intersection points between
+        # all possible plane triplets. If the z coordinate of the point
+        # matches the corresponding pourbaix energy,
+        # then the point is a simplex.
+        simplices = []
+        for (p1, c1, id1), (p2, c2, id2), (p3, c3, id3) in \
+                combinations(planes, 3):
+            A = np.vstack((p1, p2, p3))
+            c = np.array([c1, c2, c3])
+            ids = (id1, id2, id3)
+            try:
+                pt = np.dot(np.linalg.inv(A), c)
+                Epbx = self._get_pourbaix_energy(pt[1], pt[0])[0]
+                if pt[2] >= -tol and \
+                   np.isclose(Epbx, pt[2], rtol=0, atol=tol) and \
+                   min(phrange)-tol <= pt[0] <= max(phrange)+tol and \
+                   min(urange)-tol  <= pt[1] <= max(urange)+tol:
+                        simplex = np.round(pt[:2], 3)
+                        simplices.append((simplex, ids))
+
+            # triplets containing parallel planes raise a LinAlgError
+            # and are automatically excluded.
+            except np.linalg.LinAlgError:
+                continue
+
+        # The final segments to plot on the diagram are found from
+        # the pairs of unique simplices that have two neighboring phases
+        # in common, diagram frame excluded.
+        duplicate_filter = defaultdict(int)
+        for (s1, id1), (s2, id2) in combinations(simplices, 2):
+
+            # common neighboring phases
+            common = list(set(id1).intersection(id2))
+
+            # Simplices have to be distinct
+            cond1 = not np.allclose(s1, s2, rtol=0, atol=tol)
+            # Only two phases in common...
+            cond2 = (len(common) == 2)
+            # ...Diagram frame excluded
+            cond3 = not any(np.isin(common, ['b', 't', 'l', 'r']))
+
+            # Filtering out duplicates
+            if all((cond1, cond2, cond3)):
+                testarray = sorted(
+                    [s1, s2], key=lambda s: (s[0], s[1])
+                )
+                testarray.append(sorted(common))
+                testarray = np.array(testarray).flatten()
+                duplicate_filter[tuple(testarray)] += 1
+
+        segments = []
+        for segment in duplicate_filter:
+            coords, phases = np.split(np.array(segment), [4])
+            segments.append((
+                coords.reshape(2, 2).T,
+                list(phases.astype(int))
+            ))
+        print(segments)
+        return segments
+
 
     def _draw_diagram_axes(
             self,
@@ -583,7 +674,7 @@ class Pourbaix:
         pH = np.linspace(*pHrange, num=npoints)
         U = np.linspace(*Urange, num=npoints)
 
-        pour, meta, text = self.get_diagrams(U, pH)
+        pour, meta, text, domains = self.get_diagrams(U, pH)
 
         if normalize:
             meta /= self.material.natoms
@@ -617,16 +708,11 @@ class Pourbaix:
                pad=0.02
         )
 
-        edges = edge_detection(pour)
-        for _, indexes in edges.items():
-            ax.plot(
-                pH[indexes[1]],
-                U[indexes[0]],
-                ls='-',
-                marker=None,
-                zorder=1,
-                color='k'
-            )
+        bounds = self.get_phase_boundaries(
+            pHrange, Urange, domains
+        )
+        for coords,_ in bounds:
+            ax.plot(coords[0], coords[1], '-', c='k', lw=1.0)
 
         if include_text:
             plt.subplots_adjust(right=0.75)
@@ -650,14 +736,20 @@ class Pourbaix:
         ax.set_ylabel(r'$\it{U}$' + f' vs. {self.counter} (V)', fontsize=18)
         ax.set_xticks(np.arange(pHrange[0], pHrange[1] + 1, 2))
         ax.set_yticks(np.arange(Urange[0], Urange[1] + 1, 1))
+        ax.xaxis.set_tick_params(width=1.5, length=5)
+        ax.yaxis.set_tick_params(width=1.5, length=5)
         plt.xticks(fontsize=18)
         plt.yticks(fontsize=18)
 
         ticks = np.linspace(vmin, vmax, num=9)
         cbar.set_ticks(ticks)
         cbar.set_ticklabels(ticks)
-        cbar.ax.tick_params(labelsize=18)
+        cbar.outline.set_linewidth(1.5)
+        cbar.ax.tick_params(labelsize=18, width=1.5, length=5)
         cbar.ax.set_ylabel(r'$E_{pbx}$ (eV/atom)', fontsize=18)
+
+        for axis in ['top','bottom','left','right']:
+            ax.spines[axis].set_linewidth(1.5)
 
         return ax
 
