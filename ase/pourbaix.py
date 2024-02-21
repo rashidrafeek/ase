@@ -76,38 +76,13 @@ def get_phases(reactant, refs, T, conc, counter, tol=1e-3):
     return phases, np.array(phase_matrix).astype('float64')
 
 
-def edge_detection(array):
-    """Add phase boundaries to a Pourbaix diagram."""
-    from collections import defaultdict
-    edges_raw = defaultdict(list)
-    edges = defaultdict(list)
-
-    for i in range(array.shape[0] - 1):
-        for j in range(array.shape[1] - 1):
-            xpair = (array[i, j], array[i+1, j])
-            ypair = (array[i, j], array[i, j+1])
-            for pair in [xpair, ypair]:
-                if np.ptp(pair) != 0:
-                    edges_raw[pair].append([i+1, j])
-
-    for pair, values in edges_raw.items():
-        varr = np.array(values)
-        left = values[np.argmin(varr[:, 1])]
-        right = values[np.argmax(varr[:, 1])]
-        if left == right:
-            left = values[np.argmin(varr[:, 0])]
-            right = values[np.argmax(varr[:, 0])]
-        edges[pair] = np.array([left, right]).T
-
-    return edges
-
-
 def get_main_products(species):
     """Obtain the reaction products excluded protons,
        water and electrons.
     """
     return [spec for spec, coef in species.items() 
             if coef > 0 and spec not in ['H+', 'H2O', 'e-']]
+
 
 def format_label(species):
     """Obtain phase labels formatted in LaTeX style."""
@@ -823,6 +798,8 @@ class Pourbaix:
              include_text,
              include_h2o,
              labeltype, cmap)
+
+        plt.tight_layout()
 
         if savefig:
             plt.savefig(savefig)
