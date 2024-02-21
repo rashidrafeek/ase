@@ -21,6 +21,7 @@ PREDEF_ENERGIES = {     # Default chemical potentials
 }
 
 U_STD_AGCL = 0.222  # Standard redox potential of AgCl electrode
+U_STD_SCE = 0.244   # Standard redox potential of SCE electrode
 
 
 def initialize_refs(refs_dct):
@@ -168,13 +169,14 @@ def add_redox_lines(axes, pH, counter, color='k'):
         'RHE': 0,
         'Pt': 0,
         'AgCl': -U_STD_AGCL,
+        'SCE': -U_STD_SCE,
     }
     kwargs = {
         'c': color,
         'ls': '--',
         'zorder': 2
     }
-    if counter in ['SHE', 'AgCl']:    
+    if counter in ['SHE', 'AgCl', 'SCE']:    
         slope = -59.2e-3
         axes.plot(pH, slope*pH + corr[counter], **kwargs)
         axes.plot(pH, slope*pH + const + corr[counter], **kwargs)
@@ -375,6 +377,8 @@ class RedOx:
                 gibbs_corr +=  n_e * 0.5 * PREDEF_ENERGIES['H2O']
         if counter == 'AgCl':
             gibbs_corr -= n_e * U_STD_AGCL
+        if counter == 'SCE':
+            gibbs_corr -= n_e * U_STD_SCE
 
         return gibbs_corr, pH_corr
 
@@ -632,7 +636,6 @@ class Pourbaix:
                 coords.reshape(2, 2).T,
                 list(phases.astype(int))
             ))
-        print(segments)
         return segments
 
 
