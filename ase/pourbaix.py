@@ -450,8 +450,9 @@ class Pourbaix:
         the target material as a Species object
 
     phases: list[RedOx]
-        the available decomposition pathways of the target material
-        into its competing phases as a list of RedOx objects
+        the available decomposition reactions of the target material
+        into its competing phases as a list of RedOx objects.
+        Each reaction can be accessed through its index.
 
     """
     def __init__(self,
@@ -490,9 +491,9 @@ class Pourbaix:
         return -energies[i_min], i_min
 
     def get_pourbaix_energy(self, U, pH, verbose=True):
-        """Evaluate the Pourbaix energy and print info
-           about the most stable phase, decomposition pathway
-           and corresponding energy.
+        """Evaluate the Pourbaix energy, print info about
+        the most stable phase and the corresponding energy at
+        a given potential U and pH.
         
         The Pourbaix energy represents the energy of the target material
         relative to the most stable competing phase. If negative,
@@ -504,6 +505,18 @@ class Pourbaix:
             print(f'Stable phase: \n{phase.equation()}'
                   f'\nEnergy: {energy} eV')
         return energy, phase
+
+    def get_equations(self, contains: Union[str,None]=None):
+        """Print the chemical reactions of the available phases.
+
+        the argument `contains' allows to filter for phases containing a
+        particular species
+            e.g. get_equations(contains='ZnO')
+        """
+        for i, p in enumerate(self.phases):
+            if contains and contains not in p.species:
+                continue
+            print(f'{i}) {p.equation()}')
 
     def get_diagrams(self, U, pH):
         """Actual evaluation of the complete diagram
