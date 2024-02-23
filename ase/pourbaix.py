@@ -86,7 +86,7 @@ def get_main_products(species):
 
 
 def format_label(species):
-    """Obtain phase labels formatted in LaTeX style."""
+    """Obtain phase labels formatted in LaTeX math style."""
     formatted = []
     for prod in get_main_products(species):
         label = re.sub(r'(\S)([+-]+)', r'\1$^{\2}$', prod)
@@ -103,6 +103,7 @@ def format_label(species):
 
 
 def make_coeff_nice(coeff, max_denom):
+    """Convert a fraction into a string while limiting the denominator"""
     frac = abs(Fraction(coeff).limit_denominator(max_denom))
     if frac.numerator == frac.denominator:
         return ''
@@ -110,7 +111,7 @@ def make_coeff_nice(coeff, max_denom):
 
 
 def add_numbers(ax, text):
-    """Add phase indexes to the different domains of a Pourbaix diagram."""
+    """Add number identifiers to the different domains of a Pourbaix diagram."""
     import matplotlib.patheffects as pfx
     for i, (x, y, _) in enumerate(text):
         txt = ax.text(
@@ -123,7 +124,7 @@ def add_numbers(ax, text):
 
 
 def add_labels(ax, text):
-    """Add phase indexes to the different domains of a Pourbaix diagram."""
+    """Add phase labels to the different domains of a Pourbaix diagram."""
     import matplotlib.patheffects as pfx
     for i, (x, y, species) in enumerate(text):
         label = format_label(species)
@@ -567,7 +568,14 @@ class Pourbaix:
         return pour, meta, text, domains
 
     def get_phase_boundaries(self, phrange, urange, domains, tol=1e-6):
-        """Plane intersection method for finding phases boundaries."""
+        """Plane intersection method for finding
+           the boundaries between phases seen in the final plot.
+        
+        Returns a list of tuples, each representing a single boundary,
+        of the form ([[x1, x2], [y1, y2]], [id1, id2]), namely the
+        x and y coordinates of the simplices connected by the boundary
+        and the id's of the phases at each side of the boundary.
+        """
         from itertools import combinations
         from collections import defaultdict
 
@@ -581,7 +589,7 @@ class Pourbaix:
         # Given x=pH, y=U, z=E_pbx=-DeltaG, each plane has expression:
         # _vector[2]*x + _vector[1]*y + z = -_vector[0]
         # The region where the target material is stable
-        # (id=-1, if present) is delimited by the xy plane (z=0)
+        # (id=-1, if present) is delimited by the xy plane (Epbx=0)
         for d in domains:
             if d == -1:
                 plane = np.array([0.0, 0.0, 1.0])
