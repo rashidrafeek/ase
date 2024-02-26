@@ -10,4 +10,4 @@ print(phase.get_free_energy(1.0, 9.0))
 pbx.get_pourbaix_energy(0.0, 10.0, verbose=True)
 Urange = [-2, 2]
 pHrange = [0, 14]
-pbx.plot(show=False, include_text=True, savefig='pbx-ZnO.png')
+pbx.plot(show=False, include_text=True, savefig='zno.png')
