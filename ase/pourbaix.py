@@ -316,7 +316,7 @@ class RedOx:
             The reactant and products excluded H2O, protons and electrons.
 
         coeffs
-            The stoichiometric coefficients of the species.
+            The stoichiometric coefficients of the above species.
             Positive coefficients are associated with the products,
             negative coefficients with the reactants.
 
@@ -326,6 +326,10 @@ class RedOx:
         conc
             The concentration of ionic species.
             
+        counter: str
+            The counter electrode. Default: SHE.
+            available options: SHE, RHE, AgCl, Pt.
+
 
         Relevant methods
         ----------------
@@ -453,7 +457,6 @@ class Pourbaix:
     phases: list[RedOx]
         the available decomposition reactions of the target material
         into its competing phases as a list of RedOx objects.
-        Each reaction can be accessed through its index.
 
     """
     def __init__(self,
@@ -503,8 +506,11 @@ class Pourbaix:
         energy, index = self._get_pourbaix_energy(U, pH)
         phase = self.phases[index]
         if verbose:
-            print(f'Stable phase: \n{phase.equation()}'
-                  f'\nEnergy: {energy} eV')
+            if energy <= 0.0:
+                print(f'{self.material.name} is stable.')
+            else:
+                print(f'Stable phase: \n{phase.equation()}')
+            print(f'Energy: {energy:.3f} eV')
         return energy, phase
 
     def get_equations(self, contains: Union[str,None]=None):
@@ -713,10 +719,6 @@ class Pourbaix:
         for coords,_ in bounds:
             ax.plot(coords[0], coords[1], '-', c='k', lw=1.0)
 
-        if include_text:
-            plt.subplots_adjust(right=0.75)
-            add_text(text, offset=0.05)
-
         if labeltype == 'numbers':
             add_numbers(ax, text)
         elif labeltype == 'phases':
@@ -750,6 +752,12 @@ class Pourbaix:
         for axis in ['top','bottom','left','right']:
             ax.spines[axis].set_linewidth(1.5)
 
+        if include_text:
+            plt.subplots_adjust(right=0.75)
+            add_text(text, offset=0.05)
+            return ax
+        
+        plt.tight_layout()
         return ax
 
     def plot(self,
@@ -760,7 +768,7 @@ class Pourbaix:
              figsize=[12, 6],
              normalize=True,
              include_text=True,
-             include_h2o=True,
+             include_h2o=False,
              labeltype='numbers',
              cmap="RdYlGn_r",
              savefig=None,
@@ -822,8 +830,6 @@ class Pourbaix:
              include_text,
              include_h2o,
              labeltype, cmap)
-
-        plt.tight_layout()
 
         if savefig:
             plt.savefig(savefig)
