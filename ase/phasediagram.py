@@ -9,6 +9,7 @@ from scipy.spatial import ConvexHull
 
 import ase.units as units
 from ase.formula import Formula
+from ase.utils import deprecated
 
 _solvated: List[Tuple[str, Dict[str, int], float, bool, float]] = []
 
@@ -122,6 +123,7 @@ def print_results(results):
     print('------------------------------------')
 
 
+@deprecated(DeprecationWarning('Please use ase.pourbaix.Pourbaix'))
 class Pourbaix:
     def __init__(self, references, formula=None, T=300.0, **kwargs):
         """Pourbaix object.
