@@ -239,14 +239,15 @@ class Species:
         self.mu = None
 
     def get_chemsys(self):
-        """Get the possible combinations of elements based on the stoichiometry.
-           Useful for database queries.
+        """Get the possible combinations of elements based
+           on the stoichiometry. Useful for database queries.
         """
         elements = set(self.count.keys())
         elements.update(['H', 'O'])
         chemsys = list(
             chain.from_iterable(
-                [combinations(elements, i+1) for i,_ in enumerate(list(elements))]
+                [combinations(elements, i+1) \
+                for i, _ in enumerate(list(elements))]
             )
         )
         return chemsys
@@ -286,9 +287,10 @@ class Species:
     def set_chemical_potential(self, energy, refs=None):
         """Set the chemical potential of the species.
 
-        If a reference dictionary with the elements and their chemical potentials
-        is provided, the chemical potential will be calculated by as a formation
-        energy. Otherwise the provided energy will be used directly as the
+        If a reference dictionary with the elements and their
+        chemical potentials is provided, the chemical potential
+        will be calculated as a formation energy.
+        Otherwise the provided energy will be used directly as the
         chemical potential.
         """
         self.energy = energy
@@ -342,7 +344,8 @@ class RedOx:
             Print the chemical equation of the reaction.
 
         get_free_energy(U, pH):
-            Obtain the reaction free energy at a given applied potential U and pH
+            Obtain the reaction free energy at a given
+            applied potential U and pH.
 
         """
 
@@ -383,7 +386,7 @@ class RedOx:
         if counter in ['RHE', 'Pt']:
             pH_corr += n_e * alpha
             if counter == 'Pt' and n_e < 0:
-                gibbs_corr +=  n_e * 0.5 * PREDEF_ENERGIES['H2O']
+                gibbs_corr += n_e * 0.5 * PREDEF_ENERGIES['H2O']
         if counter == 'AgCl':
             gibbs_corr -= n_e * U_STD_AGCL
         if counter == 'SCE':
@@ -408,8 +411,9 @@ class RedOx:
         return "  ➜  ".join([" + ".join(reactants), " + ".join(products)])
 
     def get_free_energy(self, U, pH):
-        """Evaluate the reaction free energy at a given applied potential U and pH"""
-        return self._vector[0] + self._vector[1]*U + self._vector[2]*pH
+        """Evaluate the reaction free energy
+           at a given applied potential U and pH"""
+        return self._vector[0] + self._vector[1] * U + self._vector[2] * pH
 
 
 class Pourbaix:
@@ -464,12 +468,11 @@ class Pourbaix:
 
     """
     def __init__(self,
-            material_name:str,
-            refs_dct:dict,
-            T:float=298.15,
-            conc:float=1.0e-6,
-            counter:str='SHE'
-        ):
+                 material_name: str,
+                 refs_dct: dict,
+                 T: float=298.15,
+                 conc: float=1.0e-6,
+                 counter: str='SHE'):
 
         refs = initialize_refs(refs_dct)
 
