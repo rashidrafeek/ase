@@ -34,7 +34,7 @@ def initialize_refs(refs_dct):
 
 
 def get_product_combos(reactant, refs):
-    """Obtain all possible combination of products.
+    """Obtain all possible combinations of products.
 
     Obtain - from the available references and based
     on the stoichiometry of the target material (reactant) -

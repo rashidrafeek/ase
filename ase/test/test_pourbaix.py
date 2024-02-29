@@ -4,6 +4,7 @@ import pytest
 
 from ase.phasediagram import Pourbaix, solvated
 from ase.pourbaix import Pourbaix as Pourbaix_new
+from ase.pourbaix import get_main_products
 
 
 def test_pourbaix():
@@ -44,7 +45,7 @@ def test_new_pourbaix():
     phases, diagram, text, _ = pbx.get_diagrams(U, pH)
 
     # Verify that the stability domains are the expected ones
-    names = [txt[2][0] for txt in text]
+    names = [get_main_products(txt[2])[0] for txt in text]
     for name in ['Zn', 'ZnO', 'Zn++(aq)', 'HZnO2-(aq)', 'ZnO2--(aq)']:
         assert name in names
     assert 'ZnOH+(aq)' not in names
