@@ -733,21 +733,21 @@ class Pourbaix:
 
         ax.set_xlim(*pHrange)
         ax.set_ylim(*Urange)
-        ax.set_xlabel('pH', fontsize=18)
-        ax.set_ylabel(r'$\it{U}$' + f' vs. {self.counter} (V)', fontsize=18)
+        ax.set_xlabel('pH', fontsize=22)
+        ax.set_ylabel(r'$\it{U}$' + f' vs. {self.counter} (V)', fontsize=22)
         ax.set_xticks(np.arange(pHrange[0], pHrange[1] + 1, 2))
         ax.set_yticks(np.arange(Urange[0], Urange[1] + 1, 1))
         ax.xaxis.set_tick_params(width=1.5, length=5)
         ax.yaxis.set_tick_params(width=1.5, length=5)
-        plt.xticks(fontsize=18)
-        plt.yticks(fontsize=18)
+        plt.xticks(fontsize=22)
+        plt.yticks(fontsize=22)
 
-        ticks = np.linspace(vmin, vmax, num=9)
+        ticks = np.linspace(vmin, vmax, num=5)
         cbar.set_ticks(ticks)
         cbar.set_ticklabels(ticks)
         cbar.outline.set_linewidth(1.5)
-        cbar.ax.tick_params(labelsize=18, width=1.5, length=5)
-        cbar.ax.set_ylabel(r'$E_{pbx}$ (eV/atom)', fontsize=18)
+        cbar.ax.tick_params(labelsize=20, width=1.5, length=5)
+        cbar.ax.set_ylabel(r'$E_{pbx}$ (eV/atom)', fontsize=20)
 
         for axis in ['top','bottom','left','right']:
             ax.spines[axis].set_linewidth(1.5)
@@ -755,10 +755,10 @@ class Pourbaix:
         if include_text:
             plt.subplots_adjust(right=0.75)
             add_text(text, offset=0.05)
-            return ax
+            return ax, cbar
         
         plt.tight_layout()
-        return ax
+        return ax, cbar
 
     def plot(self,
              Urange=[-2, 2],
@@ -823,7 +823,7 @@ class Pourbaix:
             Spawn a window showing the diagram.
 
         """
-        ax = self._draw_diagram_axes(
+        ax, colorbar = self._draw_diagram_axes(
              Urange, pHrange,
              npoints, cap,
              figsize, normalize,
