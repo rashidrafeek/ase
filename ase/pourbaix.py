@@ -1,11 +1,10 @@
+import re
 from collections import Counter
 from itertools import product, chain, combinations
 from typing import Union
-from fractions import Fraction
-import re
 
+from fractions import Fraction
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 from ase.units import kB
@@ -81,7 +80,7 @@ def get_main_products(species):
     """Obtain the reaction products excluded protons,
        water and electrons.
     """
-    return [spec for spec, coef in species.items() 
+    return [spec for spec, coef in species.items()
             if coef > 0 and spec not in ['H+', 'H2O', 'e-']]
 
 
@@ -115,7 +114,7 @@ def add_numbers(ax, text):
     import matplotlib.patheffects as pfx
     for i, (x, y, _) in enumerate(text):
         txt = ax.text(
-            y, x, f'{i}', 
+            y, x, f'{i}',
             fontsize=20,
             horizontalalignment='center'
         )
@@ -177,7 +176,7 @@ def add_redox_lines(axes, pH, counter, color='k'):
         'ls': '--',
         'zorder': 2
     }
-    if counter in ['SHE', 'AgCl', 'SCE']:    
+    if counter in ['SHE', 'AgCl', 'SCE']:
         slope = -59.2e-3
         axes.plot(pH, slope*pH + corr[counter], **kwargs)
         axes.plot(pH, slope*pH + const + corr[counter], **kwargs)
@@ -202,13 +201,13 @@ class Species:
         Acqueous species are specified by expliciting
         all the positive or negative charges and by appending ``(aq)``.
         Parentheses for grouping functional groups are acceptable.
-            e.g. 
+            e.g.
                 Be3(OH)3[3+]    ➜  wrong
                 Be3(OH)3+++     ➜  wrong
                 Be3(OH)3+++(aq) ➜  correct
                 Be3O3H3+++(aq)  ➜  correct
     fmt: str
-        Formula formatting according to the available options in 
+        Formula formatting according to the available options in
         ase.formula.Formula
 
     """
@@ -325,7 +324,7 @@ class RedOx:
 
         conc
             The concentration of ionic species.
-            
+
         counter: str
             The counter electrode. Default: SHE.
             available options: SHE, RHE, AgCl, Pt.
@@ -363,8 +362,8 @@ class RedOx:
 
         const_corr, pH_corr = self.get_counter_correction(counter, alpha)
         self._vector = [
-            float(const_term + const_corr), 
-            float(U_term), 
+            float(const_term + const_corr),
+            float(U_term),
             float(pH_term + pH_corr)
         ]
 
@@ -460,7 +459,7 @@ class Pourbaix:
 
     """
     def __init__(self,
-            material_name:str, 
+            material_name:str,
             refs_dct:dict,
             T:float=298.15,
             conc:float=1.0e-6,
@@ -498,7 +497,7 @@ class Pourbaix:
         """Evaluate the Pourbaix energy, print info about
         the most stable phase and the corresponding energy at
         a given potential U and pH.
-        
+
         The Pourbaix energy represents the energy of the target material
         relative to the most stable competing phase. If negative,
         the target material can be considered as stable.
@@ -527,18 +526,18 @@ class Pourbaix:
 
     def get_diagrams(self, U, pH):
         """Actual evaluation of the complete diagram
-        
+
         Returns
         -------
 
-        pour: 
+        pour:
             The stability domains of the diagram on the pH vs. U grid.
             domains are represented by indexes (as integers)
             that map to Pourbaix.phases
             the target material is stable (index=-1)
 
         meta:
-            The Pourbaix energy on the pH vs. U grid. 
+            The Pourbaix energy on the pH vs. U grid.
 
         text:
             The coordinates and phases information for
@@ -576,7 +575,7 @@ class Pourbaix:
     def get_phase_boundaries(self, phrange, urange, domains, tol=1e-6):
         """Plane intersection method for finding
            the boundaries between phases seen in the final plot.
-        
+
         Returns a list of tuples, each representing a single boundary,
         of the form ([[x1, x2], [y1, y2]], [id1, id2]), namely the
         x and y coordinates of the simplices connected by the boundary
@@ -671,7 +670,7 @@ class Pourbaix:
             Urange, pHrange,
             npoints, cap,
             figsize, normalize,
-            include_text, 
+            include_text,
             include_h2o,
             labeltype, cmap):
         """Backend for drawing Pourbaix diagrams"""
@@ -706,7 +705,7 @@ class Pourbaix:
             origin='lower', aspect='auto',
             interpolation='gaussian'
         )
-            
+
         cbar = plt.gcf().colorbar(
                colorplot,
                ax=ax,
@@ -725,9 +724,9 @@ class Pourbaix:
             add_labels(ax, text)
         elif labeltype == None:
             pass
-        else: 
+        else:
             raise ValueError("The provided label type doesn't exist")
-            
+
         if include_h2o:
             add_redox_lines(ax, pH, self.counter, 'w')
 
@@ -756,7 +755,7 @@ class Pourbaix:
             plt.subplots_adjust(right=0.75)
             add_text(text, offset=0.05)
             return ax, cbar
-        
+
         plt.tight_layout()
         return ax, cbar
 
@@ -790,7 +789,7 @@ class Pourbaix:
 
         cap: float/list
             If float, the limit (in both the positive and negative direction)
-            of the Pourbaix energy colormap. 
+            of the Pourbaix energy colormap.
             If list, the first and second value determine the colormap limits.
 
         figsize: list
