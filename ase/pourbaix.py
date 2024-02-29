@@ -359,8 +359,9 @@ class RedOx:
             self.species[spec.name] = coef
             amounts = spec.balance_electrochemistry()
 
-            const_term += coef * ( \
-                spec.mu + alpha * (spec.aq * np.log10(conc)))
+            const_term += coef * (
+                spec.mu + alpha * (spec.aq * np.log10(conc))
+            )
             pH_term += - coef * alpha * amounts[1]
             U_term += - coef * amounts[2]
 
@@ -815,7 +816,7 @@ class Pourbaix:
 
         labeltype: str/None
             The labeling style of the diagram domains. Options:
-                'numbers': just add numbers associated with the 
+                'numbers': just add numbers associated with the
                            different phases, the latter shown
                            on the right if include_text=True.
                 'phases':  Write the main products directly on the diagram.
