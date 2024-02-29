@@ -36,7 +36,7 @@ def test_new_pourbaix():
         'ZnOH+(aq)': -3.4125107,
         'HZnO2-(aq)': -4.8087349,
         'ZnO2--(aq)': -4.03387383
-    } 
+    }
 
     U = np.linspace(-2, 2, 5)
     pH = np.linspace(0, 14, 8)

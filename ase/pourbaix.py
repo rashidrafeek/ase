@@ -246,8 +246,8 @@ class Species:
         elements.update(['H', 'O'])
         chemsys = list(
             chain.from_iterable(
-                [combinations(elements, i+1) \
-                for i, _ in enumerate(list(elements))]
+                [combinations(elements, i + 1)
+                 for i, _ in enumerate(list(elements))]
             )
         )
         return chemsys
@@ -470,9 +470,9 @@ class Pourbaix:
     def __init__(self,
                  material_name: str,
                  refs_dct: dict,
-                 T: float=298.15,
-                 conc: float=1.0e-6,
-                 counter: str='SHE'):
+                 T: float = 298.15,
+                 conc: float = 1.0e-6,
+                 counter: str = 'SHE'):
 
         refs = initialize_refs(refs_dct)
 
@@ -520,7 +520,7 @@ class Pourbaix:
             print(f'Energy: {energy:.3f} eV')
         return energy, phase
 
-    def get_equations(self, contains: Union[str,None]=None):
+    def get_equations(self, contains: Union[str, None] = None):
         """Print the chemical reactions of the available phases.
 
         the argument `contains' allows to filter for phases containing a
@@ -593,8 +593,8 @@ class Pourbaix:
         from collections import defaultdict
 
         # Planes identifying the diagram frame
-        planes = [(np.array([0.0, 1.0, 0.0]), min(urange),  'b'),  # Bottom
-                  (np.array([0.0, 1.0, 0.0]), max(urange),  't'),  # Top
+        planes = [(np.array([0.0, 1.0, 0.0]), min(urange), 'b'),  # Bottom
+                  (np.array([0.0, 1.0, 0.0]), max(urange), 't'),  # Top
                   (np.array([1.0, 0.0, 0.0]), min(phrange), 'l'),  # Left
                   (np.array([1.0, 0.0, 0.0]), max(phrange), 'r')]  # Right
 
@@ -628,10 +628,10 @@ class Pourbaix:
                 Epbx = self._get_pourbaix_energy(pt[1], pt[0])[0]
                 if pt[2] >= -tol and \
                    np.isclose(Epbx, pt[2], rtol=0, atol=tol) and \
-                   min(phrange)-tol <= pt[0] <= max(phrange)+tol and \
-                   min(urange)-tol  <= pt[1] <= max(urange)+tol:
-                        simplex = np.round(pt[:2], 3)
-                        simplices.append((simplex, ids))
+                   min(phrange) - tol <= pt[0] <= max(phrange) + tol and \
+                   min(urange) - tol <= pt[1] <= max(urange) + tol:
+                    simplex = np.round(pt[:2], 3)
+                    simplices.append((simplex, ids))
 
             # triplets containing parallel planes raise a LinAlgError
             # and are automatically excluded.
@@ -671,7 +671,6 @@ class Pourbaix:
                 list(phases.astype(int))
             ))
         return segments
-
 
     def _draw_diagram_axes(
             self,
@@ -715,22 +714,22 @@ class Pourbaix:
         )
 
         cbar = plt.gcf().colorbar(
-               colorplot,
-               ax=ax,
-               pad=0.02
+            colorplot,
+            ax=ax,
+            pad=0.02
         )
 
         bounds = self.get_phase_boundaries(
             pHrange, Urange, domains
         )
-        for coords,_ in bounds:
+        for coords, _ in bounds:
             ax.plot(coords[0], coords[1], '-', c='k', lw=1.0)
 
         if labeltype == 'numbers':
             add_numbers(ax, text)
         elif labeltype == 'phases':
             add_labels(ax, text)
-        elif labeltype == None:
+        elif labeltype is None:
             pass
         else:
             raise ValueError("The provided label type doesn't exist")
@@ -756,7 +755,7 @@ class Pourbaix:
         cbar.ax.tick_params(labelsize=20, width=1.5, length=5)
         cbar.ax.set_ylabel(r'$E_{pbx}$ (eV/atom)', fontsize=20)
 
-        for axis in ['top','bottom','left','right']:
+        for axis in ['top', 'bottom', 'left', 'right']:
             ax.spines[axis].set_linewidth(1.5)
 
         if include_text:
@@ -816,8 +815,9 @@ class Pourbaix:
 
         labeltype: str/None
             The labeling style of the diagram domains. Options:
-                'numbers': just add numbers associated with the different phases,
-                           the latter shown on the right if include_text=True.
+                'numbers': just add numbers associated with the 
+                           different phases, the latter shown
+                           on the right if include_text=True.
                 'phases':  Write the main products directly on the diagram.
                            These labels can be dragged around if the placement
                            is unsatisfactory. Redundant if include_text=True.
@@ -831,12 +831,12 @@ class Pourbaix:
 
         """
         ax, colorbar = self._draw_diagram_axes(
-             Urange, pHrange,
-             npoints, cap,
-             figsize, normalize,
-             include_text,
-             include_h2o,
-             labeltype, cmap)
+            Urange, pHrange,
+            npoints, cap,
+            figsize, normalize,
+            include_text,
+            include_h2o,
+            labeltype, cmap)
 
         if savefig:
             plt.savefig(savefig)
