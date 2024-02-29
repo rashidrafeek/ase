@@ -35,7 +35,7 @@ def initialize_refs(refs_dct):
 
 def get_product_combos(reactant, refs):
     """Obtain, from the available references, different combinations
-       of products that are compatible with valid (electro)chemical reactions.
+       of products that are compatible with valid electrochemical reactions.
     """
     array = [[] for i in range(len(reactant.elements))]
     for ref in refs.values():
