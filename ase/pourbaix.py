@@ -24,7 +24,7 @@ U_STD_SCE = 0.244   # Standard redox potential of SCE electrode
 
 
 def initialize_refs(refs_dct):
-    """Convert dictionary entries to ``Species`` instances"""
+    """Convert dictionary entries to Species instances"""
     refs = {}
     for name, energy in refs_dct.items():
         spec = Species(name)
@@ -457,7 +457,7 @@ class Pourbaix:
         obtain the energy of the target material
         relative to the most stable phase at a given potential U and pH.
         If negative, the target material can be regarded as stable.
-    plot(**kwargs)
+    plot(...)
         plot a complete Pourbaix diagram in a given pH and potential window.
 
 
