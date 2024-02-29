@@ -11,10 +11,10 @@ from ase.units import kB
 from ase.formula import Formula
 
 
-CONST = kB * np.log(10) # Nernst constant
+CONST = kB * np.log(10)  # Nernst constant
 
-PREDEF_ENERGIES = {     # Default chemical potentials
-    'H+': 0.0,          # for water, protons and electrons
+PREDEF_ENERGIES = {      # Default chemical potentials
+    'H+': 0.0,           # for water, protons and electrons
     'e-': 0.0,
     'H2O': -2.4583
 }
@@ -69,7 +69,7 @@ def get_phases(reactant, refs, T, conc, counter, tol=1e-3):
 
     if len(phase_matrix) == 0:
         raise ValueError(
-            "No valid decomposition pathways have been found" + \
+            "No valid decomposition pathways have been found" +
             " given this set of references."
         )
 
@@ -93,9 +93,9 @@ def format_label(species):
         for symbol in ['+', '-']:
             count = label.count(symbol)
             if count > 1:
-                label = label.replace(count*symbol, f'{count}{symbol}')
+                label = label.replace(count * symbol, f'{count}{symbol}')
             if count == 1:
-                label = label.replace(count*symbol, symbol)
+                label = label.replace(count * symbol, symbol)
         formatted.append(label)
     label = ', '.join(f for f in formatted)
     return label
@@ -128,10 +128,12 @@ def add_labels(ax, text):
     for i, (x, y, species) in enumerate(text):
         label = format_label(species)
         annotation = ax.annotate(
-                label, xy=(y, x), color='w',
-                fontsize=16, horizontalalignment='center'
+            label, xy=(y, x), color='w',
+            fontsize=16, horizontalalignment='center'
         )
-        annotation.set_path_effects([pfx.withStroke(linewidth=2.0, foreground='k')])
+        annotation.set_path_effects(
+            [pfx.withStroke(linewidth=2.0, foreground='k')]
+        )
         annotation.draggable()
         ax.add_artist(annotation)
     return
@@ -153,11 +155,11 @@ def add_text(text, offset=0.0):
         )
     text = "\n".join(textlines)
     plt.gcf().text(
-            0.75 + offset, 0.5,
-            text,
-            fontsize=16,
-            va='center',
-            ha='left')
+        0.75 + offset, 0.5,
+        text,
+        fontsize=16,
+        va='center',
+        ha='left')
     return 0
 
 
@@ -178,8 +180,8 @@ def add_redox_lines(axes, pH, counter, color='k'):
     }
     if counter in ['SHE', 'AgCl', 'SCE']:
         slope = -59.2e-3
-        axes.plot(pH, slope*pH + corr[counter], **kwargs)
-        axes.plot(pH, slope*pH + const + corr[counter], **kwargs)
+        axes.plot(pH, slope * pH + corr[counter], **kwargs)
+        axes.plot(pH, slope * pH + const + corr[counter], **kwargs)
     elif counter in ['Pt', 'RHE']:
         axes.axhline(0 + corr[counter], **kwargs)
         axes.axhline(const + corr[counter], **kwargs)
@@ -189,15 +191,16 @@ def add_redox_lines(axes, pH, counter, color='k'):
 
 
 class Species:
-    """Class representing an individual chemical species, grouping relevant properties.
+    """Class representing an individual chemical species,
+       grouping relevant properties.
 
     Initialization
     --------------
 
     formula: str
         The chemical formula of the species (e.g. ``ZnO``).
-        For solid species, the formula is automatically reduced to the unit formula,
-        and the chemical potential normalized accordingly.
+        For solid species, the formula is automatically reduced to the
+        unit formula, and the chemical potential normalized accordingly.
         Acqueous species are specified by expliciting
         all the positive or negative charges and by appending ``(aq)``.
         Parentheses for grouping functional groups are acceptable.
@@ -228,7 +231,9 @@ class Species:
             self.name = str(reduced)
 
         self._elements = [elem for elem in self.count]
-        self.elements = [elem for elem in self._elements if elem not in ['H', 'O']]
+        self.elements = [
+            elem for elem in self._elements if elem not in ['H', 'O']
+        ]
         self.natoms = sum(self.count.values())
         self.energy = None
         self.mu = None
