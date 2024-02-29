@@ -2,6 +2,7 @@ import math
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
+
 from ase import Atoms
 from ase.cell import Cell
 
@@ -124,9 +125,10 @@ def get_recommended_r_max(cell: Cell, pbc: List[bool]) -> float:
     vol = cell.volume
     for i in range(3):
         if pbc[i]:
-            axb = np.cross(cell[(i + 1) % 3, :],  # type: ignore
-                           cell[(i + 2) % 3, :])  # type: ignore
+            axb = np.cross(cell[(i + 1) % 3, :],  # type: ignore[index]
+                           cell[(i + 2) % 3, :])  # type: ignore[index]
             h = vol / np.linalg.norm(axb)
+            assert isinstance(h, float)  # mypy
             recommended_r_max = min(h / 2 * 0.99, recommended_r_max)
     return recommended_r_max
 

@@ -19,27 +19,35 @@ http://cms.mpi.univie.ac.at/vasp/
 """
 
 import os
-import sys
 import re
-import numpy as np
 import subprocess
+import sys
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Any, Dict, List, Tuple
 from warnings import warn
-from typing import Dict, Any, List, Tuple
 from xml.etree import ElementTree
 
+import numpy as np
+
 import ase
-from ase.io import read, jsonio
-from ase.utils import PurePath
 from ase.calculators import calculator
 from ase.calculators.calculator import Calculator
 from ase.calculators.singlepoint import SinglePointDFTCalculator
 from ase.calculators.vasp.create_input import GenerateVaspInput
+from ase.config import cfg
+from ase.io import jsonio, read
+from ase.utils import PurePath, deprecated
 from ase.vibrations.data import VibrationsData
 
 
-class Vasp(GenerateVaspInput, Calculator):  # type: ignore
+def _prohibit_directory_in_label(args: List, kwargs: Dict[str, Any]) -> bool:
+    if len(args) >= 5 and "/" in args[4]:
+        return True
+    return "/" in kwargs.get("label", "")
+
+
+class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
     """ASE interface for the Vienna Ab initio Simulation Package (VASP),
     with the Calculator interface.
 
@@ -98,6 +106,12 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
     # Can be used later to set some ASE defaults
     default_parameters: Dict[str, Any] = {}
 
+    @deprecated(
+        'Specifying directory in "label" is deprecated, '
+        'use "directory" instead.',
+        category=FutureWarning,
+        callback=_prohibit_directory_in_label,
+    )
     def __init__(self,
                  atoms=None,
                  restart=None,
@@ -107,6 +121,11 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
                  command=None,
                  txt='vasp.out',
                  **kwargs):
+        """
+        .. deprecated:: 3.19.2
+            Specifying directory in ``label`` is deprecated,
+            use ``directory`` instead.
+        """
 
         self._atoms = None
         self.results = {}
@@ -120,23 +139,20 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
 
         # Set directory and label
         self.directory = directory
-        if '/' in label:
-            warn(('Specifying directory in "label" is deprecated, '
-                  'use "directory" instead.'), np.VisibleDeprecationWarning)
-            if self.directory != '.':
-                raise ValueError('Directory redundantly specified though '
-                                 'directory="{}" and label="{}".  '
-                                 'Please omit "/" in label.'.format(
-                                     self.directory, label))
+        if "/" in label:
+            if self.directory != ".":
+                msg = (
+                    'Directory redundantly specified though directory='
+                    f'"{self.directory}" and label="{label}".  Please omit '
+                    '"/" in label.'
+                )
+                raise ValueError(msg)
             self.label = label
         else:
             self.prefix = label  # The label should only contain the prefix
 
         if isinstance(restart, bool):
-            if restart is True:
-                restart = self.label
-            else:
-                restart = None
+            restart = self.label if restart is True else None
 
         Calculator.__init__(
             self,
@@ -177,8 +193,8 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
         else:
             # Search for the environment commands
             for env in self.env_commands:
-                if env in os.environ:
-                    cmd = os.environ[env].replace('PREFIX', self.prefix)
+                if env in cfg:
+                    cmd = cfg[env].replace('PREFIX', self.prefix)
                     if env == 'VASP_SCRIPT':
                         # Make the system python exe run $VASP_SCRIPT
                         exe = sys.executable
@@ -325,7 +341,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
         if errorcode:
             raise calculator.CalculationFailed(
                 '{} in {} returned an error: {:d}'.format(
-                    self.name, self.directory, errorcode))
+                    self.name, Path(self.directory).resolve(), errorcode))
 
         # Read results from calculation
         self.update_atoms(atoms)
@@ -491,7 +507,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
             file = self._indir(f)
             if not file.is_file():
                 raise calculator.ReadError(
-                    'VASP outputfile {} was not found'.format(file))
+                    f'VASP outputfile {file} was not found')
 
         # Build sorting and resorting lists
         self.read_sort()
@@ -519,7 +535,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
         if os.path.isfile(sortfile):
             self.sort = []
             self.resort = []
-            with open(sortfile, 'r') as fd:
+            with open(sortfile) as fd:
                 for line in fd:
                     sort, resort = line.split()
                     self.sort.append(int(sort))
@@ -655,7 +671,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
         >>> outcar = calc.load_file('OUTCAR')  # doctest: +SKIP
         """
         filename = self._indir(filename)
-        with open(filename, 'r') as fd:
+        with open(filename) as fd:
             return fd.readlines()
 
     @contextmanager
@@ -663,7 +679,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
         """Return a file iterator"""
 
         filename = self._indir(filename)
-        with open(filename, 'r') as fd:
+        with open(filename) as fd:
             yield fd
 
     def read_outcar(self, lines=None):
@@ -715,8 +731,8 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
     @property
     def _xml_calc(self) -> SinglePointDFTCalculator:
         if self.__xml_calc is None:
-            raise RuntimeError(('vasprun.xml data has not yet been loaded. '
-                                'Run read_results() first.'))
+            raise RuntimeError('vasprun.xml data has not yet been loaded. '
+                               'Run read_results() first.')
         return self.__xml_calc
 
     @_xml_calc.setter
@@ -774,7 +790,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
         return nelect
 
     def get_k_point_weights(self):
-        filename = self._indir('IBZKPT')
+        filename = 'IBZKPT'
         return self.read_k_point_weights(filename)
 
     def get_dos(self, spin=None, **kwargs):
@@ -987,9 +1003,9 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
                     or (p['lorbit'] is None and q['rwigs'])):
                 magnetic_moments = self._read_magnetic_moments(lines=lines)
             else:
-                warn(('Magnetic moment data not written in OUTCAR (LORBIT<10),'
-                      ' setting magnetic_moments to zero.\nSet LORBIT>=10'
-                      ' to get information on magnetic moments'))
+                warn('Magnetic moment data not written in OUTCAR (LORBIT<10),'
+                     ' setting magnetic_moments to zero.\nSet LORBIT>=10'
+                     ' to get information on magnetic moments')
                 magnetic_moments = np.zeros(len(self.atoms))
         else:
             magnetic_moment = 0.0
@@ -1014,7 +1030,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
         # Read that occurrence
         if nidx > -1:
             for m in range(len(self.atoms)):
-                magnetic_moments[m] = float(lines[nidx + m + 4].split()[4])
+                magnetic_moments[m] = float(lines[nidx + m + 4].split()[-1])
         return magnetic_moments[self.resort]
 
     def _read_magnetic_moment(self, lines=None):
@@ -1022,9 +1038,10 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
         if not lines:
             lines = self.load_file('OUTCAR')
 
-        for n, line in enumerate(lines):
+        for line in lines:
             if 'number of electron  ' in line:
-                magnetic_moment = float(line.split()[-1])
+                _ = line.split()[-1]
+                magnetic_moment = 0.0 if _ == "magnetization" else float(_)
         return magnetic_moment
 
     def read_nbands(self, lines=None):
@@ -1050,6 +1067,16 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
                 if line.rfind('aborting loop') > -1:  # scf failed
                     raise RuntimeError(line.strip())
                     break
+            # VASP 6 actually labels loop exit reason
+            if 'aborting loop' in line:
+                converged = 'because EDIFF is reached' in line
+                # NOTE: 'EDIFF was not reached (unconverged)'
+                #        and
+                #       'because hard stop was set'
+                # will result in unconverged
+                break
+            # determine convergence by attempting to reproduce VASP's
+            # internal logic
             if 'EDIFF  ' in line:
                 ediff = float(line.split()[2])
             if 'total energy-change' in line:
@@ -1077,8 +1104,8 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
                     continue
         # Then if ibrion in [1,2,3] check whether ionic relaxation
         # condition been fulfilled
-        if ((self.int_params['ibrion'] in [1, 2, 3]
-             and self.int_params['nsw'] not in [0])):
+        if (self.int_params['ibrion'] in [1, 2, 3]
+                and self.int_params['nsw'] not in [0]):
             if not self.read_relaxed():
                 converged = False
             else:
@@ -1335,5 +1362,5 @@ def check_atoms_type(atoms: ase.Atoms) -> None:
     """
     if not isinstance(atoms, ase.Atoms):
         raise calculator.CalculatorSetupError(
-            ('Expected an Atoms object, '
-             'instead got object of type {}'.format(type(atoms))))
+            'Expected an Atoms object, '
+            'instead got object of type {}'.format(type(atoms)))

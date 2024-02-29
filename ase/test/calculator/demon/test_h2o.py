@@ -1,9 +1,11 @@
-def test_h2o():
-    import ase.calculators.demon as demon
-    from ase import Atoms
-    from ase.optimize import BFGS
-    import numpy as np
+import numpy as np
 
+import ase.calculators.demon as demon
+from ase import Atoms
+from ase.optimize import BFGS
+
+
+def test_h2o(demon_factory):
     tol = 1.0e-6
 
     # d = 0.9575

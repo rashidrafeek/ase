@@ -1,13 +1,14 @@
 """Binary runner and results class."""
 import os
-from typing import List, Optional, Union
-from pathlib import Path
 import subprocess
 import time
+from pathlib import Path
+from typing import List, Optional, Union
 
 
 class SubprocessRunResults:
     """Results returned from subprocess.run()."""
+
     def __init__(
             self, stdout, stderr, return_code: int,
             process_time: Optional[float] = None):
@@ -75,8 +76,7 @@ class SimpleBinaryRunner:
         time_start: float = time.time()
         result = subprocess.run(execution_list,
                                 env=my_env,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE,
+                                capture_output=True,
                                 cwd=self.directory)
         total_time = time.time() - time_start
         return SubprocessRunResults(

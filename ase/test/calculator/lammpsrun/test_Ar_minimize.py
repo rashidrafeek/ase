@@ -1,7 +1,8 @@
 import pytest
 from numpy.testing import assert_allclose
+
 from ase.cluster.icosahedron import Icosahedron
-from ase.data import atomic_numbers, atomic_masses
+from ase.data import atomic_masses, atomic_numbers
 from ase.optimize import LBFGS
 
 
@@ -34,7 +35,7 @@ def test_Ar_minimize(factory, ar_nc, params):
                         calc.calculate_numerical_forces(ar_nc),
                         atol=1e-4, rtol=1e-4)
 
-        with LBFGS(ar_nc, force_consistent=False) as dyn:
+        with LBFGS(ar_nc) as dyn:
             dyn.run(fmax=1E-6)
 
         assert_allclose(ar_nc.get_potential_energy(), -0.4791815886953914,

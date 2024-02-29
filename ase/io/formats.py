@@ -13,28 +13,25 @@ read_xyz() generator and a write_xyz() function.  This and other
 information can be obtained from ioformats['xyz'].
 """
 
-import io
-import re
 import functools
 import inspect
-import os
-import sys
+import io
 import numbers
+import os
+import re
+import sys
 import warnings
 from pathlib import Path, PurePath
-from typing import (
-    IO, List, Any, Iterable, Tuple, Union, Sequence, Dict, Optional)
+from typing import (IO, Any, Dict, Iterable, List, Optional, Sequence, Tuple,
+                    Union)
 
-if sys.version_info >= (3, 8):
-    from importlib.metadata import entry_points
-else:
-    from importlib_metadata import entry_points
+from importlib.metadata import entry_points
+from importlib import import_module
 
 from ase.atoms import Atoms
-from ase.utils.plugins import ExternalIOFormat
-from importlib import import_module
 from ase.parallel import parallel_function, parallel_generator
-
+from ase.utils import string2index
+from ase.utils.plugins import ExternalIOFormat
 
 PEEK_BYTES = 50000
 
@@ -131,7 +128,7 @@ class IOFormat:
         return self.can_write and 'append' in writefunc.__code__.co_varnames
 
     def __repr__(self) -> str:
-        tokens = ['{}={}'.format(name, repr(value))
+        tokens = [f'{name}={repr(value)}'
                   for name, value in vars(self).items()]
         return 'IOFormat({})'.format(', '.join(tokens))
 
@@ -245,8 +242,10 @@ class IOFormat:
             return match is not None
 
         from fnmatch import fnmatchcase
-        return any(fnmatchcase(data, magic + b'*')  # type: ignore
-                   for magic in self.magic)
+        return any(
+            fnmatchcase(data, magic + b'*')  # type: ignore[operator, type-var]
+            for magic in self.magic
+        )
 
 
 ioformats: Dict[str, IOFormat] = {}  # These will be filled at run-time.
@@ -287,7 +286,7 @@ def define_io_format(name, desc, code, *, module=None, ext=None,
 
     for ext in fmt.extensions:
         if ext in extension2format:
-            raise ValueError('extension "{}" already registered'.format(ext))
+            raise ValueError(f'extension "{ext}" already registered')
         extension2format[ext] = fmt
 
     ioformats[name] = fmt
@@ -306,7 +305,7 @@ def get_ioformat(name: str) -> IOFormat:
 
 def register_external_io_formats(group):
     if hasattr(entry_points(), 'select'):
-        fmt_entry_points = entry_points().select(group=group)  # type: ignore
+        fmt_entry_points = entry_points().select(group=group)
     else:
         fmt_entry_points = entry_points().get(group, ())
 
@@ -329,7 +328,7 @@ def define_external_io_format(entry_point):
         raise TypeError('Wrong type for registering external IO formats '
                         f'in format {entry_point.name}, expected '
                         'ExternalIOFormat')
-    F(entry_point.name, **fmt._asdict(), external=True)  # type: ignore
+    F(entry_point.name, **fmt._asdict(), external=True)
 
 
 # We define all the IO formats below.  Each IO format has a code,
@@ -454,6 +453,14 @@ F('nwchem-out', 'NWChem output file', '+F',
   magic=b'*Northwest Computational Chemistry Package')
 F('octopus-in', 'Octopus input file', '1F',
   module='octopus', glob='inp')
+F('onetep-out', 'ONETEP output file', '+F',
+  module='onetep',
+  magic=b'*Linear-Scaling Ab Initio Total Energy Program*')
+F('onetep-in', 'ONETEP input file', '1F',
+  module='onetep',
+  magic=[b'*lock species ',
+         b'*LOCK SPECIES ',
+         b'*--- INPUT FILE ---*'])
 F('proteindatabank', 'Protein Data Bank', '+F',
   ext='pdb')
 F('png', 'Portable Network Graphics', '1B')
@@ -579,10 +586,10 @@ def open_with_compression(filename: str, mode: str = 'r') -> IO:
 
     if compression == 'gz':
         import gzip
-        return gzip.open(filename, mode=mode)  # type: ignore
+        return gzip.open(filename, mode=mode)  # type: ignore[return-value]
     elif compression == 'bz2':
         import bz2
-        return bz2.open(filename, mode=mode)  # type: ignore
+        return bz2.open(filename, mode=mode)
     elif compression == 'xz':
         import lzma
         return lzma.open(filename, mode)
@@ -591,13 +598,31 @@ def open_with_compression(filename: str, mode: str = 'r') -> IO:
         return open(filename, mode)
 
 
+def is_compressed(fd: io.BufferedIOBase) -> bool:
+    """Check if the file object is in a compressed format."""
+    compressed = False
+
+    # We'd like to avoid triggering imports unless already imported.
+    # Also, Python can be compiled without e.g. lzma so we need to
+    # protect against that:
+    if 'gzip' in sys.modules:
+        import gzip
+        compressed = compressed or isinstance(fd, gzip.GzipFile)
+    if 'bz2' in sys.modules:
+        import bz2
+        compressed = compressed or isinstance(fd, bz2.BZ2File)
+    if 'lzma' in sys.modules:
+        import lzma
+        compressed = compressed or isinstance(fd, lzma.LZMAFile)
+    return compressed
+
+
 def wrap_read_function(read, filename, index=None, **kwargs):
     """Convert read-function to generator."""
     if index is None:
         yield read(filename, **kwargs)
     else:
-        for atoms in read(filename, index, **kwargs):
-            yield atoms
+        yield from read(filename, index, **kwargs)
 
 
 NameOrFile = Union[str, PurePath, IO]
@@ -647,19 +672,19 @@ def write(
         fd = None
         if filename == '-':
             fd = sys.stdout
-            filename = None  # type: ignore
+            filename = None  # type: ignore[assignment]
         elif format is None:
             format = filetype(filename, read=False)
             assert isinstance(format, str)
     else:
-        fd = filename  # type: ignore
+        fd = filename  # type: ignore[assignment]
         if format is None:
             try:
                 format = filetype(filename, read=False)
                 assert isinstance(format, str)
             except UnknownFileTypeError:
                 format = None
-        filename = None  # type: ignore
+        filename = None  # type: ignore[assignment]
 
     format = format or 'json'  # default is json
 
@@ -682,7 +707,7 @@ def _write(filename, fd, format, io, images, parallel=None, append=False,
         images = images[0]
 
     if not io.can_write:
-        raise ValueError("Can't write to {}-format".format(format))
+        raise ValueError(f"Can't write to {format}-format")
 
     # Special case for json-format:
     if format == 'json' and (len(images) > 1 or append):
@@ -807,9 +832,8 @@ def iread(
     format = format or filetype(filename, read=isinstance(filename, str))
     io = get_ioformat(format)
 
-    for atoms in _iread(filename, index, format, io, parallel=parallel,
-                        **kwargs):
-        yield atoms
+    yield from _iread(filename, index, format, io, parallel=parallel,
+                      **kwargs)
 
 
 @parallel_generator
@@ -817,7 +841,7 @@ def _iread(filename, index, format, io, parallel=None, full_output=False,
            **kwargs):
 
     if not io.can_read:
-        raise ValueError("Can't read from {}-format".format(format))
+        raise ValueError(f"Can't read from {format}-format")
 
     if io.single:
         start = index.start
@@ -883,24 +907,6 @@ def match_magic(data: bytes) -> IOFormat:
     raise UnknownFileTypeError('Cannot guess file type from contents')
 
 
-def string2index(string: str) -> Union[int, slice, str]:
-    """Convert index string to either int or slice"""
-    if ':' not in string:
-        # may contain database accessor
-        try:
-            return int(string)
-        except ValueError:
-            return string
-    i: List[Optional[int]] = []
-    for s in string.split(':'):
-        if s == '':
-            i.append(None)
-        else:
-            i.append(int(s))
-    i += (3 - len(i)) * [None]
-    return slice(*i)
-
-
 def filetype(
         filename: NameOrFile,
         read: bool = True,
@@ -920,7 +926,7 @@ def filetype(
 
     orig_filename = filename
     if hasattr(filename, 'name'):
-        filename = filename.name  # type: ignore
+        filename = filename.name
 
     ext = None
     if isinstance(filename, str):
@@ -959,9 +965,9 @@ def filetype(
         if orig_filename == filename:
             fd = open_with_compression(filename, 'rb')
         else:
-            fd = orig_filename  # type: ignore
+            fd = orig_filename  # type: ignore[assignment]
     else:
-        fd = filename    # type: ignore
+        fd = filename
         if fd is sys.stdin:
             return 'json'
 
@@ -972,7 +978,7 @@ def filetype(
         fd.seek(0)
 
     if len(data) == 0:
-        raise UnknownFileTypeError('Empty file: ' + filename)    # type: ignore
+        raise UnknownFileTypeError('Empty file: ' + filename)
 
     try:
         return match_magic(data).name

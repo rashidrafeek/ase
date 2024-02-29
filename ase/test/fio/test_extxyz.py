@@ -1,23 +1,21 @@
-
 # additional tests of the extended XYZ file I/O
 # (which is also included in oi.py test case)
 # maintained by James Kermode <james.kermode@gmail.com>
 
 from pathlib import Path
+
 import numpy as np
 import pytest
 
 import ase.io
-from ase.calculators.singlepoint import SinglePointCalculator
-from ase.io import extxyz
 from ase.atoms import Atoms
-from ase.build import bulk
-from ase.io.extxyz import escape
+from ase.build import bulk, molecule
 from ase.calculators.calculator import compare_atoms
 from ase.calculators.emt import EMT
+from ase.calculators.singlepoint import SinglePointCalculator
 from ase.constraints import FixAtoms, FixCartesian
-from ase.stress import full_3x3_to_voigt_6_stress
-from ase.build import molecule
+from ase.io import extxyz
+from ase.io.extxyz import escape
 
 # array data of shape (N, 1) squeezed down to shape (N, ) -- bug fixed
 # in commit r4541
@@ -194,7 +192,7 @@ def test_complex_key_val():
     expected_dict = {
         'str': 'astring',
         'quot': "quoted value",
-        'quote_special': u"a_to_Z_$%%^&*",
+        'quote_special': "a_to_Z_$%%^&*",
         'escaped_quote': 'esc"aped',
         'true_value': True,
         'false_value': False,
@@ -245,7 +243,7 @@ def test_complex_key_val():
     # Round trip through a file with complex line.
     # Create file with the complex line and re-read it afterwards.
     with open('complex.xyz', 'w', encoding='utf-8') as f_out:
-        f_out.write('1\n{}\nH 1.0 1.0 1.0'.format(complex_xyz_string))
+        f_out.write(f'1\n{complex_xyz_string}\nH 1.0 1.0 1.0')
     complex_atoms = ase.io.read('complex.xyz')
 
     # test all keys end up in info, as expected
@@ -300,16 +298,11 @@ def test_stress():
     atoms.cell = [10, 10, 10]
     atoms.pbc = True
 
-    # array with clashing name
-    atoms.new_array('stress', np.arange(6, dtype=float))
     atoms.calc = EMT()
     a_stress = atoms.get_stress()
     atoms.write('tmp.xyz')
     b = ase.io.read('tmp.xyz')
     assert abs(b.get_stress() - a_stress).max() < 1e-6
-    assert abs(b.arrays['stress'] - np.arange(6, dtype=float)).max() < 1e-6
-    b_stress = b.info['stress']
-    assert abs(full_3x3_to_voigt_6_stress(b_stress) - a_stress).max() < 1e-6
 
 
 def test_json_scalars():
@@ -318,7 +311,7 @@ def test_json_scalars():
     a.info['val_2'] = 42.0  # was np.float but that's the same.  Can remove
     a.info['val_3'] = np.int64(42)
     a.write('tmp.xyz')
-    with open('tmp.xyz', 'r') as fd:
+    with open('tmp.xyz') as fd:
         comment_line = fd.readlines()[1]
     assert ("val_1=42.0" in comment_line
             and "val_2=42.0" in comment_line

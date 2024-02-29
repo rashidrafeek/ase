@@ -1,5 +1,13 @@
+<<<<<<< HEAD
 from ase.phasediagram import solvated
 from ase.pourbaix import Pourbaix
+=======
+# creates: zno.png
+import matplotlib.pyplot as plt
+import numpy as np
+
+from ase.phasediagram import Pourbaix, solvated
+>>>>>>> master
 
 refs = solvated('Zn')
 refs += [('Zn', 0.0), ('ZnO', -3.323), ('ZnO2(aq)', -2.921)]

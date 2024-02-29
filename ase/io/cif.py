@@ -6,22 +6,21 @@ global blocks, nested loops and multi-data values are not supported.
 The "latin-1" encoding is required by the IUCR specification.
 """
 
+import collections.abc
 import io
 import re
 import shlex
 import warnings
-from typing import Dict, List, Tuple, Optional, Union, Iterator, Any, Sequence
-import collections.abc
+from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
 from ase import Atoms
 from ase.cell import Cell
-from ase.spacegroup import crystal
-from ase.spacegroup.spacegroup import spacegroup_from_data, Spacegroup
 from ase.io.cif_unicode import format_unicode, handle_subscripts
+from ase.spacegroup import crystal
+from ase.spacegroup.spacegroup import Spacegroup, spacegroup_from_data
 from ase.utils import iofunction
-
 
 rhombohedral_spacegroups = {146, 148, 155, 160, 161, 166, 167}
 
@@ -51,7 +50,7 @@ def convert_value(value: str) -> CIFDataValue:
         return float(value[:value.index('(')])  # strip off uncertainties
     elif re.match(r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\(\d+$',
                   value):
-        warnings.warn('Badly formed number: "{0}"'.format(value))
+        warnings.warn(f'Badly formed number: "{value}"')
         return float(value[:value.index('(')])  # strip off uncertainties
     else:
         return handle_subscripts(value)
@@ -118,6 +117,8 @@ def parse_cif_loop_data(lines: List[str],
         if line.startswith('#'):
             continue
 
+        line = line.split(' #')[0]
+
         if line.startswith(';'):
             moretokens = [parse_multiline_string(lines, line)]
         else:
@@ -133,15 +134,16 @@ def parse_cif_loop_data(lines: List[str],
             for i, token in enumerate(tokens):
                 columns[i].append(convert_value(token))
         else:
-            warnings.warn('Wrong number {} of tokens, expected {}: {}'
-                          .format(len(tokens), ncolumns, tokens))
+            warnings.warn(f'Wrong number {len(tokens)} of tokens, '
+                          f'expected {ncolumns}: {tokens}')
 
         # (Due to continue statements we cannot move this to start of loop)
         tokens = []
 
     if tokens:
         assert len(tokens) < ncolumns
-        raise RuntimeError('CIF loop ended unexpectedly with incomplete row')
+        raise RuntimeError('CIF loop ended unexpectedly with incomplete row: '
+                           f'{tokens}, expected {ncolumns} tokens')
 
     return columns
 
@@ -158,7 +160,7 @@ def parse_loop(lines: List[str]) -> Dict[str, List[CIFDataValue]]:
     columns_dict = {}
     for i, header in enumerate(headers):
         if header in columns_dict:
-            warnings.warn('Duplicated loop tags: {0}'.format(header))
+            warnings.warn(f'Duplicated loop tags: {header}')
         else:
             columns_dict[header] = columns[i]
     return columns_dict
@@ -189,7 +191,7 @@ def parse_items(lines: List[str], line: str) -> Dict[str, CIFData]:
         elif line.startswith(';'):
             parse_multiline_string(lines, line)
         else:
-            raise ValueError('Unexpected CIF file entry: "{0}"'.format(line))
+            raise ValueError(f'Unexpected CIF file entry: "{line}"')
     return tags
 
 
@@ -350,22 +352,27 @@ class CIFBlock(collections.abc.Mapping):
 
     def get_spacegroup(self, subtrans_included) -> Spacegroup:
         # XXX The logic in this method needs serious cleaning up!
-        # The setting needs to be passed as either 1 or two, not None (default)
         no = self._get_spacegroup_number()
+        if isinstance(no, str):
+            # If the value was specified as "key  'value'" with ticks,
+            # then "integer values" become strings and we'll have to
+            # manually convert it:
+            no = int(no)
+
         hm_symbol = self._get_spacegroup_name()
         sitesym = self._get_sitesym()
 
-        setting = 1
-        spacegroup = 1
         if sitesym:
             # Special cases: sitesym can be None or an empty list.
             # The empty list could be replaced with just the identity
             # function, but it seems more correct to try to get the
             # spacegroup number and derive the symmetries for that.
             subtrans = [(0.0, 0.0, 0.0)] if subtrans_included else None
+
             spacegroup = spacegroup_from_data(
-                no=no, symbol=hm_symbol, sitesym=sitesym, subtrans=subtrans,
-                setting=setting)
+                no=no, symbol=hm_symbol, sitesym=sitesym,
+                subtrans=subtrans,
+                setting=1)  # should the setting be passed from somewhere?
         elif no is not None:
             spacegroup = no
         elif hm_symbol is not None:
@@ -375,6 +382,7 @@ class CIFBlock(collections.abc.Mapping):
 
         setting_std = self._get_setting()
 
+        setting = 1
         setting_name = None
         if '_symmetry_space_group_setting' in self:
             assert setting_std is not None
@@ -393,14 +401,14 @@ class CIFBlock(collections.abc.Mapping):
                     setting = 2
                 else:
                     warnings.warn(
-                        'unexpected crystal system %r for space group %r' % (
-                            setting_name, spacegroup))
+                        f'unexpected crystal system {repr(setting_name)} '
+                        f'for space group {repr(spacegroup)}')
             # FIXME - check for more crystal systems...
             else:
                 warnings.warn(
-                    'crystal system %r is not interpreted for space group %r. '
-                    'This may result in wrong setting!' % (
-                        setting_name, spacegroup))
+                    f'crystal system {repr(setting_name)} is not '
+                    f'interpreted for space group {repr(spacegroup)}. '
+                    'This may result in wrong setting!')
 
         spg = Spacegroup(spacegroup, setting)
         if no is not None:
@@ -561,44 +569,17 @@ def parse_cif_pycodcif(fileobj) -> Iterator[CIFBlock]:
         yield CIFBlock(datablock['name'], tags)
 
 
-def read_cif(fileobj, index, store_tags=False, primitive_cell=False,
-             subtrans_included=True, fractional_occupancies=True,
-             reader='ase') -> Iterator[Atoms]:
-    """Read Atoms object from CIF file. *index* specifies the data
-    block number or name (if string) to return.
-
-    If *index* is None or a slice object, a list of atoms objects will
-    be returned. In the case of *index* is *None* or *slice(None)*,
-    only blocks with valid crystal data will be included.
-
-    If *store_tags* is true, the *info* attribute of the returned
-    Atoms object will be populated with all tags in the corresponding
-    cif data block.
-
-    If *primitive_cell* is true, the primitive cell will be built instead
-    of the conventional cell.
-
-    If *subtrans_included* is true, sublattice translations are
-    assumed to be included among the symmetry operations listed in the
-    CIF file (seems to be the common behaviour of CIF files).
-    Otherwise the sublattice translations are determined from setting
-    1 of the extracted space group.  A result of setting this flag to
-    true, is that it will not be possible to determine the primitive
-    cell.
-
-    If *fractional_occupancies* is true, the resulting atoms object will be
-    tagged equipped with a dictionary `occupancy`. The keys of this dictionary
-    will be integers converted to strings. The conversion to string is done
-    in order to avoid troubles with JSON encoding/decoding of the dictionaries
-    with non-string keys.
-    Also, in case of mixed occupancies, the atom's chemical symbol will be
-    that of the most dominant species.
-
-    String *reader* is used to select CIF reader. Value `ase` selects
-    built-in CIF reader (default), while `pycodcif` selects CIF reader based
-    on `pycodcif` package.
-    """
+def iread_cif(
+    fileobj,
+    index=-1,
+    store_tags: bool = False,
+    primitive_cell: bool = False,
+    subtrans_included: bool = True,
+    fractional_occupancies: bool = True,
+    reader: str = 'ase',
+) -> Iterator[Atoms]:
     # Find all CIF blocks with valid crystal data
+    # TODO: return Atoms of the block name ``index`` if it is a string.
     images = []
     for block in parse_cif(fileobj, reader):
         if not block.has_structure():
@@ -610,15 +591,82 @@ def read_cif(fileobj, index, store_tags=False, primitive_cell=False,
             fractional_occupancies=fractional_occupancies)
         images.append(atoms)
 
+    if index is None or index == ':':
+        index = slice(None, None, None)
+
+    if not isinstance(index, (slice, str)):
+        index = slice(index, (index + 1) or None)
+
     for atoms in images[index]:
         yield atoms
+
+
+def read_cif(
+    fileobj,
+    index=-1,
+    *,
+    store_tags: bool = False,
+    primitive_cell: bool = False,
+    subtrans_included: bool = True,
+    fractional_occupancies: bool = True,
+    reader: str = 'ase',
+) -> Union[Atoms, List[Atoms]]:
+    """Read Atoms object from CIF file.
+
+    Parameters
+    ----------
+    store_tags : bool
+        If true, the *info* attribute of the returned Atoms object will be
+        populated with all tags in the corresponding cif data block.
+    primitive_cell : bool
+        If true, the primitive cell is built instead of the conventional cell.
+    subtrans_included : bool
+        If true, sublattice translations are assumed to be included among the
+        symmetry operations listed in the CIF file (seems to be the common
+        behaviour of CIF files).
+        Otherwise the sublattice translations are determined from setting 1 of
+        the extracted space group. A result of setting this flag to true, is
+        that it will not be possible to determine the primitive cell.
+    fractional_occupancies : bool
+        If true, the resulting atoms object will be tagged equipped with a
+        dictionary `occupancy`. The keys of this dictionary will be integers
+        converted to strings. The conversion to string is done in order to
+        avoid troubles with JSON encoding/decoding of the dictionaries with
+        non-string keys.
+        Also, in case of mixed occupancies, the atom's chemical symbol will be
+        that of the most dominant species.
+    reader : str
+        Select CIF reader.
+
+        * ``ase`` : built-in CIF reader (default)
+        * ``pycodcif`` : CIF reader based on ``pycodcif`` package
+
+    Notes
+    -----
+    Only blocks with valid crystal data will be included.
+    """
+    g = iread_cif(
+        fileobj,
+        index,
+        store_tags,
+        primitive_cell,
+        subtrans_included,
+        fractional_occupancies,
+        reader,
+    )
+    if isinstance(index, (slice, str)):
+        # Return list of atoms
+        return list(g)
+    else:
+        # Return single atoms object
+        return next(g)
 
 
 def format_cell(cell: Cell) -> str:
     assert cell.rank == 3
     lines = []
     for name, value in zip(CIFBlock.cell_tags, cell.cellpar()):
-        line = '{:20} {}\n'.format(name, value)
+        line = f'{name:20} {value}\n'
         lines.append(line)
     assert len(lines) == 6
     return ''.join(lines)

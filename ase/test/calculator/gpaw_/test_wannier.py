@@ -1,19 +1,21 @@
-import pytest
-import numpy as np
 from functools import partial
-from ase import Atoms
-from ase.transport.tools import dagger, normalize
-from ase.dft.kpoints import monkhorst_pack
-from ase.build import molecule, bulk
-from ase.io.cube import read_cube
-from ase.lattice import CUB, FCC, BCC, TET, BCT, ORC, ORCF, ORCI, ORCC, HEX, \
-    RHL, MCL, MCLC, TRI, OBL, HEX2D, RECT, CRECT, SQR, LINE
-from ase.dft.wannier import gram_schmidt, lowdin, \
-    neighbor_k_search, calculate_weights, steepest_descent, md_min, \
-    rotation_from_projection, init_orbitals, scdm, Wannier, \
-    search_for_gamma_point, arbitrary_s_orbitals
-from ase.dft.wannierstate import random_orthogonal_matrix
 
+import numpy as np
+import pytest
+
+from ase import Atoms
+from ase.build import bulk, molecule
+from ase.dft.kpoints import monkhorst_pack
+from ase.dft.wannier import (Wannier, arbitrary_s_orbitals, calculate_weights,
+                             gram_schmidt, init_orbitals, lowdin, md_min,
+                             neighbor_k_search, rotation_from_projection, scdm,
+                             search_for_gamma_point, steepest_descent)
+from ase.dft.wannierstate import random_orthogonal_matrix
+from ase.io.cube import read_cube
+from ase.lattice import (BCC, BCT, CRECT, CUB, FCC, HEX, HEX2D, LINE, MCL,
+                         MCLC, OBL, ORC, ORCC, ORCF, ORCI, RECT, RHL, SQR, TET,
+                         TRI)
+from ase.transport.tools import dagger, normalize
 
 calc = pytest.mark.calculator
 Nk = 2
@@ -36,6 +38,7 @@ def _base_calculator_gpwfile(tmp_path_factory, factories):
         import gpaw
         gpw_path = tmp_path_factory.mktemp('sub') / filename
         calc = gpaw.GPAW(
+            mode='fd',
             gpts=gpts,
             nbands=nbands,
             kpts={'size': kpts, 'gamma': True},
@@ -142,6 +145,7 @@ def wan(rng, h2_calculator):
         if calc is None:
             gpaw = pytest.importorskip('gpaw')
             calc = gpaw.GPAW(
+                mode='fd',
                 gpts=gpts,
                 nbands=nwannier,
                 kpts=kpts,
@@ -340,7 +344,7 @@ def test_get_functional_value(fun, wan):
 def test_get_centers(factory):
     # Rough test on the position of the Wannier functions' centers
     gpaw = pytest.importorskip('gpaw')
-    calc = gpaw.GPAW(gpts=(32, 32, 32), nbands=4, txt=None)
+    calc = gpaw.GPAW(mode='fd', gpts=(32, 32, 32), nbands=4, txt=None)
     atoms = molecule('H2', calculator=calc)
     atoms.center(vacuum=3.)
     atoms.get_potential_energy()
@@ -362,7 +366,7 @@ def test_write_cube_default(wan, h2_calculator, testdir):
     # It returns some errors when using file objects, so we use a string
     cubefilename = 'wanf.cube'
     wanf.write_cube(index, cubefilename)
-    with open(cubefilename, mode='r') as inputfile:
+    with open(cubefilename) as inputfile:
         content = read_cube(inputfile)
     assert pytest.approx(content['atoms'].cell.array) == atoms.cell.array * 2
     assert pytest.approx(content['data']) == abs(wanf.get_function(index))
@@ -379,7 +383,7 @@ def test_write_cube_angle(wan, testdir):
     # It returns some errors when using file objects, so we use a string
     cubefilename = 'wanf.cube'
     wanf.write_cube(index, cubefilename, angle=True)
-    with open(cubefilename, mode='r') as inputfile:
+    with open(cubefilename) as inputfile:
         content = read_cube(inputfile)
     assert pytest.approx(content['atoms'].cell.array) == atoms.cell.array
     assert pytest.approx(content['data']) == np.angle(wanf.get_function(index))
@@ -398,7 +402,7 @@ def test_write_cube_repeat(wan, testdir):
     cubefilename = 'wanf.cube'
     wanf.write_cube(index, cubefilename, repeat=repetition)
 
-    with open(cubefilename, mode='r') as inputfile:
+    with open(cubefilename) as inputfile:
         content = read_cube(inputfile)
     assert pytest.approx(content['atoms'].cell.array) == \
         (atoms * repetition).cell.array
@@ -431,7 +435,7 @@ def test_get_spectral_weight_random(wan, rng):
 def test_get_pdos(wan):
     nwannier = 4
     gpaw = pytest.importorskip('gpaw')
-    calc = gpaw.GPAW(gpts=(16, 16, 16), nbands=nwannier, txt=None)
+    calc = gpaw.GPAW(mode='fd', gpts=(16, 16, 16), nbands=nwannier, txt=None)
     atoms = molecule('H2')
     atoms.center(vacuum=3.)
     atoms.calc = calc

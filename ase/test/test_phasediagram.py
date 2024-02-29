@@ -1,5 +1,6 @@
 """Test phasediagram code."""
 import pytest
+
 from ase.phasediagram import PhaseDiagram
 
 
@@ -14,4 +15,15 @@ def test_phasediagram():
     energy, indices, coefs = pd.decompose('Cu3Au')
     assert energy == pytest.approx(-0.7)
     assert (indices == [4, 0]).all()
+    assert coefs == pytest.approx(1.0)
+
+
+def test_phasediagram_1():
+    """Test 1D case."""
+    refs = [('Cu', 0.0),
+            ('Cu', 0.1)]
+    pd = PhaseDiagram(refs)
+    energy, indices, coefs = pd.decompose('Cu')
+    assert energy == pytest.approx(0.0)
+    assert (indices == [0]).all()
     assert coefs == pytest.approx(1.0)

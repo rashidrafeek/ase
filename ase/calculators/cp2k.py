@@ -4,19 +4,22 @@ https://www.cp2k.org/
 Author: Ole Schuett <ole.schuett@mat.ethz.ch>
 """
 
-
 import os
 import os.path
+import subprocess
 from warnings import warn
-from subprocess import Popen, PIPE
+from contextlib import AbstractContextManager
+
 import numpy as np
+
 import ase.io
+from ase.calculators.calculator import (Calculator, CalculatorSetupError,
+                                        Parameters, all_changes)
+from ase.config import cfg
 from ase.units import Rydberg
-from ase.calculators.calculator import (Calculator, all_changes, Parameters,
-                                        CalculatorSetupError)
 
 
-class CP2K(Calculator):
+class CP2K(Calculator, AbstractContextManager):
     """ASE-Calculator for CP2K.
 
     CP2K is a program to perform atomistic and molecular simulations of solid
@@ -47,6 +50,15 @@ class CP2K(Calculator):
     ``cp2k_shell``. To run a parallelized simulation use something like this::
 
         CP2K.command="env OMP_NUM_THREADS=2 mpiexec -np 4 cp2k_shell.psmp"
+
+    The CP2K-shell can be shut down by calling :meth:`close`.
+    The close method will be called automatically when using the calculator as
+    part of a with statement::
+
+        with CP2K() as calc:
+            calc.get_potential_energy(atoms)
+
+    The shell will be restarted if you call the calculator object again.
 
     Arguments:
 
@@ -114,6 +126,10 @@ class CP2K(Calculator):
     max_scf: int
         Maximum number of SCF iteration to be performed for
         one optimization. Default is ``50``.
+    multiplicity: int, default=None
+        Select the multiplicity of the system
+        (two times the total spin plus one).
+        If None, multiplicity is not explicitly given in the input file.
     poisson_solver: str
         The poisson solver to be used. Currently, the only supported
         values are ``auto`` and ``None``. Default is ``auto``.
@@ -161,6 +177,7 @@ class CP2K(Calculator):
         force_eval_method="Quickstep",
         inp='',
         max_scf=50,
+        multiplicity=None,
         potential_file='POTENTIAL',
         pseudo_potential='auto',
         stress_tensor=True,
@@ -188,25 +205,31 @@ class CP2K(Calculator):
             self.command = command
         elif CP2K.command is not None:
             self.command = CP2K.command
-        elif 'ASE_CP2K_COMMAND' in os.environ:
-            self.command = os.environ['ASE_CP2K_COMMAND']
         else:
-            self.command = 'cp2k_shell'  # default
+            self.command = cfg.get('ASE_CP2K_COMMAND', 'cp2k_shell')
 
-        Calculator.__init__(self, restart=restart,
-                            ignore_bad_restart_file=ignore_bad_restart_file,
-                            label=label, atoms=atoms, **kwargs)
-
-        self._shell = Cp2kShell(self.command, self._debug)
-
+        super().__init__(restart=restart,
+                         ignore_bad_restart_file=ignore_bad_restart_file,
+                         label=label, atoms=atoms, **kwargs)
         if restart is not None:
             self.read(restart)
 
+        # Start the shell by default, which is how SocketIOCalculator
+        self._shell = Cp2kShell(self.command, self._debug)
+
     def __del__(self):
-        """Release force_env and terminate cp2k_shell child process"""
-        if self._shell:
-            self._release_force_env()
-            del self._shell
+        """Terminate cp2k_shell child process"""
+        self.close()
+
+    def __exit__(self, __exc_type, __exc_value, __traceback):
+        self.close()
+
+    def close(self):
+        """Close the attached shell"""
+        if self._shell is not None:
+            self._shell.close()
+            self._shell = None
+            self._force_env_id = None  # Force env must be recreated
 
     def set(self, **kwargs):
         """Set parameters like set(key1=value1, key2=value2, ...)."""
@@ -246,6 +269,10 @@ class CP2K(Calculator):
         if not properties:
             properties = ['energy']
         Calculator.calculate(self, atoms, properties, system_changes)
+
+        # Start the shell if needed
+        if self._shell is None:
+            self._shell = Cp2kShell(self.command, self._debug)
 
         if self._debug:
             print("system_changes:", system_changes)
@@ -302,7 +329,7 @@ class CP2K(Calculator):
         self._shell.expect('* READY')
 
         stress = np.array([float(x) for x in line.split()]).reshape(3, 3)
-        assert np.all(stress == np.transpose(stress))   # should be symmetric
+        assert np.all(stress == np.transpose(stress))  # should be symmetric
         # Convert 3x3 stress tensor to Voigt form as required by ASE
         stress = np.array([stress[0, 0], stress[1, 1], stress[2, 2],
                            stress[1, 2], stress[0, 2], stress[0, 1]])
@@ -323,7 +350,7 @@ class CP2K(Calculator):
         inp_fn = self.label + '.inp'
         out_fn = self.label + '.out'
         self._write_file(inp_fn, inp)
-        self._shell.send('LOAD %s %s' % (inp_fn, out_fn))
+        self._shell.send(f'LOAD {inp_fn} {out_fn}')
         self._force_env_id = int(self._shell.recv())
         assert self._force_env_id > 0
         self._shell.expect('* READY')
@@ -410,6 +437,10 @@ class CP2K(Calculator):
         if p.uks:
             root.add_keyword('FORCE_EVAL/DFT', 'UNRESTRICTED_KOHN_SHAM ON')
 
+        if p.multiplicity:
+            root.add_keyword('FORCE_EVAL/DFT',
+                             'MULTIPLICITY %d' % p.multiplicity)
+
         if p.charge and p.charge != 0:
             root.add_keyword('FORCE_EVAL/DFT', 'CHARGE %d' % p.charge)
 
@@ -422,7 +453,7 @@ class CP2K(Calculator):
         syms = self.atoms.get_chemical_symbols()
         atoms = self.atoms.get_positions()
         for elm, pos in zip(syms, atoms):
-            line = '%s %.18e %.18e %.18e' % (elm, pos[0], pos[1], pos[2])
+            line = f'{elm} {pos[0]:.18e} {pos[1]:.18e} {pos[2]:.18e}'
             root.add_keyword('FORCE_EVAL/SUBSYS/COORD', line, unique=False)
 
         # write cell
@@ -432,7 +463,7 @@ class CP2K(Calculator):
         root.add_keyword('FORCE_EVAL/SUBSYS/CELL', 'PERIODIC ' + pbc)
         c = self.atoms.get_cell()
         for i, a in enumerate('ABC'):
-            line = '%s %.18e %.18e %.18e' % (a, c[i, 0], c[i, 1], c[i, 2])
+            line = f'{a} {c[i, 0]:.18e} {c[i, 1]:.18e} {c[i, 2]:.18e}'
             root.add_keyword('FORCE_EVAL/SUBSYS/CELL', line)
 
         # determine pseudo-potential
@@ -447,7 +478,7 @@ class CP2K(Calculator):
 
         # write atomic kinds
         subsys = root.get_subsection('FORCE_EVAL/SUBSYS').subsections
-        kinds = dict([(s.params, s) for s in subsys if s.name == "KIND"])
+        kinds = {s.params: s for s in subsys if s.name == "KIND"}
         for elem in set(self.atoms.get_chemical_symbols()):
             if elem not in kinds.keys():
                 s = InputSection(name='KIND', params=elem)
@@ -476,8 +507,9 @@ class Cp2kShell:
         assert 'cp2k_shell' in command
         if self._debug:
             print(command)
-        self._child = Popen(command, shell=True, universal_newlines=True,
-                            stdin=PIPE, stdout=PIPE, bufsize=1)
+        self._child = subprocess.Popen(
+            command, shell=True, universal_newlines=True,
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, bufsize=1)
         self.expect('* READY')
 
         # check version of shell
@@ -500,13 +532,17 @@ class Cp2kShell:
 
     def __del__(self):
         """Terminate cp2k_shell child process"""
+        self.close()
+
+    def close(self):
+        """Terminate cp2k_shell child process"""
         if self.isready:
             self.send('EXIT')
             self._child.communicate()
             rtncode = self._child.wait()
             assert rtncode == 0  # child process exited properly?
-        else:
-            warn("CP2K-shell not ready, sending SIGTERM.", RuntimeWarning)
+        elif getattr(self, '_child', None) is not None:
+            warn('CP2K-shell not ready, sending SIGTERM.', RuntimeWarning)
             self._child.terminate()
             self._child.communicate()
         self._child = None
@@ -555,12 +591,12 @@ class InputSection:
             output.append(k)
         for s in self.subsections:
             if s.params:
-                output.append('&%s %s' % (s.name, s.params))
+                output.append(f'&{s.name} {s.params}')
             else:
-                output.append('&%s' % s.name)
+                output.append(f'&{s.name}')
             for l in s.write():
-                output.append('   %s' % l)
-            output.append('&END %s' % s.name)
+                output.append(f'   {l}')
+            output.append(f'&END {s.name}')
         return output
 
     def add_keyword(self, path, line, unique=True):
@@ -572,14 +608,14 @@ class InputSection:
             self.subsections.append(s)
             candidates = [s]
         elif len(candidates) != 1:
-            raise Exception('Multiple %s sections found ' % parts[0])
+            raise Exception(f'Multiple {parts[0]} sections found ')
 
         key = line.split()[0].upper()
         if len(parts) > 1:
             candidates[0].add_keyword(parts[1], line, unique)
         elif key == '_SECTION_PARAMETERS_':
             if candidates[0].params is not None:
-                msg = 'Section parameter of section %s already set' % parts[0]
+                msg = f'Section parameter of section {parts[0]} already set'
                 raise Exception(msg)
             candidates[0].params = line.split(' ', 1)[1].strip()
         else:
@@ -594,7 +630,7 @@ class InputSection:
         parts = path.upper().split('/', 1)
         candidates = [s for s in self.subsections if s.name == parts[0]]
         if len(candidates) > 1:
-            raise Exception('Multiple %s sections found ' % parts[0])
+            raise Exception(f'Multiple {parts[0]} sections found ')
         if len(candidates) == 0:
             s = InputSection(name=parts[0])
             self.subsections.append(s)

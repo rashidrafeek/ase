@@ -20,31 +20,42 @@ class CLICommand:
                             help='Show more information about files.')
         parser.add_argument('--formats', action='store_true',
                             help='List file formats known to ASE.')
+        parser.add_argument('--config', action='store_true',
+                            help='List configured calculators')
         parser.add_argument('--calculators', action='store_true',
-                            help='List calculators known to ASE '
-                            'and whether they appear to be installed.')
+                            help='List all calculators known to ASE '
+                            'and whether/how each is installed.  Also, '
+                            'attempt to determine version numbers by '
+                            'running binaries or importing packages as '
+                            'appropriate.')
 
     @staticmethod
     def run(args):
-        from ase.io.formats import filetype, ioformats, UnknownFileTypeError
-        from ase.io.ulm import print_ulm_info
         from ase.io.bundletrajectory import print_bundletrajectory_info
+        from ase.io.formats import UnknownFileTypeError, filetype, ioformats
+        from ase.io.ulm import print_ulm_info
 
+        from ase.config import cfg
         if not args.filename:
             print_info()
             if args.formats:
                 print()
                 print_formats()
+            if args.config:
+                print()
+                cfg.print_everything()
             if args.calculators:
                 print()
-                from ase.calculators.autodetect import (detect_calculators,
-                                                        format_configs)
-                configs = detect_calculators()
-                print('Calculators:')
-                for message in format_configs(configs):
-                    print('  {}'.format(message))
-                print()
-                print('Available: {}'.format(','.join(sorted(configs))))
+                cfg.check_calculators()
+                # print()
+                # from ase.calculators.autodetect import (detect_calculators,
+                #                                        format_configs)
+                # configs = detect_calculators()
+                # print('Calculators:')
+                # for message in format_configs(configs):
+                #     print('  {}'.format(message))
+                # print()
+                # print('Available: {}'.format(','.join(sorted(configs))))
             return
 
         n = max(len(filename) for filename in args.filename) + 2
@@ -79,13 +90,14 @@ class CLICommand:
 def print_info():
     import platform
     import sys
+
     from ase.dependencies import all_dependencies
 
     versions = [('platform', platform.platform()),
                 ('python-' + sys.version.split()[0], sys.executable)]
 
     for name, path in versions + all_dependencies():
-        print('{:24} {}'.format(name, path))
+        print(f'{name:24} {path}')
 
 
 def print_formats():

@@ -2,10 +2,10 @@ import optparse
 
 import numpy as np
 
-from ase.data import covalent_radii
-from ase.io.cube import read_cube_data
-from ase.data.colors import cpk_colors
 from ase.calculators.calculator import get_calculator_class
+from ase.data import covalent_radii
+from ase.data.colors import cpk_colors
+from ase.io.cube import read_cube_data
 
 
 def plot(atoms, data, contours):
@@ -23,6 +23,11 @@ def plot(atoms, data, contours):
 
     # Delay slow imports:
     from mayavi import mlab
+    import os
+    # mayavi GUI bug fix for remote access via ssh (X11 forwarding)
+    if "SSH_CONNECTION" in os.environ:
+        f = mlab.gcf()
+        f.scene._lift()
 
     mlab.figure(1, bgcolor=(1, 1, 1))  # make a white figure
 

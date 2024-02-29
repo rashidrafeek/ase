@@ -25,27 +25,22 @@ After this, call to `ase.visualize.view(atoms, viewer='my_viewer')` will be
 forwarded to `my_package.viewer.view_my_viewer` function.
 
 """
-from io import BytesIO
 import pickle
 import subprocess
 import sys
 import tempfile
 import warnings
-from pathlib import Path
 from contextlib import contextmanager
+from io import BytesIO
+from pathlib import Path
 
-if sys.version_info >= (3, 8):
-    from importlib.metadata import entry_points
-else:
-    from importlib_metadata import entry_points
+from importlib.metadata import entry_points
 
-
-from ase.io.formats import ioformats
-from ase.io import write
-
-
-from ase.utils.plugins import ExternalViewer
 from importlib import import_module
+
+from ase.io import write
+from ase.io.formats import ioformats
+from ase.utils.plugins import ExternalViewer
 
 
 class UnknownViewerError(Exception):
@@ -193,12 +188,12 @@ def define_external_viewer(entry_point):
             "ExternalViewer"
         )
     define_viewer(entry_point.name, **viewer_def._asdict(),
-                  external=True)  # type: ignore
+                  external=True)
 
 
 def register_external_viewer_formats(group):
     if hasattr(entry_points(), "select"):
-        viewer_entry_points = entry_points().select(group=group)  # type: ignore
+        viewer_entry_points = entry_points().select(group=group)
     else:
         viewer_entry_points = entry_points().get(group, ())
 

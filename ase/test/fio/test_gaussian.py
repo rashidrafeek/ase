@@ -1,9 +1,9 @@
-
 import copy
 from io import StringIO
 
 import numpy as np
 import pytest
+
 from ase.atoms import Atoms
 from ase.calculators.calculator import InputError
 from ase.calculators.gaussian import Gaussian
@@ -13,6 +13,16 @@ from ase.io.gaussian import (_get_atoms_info, _get_cartesian_atom_coords,
                              _re_method_basis, _re_nuclear_props,
                              _re_output_type, _validate_symbol_string,
                              read_gaussian_in)
+
+
+# Refactoring needed.
+#
+# Lots of calculators are instantiated here even though no calculations
+# are taking place.  These tests should instead use the GaussianConfiguration
+# class to ensure that all the formatting/parsing works well.
+@pytest.fixture(autouse=True)
+def hack_gaussian_command(monkeypatch):
+    monkeypatch.setenv('ASE_GAUSSIAN_COMMAND', '_does_not_exist_')
 
 
 @pytest.fixture
@@ -567,6 +577,6 @@ def test_read_gaussian_regex():
 
     # Test nuclear properties regex:
     nuclear_props = '(iso=0.1134289259, NMagM=-8.89, ZEff=-1)'
-    nuclear_prop_line = '1{}, -0.464,   1.137,   0.0'.format(nuclear_props)
+    nuclear_prop_line = f'1{nuclear_props}, -0.464,   1.137,   0.0'
     assert (_re_nuclear_props.search(nuclear_prop_line).group(0)
             == nuclear_props)

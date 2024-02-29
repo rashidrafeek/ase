@@ -18,7 +18,7 @@ Note: excitingtools must be installed using `pip install excitingtools` for
 the exciting io to work.
 """
 from pathlib import Path
-from typing import Dict, Union
+from typing import Dict, Optional, Union
 
 import ase
 
@@ -38,8 +38,9 @@ def parse_output(info_out_file_path):
         A dictionary containing information about how the calculation was setup
         and results from the calculations SCF cycles.
     """
-    from excitingtools.exciting_dict_parsers.groundstate_parser import (
-        parse_info_out)
+    from excitingtools.exciting_dict_parsers.groundstate_parser import \
+        parse_info_out
+
     # Check for the file:
     if not Path(info_out_file_path).is_file():
         raise FileNotFoundError
@@ -47,23 +48,35 @@ def parse_output(info_out_file_path):
 
 
 def write_input_xml_file(
-        file_name, atoms: ase.Atoms, input_parameters: Dict,
-        species_path, title=None):
+        file_name, atoms: ase.Atoms, ground_state_input: Dict,
+        species_path, title=None,
+        properties_input: Optional[Dict] = None):
     """Write input xml file for exciting calculation.
 
     Args:
         file_name: where to save the input xml file.
         atoms: ASE Atoms object.
-        input_parameters: Ground state parameters to affect exciting calc.
+        ground_state_input: ground state parameters for run.
+        properties_input: optional additional parameters to run
+            after performing the ground state calculation (e.g. bandstructure
+            or DOS.)
     """
-    from excitingtools.input.ground_state import ExcitingGroundStateInput
-    from excitingtools.input.input_xml import ExcitingInputXML
-    from excitingtools.input.structure import ExcitingStructure
-    # Convert ground state dictionary into expected input object.
-    ground_state = ExcitingGroundStateInput(**input_parameters)
-    structure = ExcitingStructure(atoms, species_path=species_path)
+    from excitingtools import (ExcitingGroundStateInput, ExcitingInputXML,
+                               ExcitingPropertiesInput, ExcitingStructure)
 
-    input_xml = ExcitingInputXML(structure, ground_state, title=title)
+    # Convert ground state dictionary into expected input object.
+    ground_state = ExcitingGroundStateInput(**ground_state_input)
+    structure = ExcitingStructure(atoms, species_path=species_path)
+    # If we are running futher calculations such as bandstructure/DOS.
+    if properties_input is not None:
+        properties_input = ExcitingPropertiesInput(**properties_input)
+    else:
+        properties_input = ExcitingPropertiesInput()
+    input_xml = ExcitingInputXML(structure=structure,
+                                 groundstate=ground_state,
+                                 properties=properties_input,
+                                 title=title)
+
     input_xml.write(file_name)
 
 
@@ -84,19 +97,7 @@ def ase_atoms_from_exciting_input_xml(
     Returns:
         ASE atoms object with all the relevant fields filled.
     """
-    from excitingtools.exciting_dict_parsers.input_parser import (
-        parse_structure)
-    struct_dict = parse_structure(input_xml_path)
-    symbols_list = []
-    positions_list = []
-    for atom in struct_dict['atoms']:
-        symbols_list.append(atom['species'])
-        positions_list.append(atom['position'])
-
-    atoms_object = ase.Atoms(
-        symbols=symbols_list,
-        cell=struct_dict['lattice'],
-        positions=positions_list)
-
-    atoms_object.set_pbc(True)
-    return atoms_object
+    from excitingtools.exciting_obj_parsers.input_xml import parse_input_xml
+    from excitingtools.structure.ase_utilities import exciting_structure_to_ase
+    structure = parse_input_xml(input_xml_path).structure
+    return exciting_structure_to_ase(structure)
