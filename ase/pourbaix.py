@@ -24,7 +24,7 @@ U_STD_SCE = 0.244   # Standard redox potential of SCE electrode
 
 
 def initialize_refs(refs_dct):
-    """Convert dictionary entries to Species instances"""
+    """Convert dictionary entries to ``Species`` instances"""
     refs = {}
     for name, energy in refs_dct.items():
         spec = Species(name)
