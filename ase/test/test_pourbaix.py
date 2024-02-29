@@ -41,7 +41,7 @@ def test_new_pourbaix():
     U = np.linspace(-2, 2, 5)
     pH = np.linspace(0, 14, 8)
     pbx = Pourbaix_new('Zn', refs)
-    phases, diagram, text = pbx.get_diagrams(U, pH)
+    phases, diagram, text, _ = pbx.get_diagrams(U, pH)
 
     # Verify that the stability domains are the expected ones
     names = [txt[2][0] for txt in text]
