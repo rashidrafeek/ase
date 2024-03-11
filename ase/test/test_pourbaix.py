@@ -5,7 +5,12 @@ import unittest
 
 from ase.phasediagram import Pourbaix, solvated
 from ase.pourbaix import Pourbaix as Pourbaix_new
-from ase.pourbaix import Species, get_main_products
+from ase.pourbaix import (
+        Species, RedOx,
+        U_STD_SCE, U_STD_AGCL,
+        PREDEF_ENERGIES,
+        get_main_products
+)
 
 
 def test_pourbaix():
@@ -63,6 +68,33 @@ def test_Zn_diagram():
     Epbx = pbx.get_pourbaix_energy(1.0, 7.0, verbose=False)[0]
     assert Epbx == pytest.approx(3.880, abs=0.001)
 
+    #Test that plotting doesn't fail
+
+
+def test_redox_counters():
+    """Test different counter electrode corrections.
+
+    Reaction:
+        Zn + H2O + e-  ➜  H+ + HZnO--(aq)
+    """
+    species = [
+        Species('Zn'),
+        Species('HZnO--(aq)')
+    ]
+    species[0].set_chemical_potential(0.0)
+    species[1].set_chemical_potential(0.0)
+    coeffs = [-1, 1]
+    reaction = RedOx(species, coeffs)
+    corr = []
+    for counter in ['SHE', 'RHE', 'Pt', 'AgCl', 'SCE']:
+        corr.append(reaction.get_counter_correction(counter, alpha=1.0))
+
+    assert (corr[0][0] == corr[0][1] == 0.0)
+    assert (corr[1][1] == -1.0)
+    assert (corr[2][0] == -0.5 * PREDEF_ENERGIES['H2O'])
+    assert (corr[3][0] == U_STD_AGCL)
+    assert (corr[4][0] == U_STD_SCE)
+
 
 def test_species_extras():
     """Test some methods of Species not used by Pourbaix"""
@@ -98,3 +130,5 @@ def test_trigger_name_exception():
     }
     pbx = Pourbaix_new('OZn', refs)
     assert pbx.material.name == 'ZnO'
+
+test_redox_counters()
