@@ -6,11 +6,11 @@ import matplotlib.pyplot as plt
 from ase.phasediagram import solvated
 from ase.phasediagram import Pourbaix as Pourbaix_old
 from ase.pourbaix import (
-        Pourbaix,
-        Species, RedOx,
-        U_STD_SCE, U_STD_AGCL,
-        PREDEF_ENERGIES,
-        get_main_products
+    Pourbaix,
+    Species, RedOx,
+    U_STD_SCE, U_STD_AGCL,
+    PREDEF_ENERGIES,
+    get_main_products
 )
 
 
@@ -96,7 +96,7 @@ def test_plotting():
                  'cap': [0, 1]})
     pbx.plot(**args)
 
-    fail=False
+    fail = False
     args.update({'labeltype': 'askjglkjh'})
     try:
         pbx.plot(**args)
@@ -132,7 +132,7 @@ def test_redox():
     assert (corr[4][0] == U_STD_SCE)
 
     assert reaction.equation()
-    
+
     G = reaction.get_free_energy(1.0, 1.0)
     assert G == pytest.approx(3.044, abs=0.001)
 
@@ -143,7 +143,7 @@ def test_species_extras():
     chemsys = s.get_chemsys()
     assert len(chemsys) == 3
     frac = s.get_fractional_composition('H')
-    assert frac == 2/3
+    assert frac == 2 / 3
     refs = {'H': -3, 'O': -4}
     s.set_chemical_potential(-12, refs)
     assert s.mu == -2
@@ -157,11 +157,11 @@ def test_trigger_phases_error():
     }
     fail = False
     try:
-        pbx = Pourbaix('Zn', refs)
+        _ = Pourbaix('Zn', refs)
     except ValueError:
         fail = True
     assert fail
-        
+
 
 def test_trigger_name_exception():
     """Trigger target material formula reformatting"""
