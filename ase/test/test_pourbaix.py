@@ -5,7 +5,7 @@ import unittest
 
 from ase.phasediagram import Pourbaix, solvated
 from ase.pourbaix import Pourbaix as Pourbaix_new
-from ase.pourbaix import get_main_products
+from ase.pourbaix import Species, get_main_products
 
 
 def test_pourbaix():
@@ -64,7 +64,22 @@ def test_Zn_diagram():
     assert Epbx == pytest.approx(3.880, abs=0.001)
 
 
-def test_trigger_phases_error():
+def test_species_extras():
+    """Test some methods of Species not used by Pourbaix"""
+    s = Species('H2O')
+    chemsys = s.get_chemsys()
+    assert len(chemsys) == 3
+    frac = s.get_fractional_composition('H')
+    assert frac == 2/3
+    refs = {'H': -3, 'O': -4}
+    s.set_chemical_potential(-12, refs)
+    assert s.mu == -2
+
+
+
+
+
+def trigger_phases_error():
     """Produce an error when provided refs don't produce valid reactions"""
     refs = {
         'Zn': 0.0,
@@ -78,7 +93,7 @@ def test_trigger_phases_error():
     assert fail
         
 
-def test_trigger_name_exception():
+def trigger_name_exception():
     """Trigger target material formula reformatting"""
     refs = {
         'Zn': 0.0,
@@ -86,3 +101,5 @@ def test_trigger_name_exception():
     }
     pbx = Pourbaix_new('OZn', refs)
     assert pbx.material.name == 'ZnO'
+
+test_species_extras()
