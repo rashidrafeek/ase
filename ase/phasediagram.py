@@ -123,7 +123,6 @@ def print_results(results):
     print('------------------------------------')
 
 
-@deprecated(DeprecationWarning('Please use ase.pourbaix.Pourbaix'))
 class Pourbaix:
     def __init__(self, references, formula=None, T=300.0, **kwargs):
         """Pourbaix object.
