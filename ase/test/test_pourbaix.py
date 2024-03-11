@@ -65,10 +65,32 @@ def test_Zn_diagram():
     assert 'Zn++(aq)' in phase0.species
 
     # Verify that the pourbaix energy at U=1, pH=7 is the expected one
-    Epbx = pbx.get_pourbaix_energy(1.0, 7.0, verbose=False)[0]
-    assert Epbx == pytest.approx(3.880, abs=0.001)
+    # and similarly for U=-2, pH=0
+    Epbx1 = pbx.get_pourbaix_energy(1.0, 7.0, verbose=True)[0]
+    assert Epbx1 == pytest.approx(3.880, abs=0.001)
+    Epbx2 = pbx.get_pourbaix_energy(-2.0, 0.0, verbose=True)[0]
+    assert Epbx2 == pytest.approx(-2.119, abs=0.001)
 
     #Test that plotting doesn't fail
+    args = {'include_text': True,
+            'include_h2o': True,
+            'labeltype': 'phases',
+            'Urange': [-2, 2],
+            'pHrange': [0, 14],
+            'npoints': 300,
+            'cap': 1.0,
+            'figsize': [12, 6],
+            'cmap': "RdYlGn_r",
+            'normalize': True}
+    ax = pbx._draw_diagram_axes(**args)
+    assert ax
+    args.update({'include_text': False,
+                 'include_h2o': False,
+                 'labeltype': 'numbers'
+                 'normalize': False,
+                 'cap': [0, 1]}
+    ax = pbx._draw_diagram_axes(**args)
+    assert ax
 
 
 def test_redox():
@@ -136,3 +158,5 @@ def test_trigger_name_exception():
     }
     pbx = Pourbaix_new('OZn', refs)
     assert pbx.material.name == 'ZnO'
+
+test_Zn_diagram()
