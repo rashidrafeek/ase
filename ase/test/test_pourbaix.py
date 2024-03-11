@@ -71,8 +71,9 @@ def test_Zn_diagram():
     #Test that plotting doesn't fail
 
 
-def test_redox_counters():
-    """Test different counter electrode corrections.
+def test_redox():
+    """Test different counter electrode corrections
+       Plus other unused RedOx methods
 
     Reaction:
         Zn + H2O + e-  ➜  H+ + HZnO--(aq)
@@ -85,15 +86,20 @@ def test_redox_counters():
     species[1].set_chemical_potential(0.0)
     coeffs = [-1, 1]
     reaction = RedOx(species, coeffs)
+
     corr = []
     for counter in ['SHE', 'RHE', 'Pt', 'AgCl', 'SCE']:
         corr.append(reaction.get_counter_correction(counter, alpha=1.0))
-
     assert (corr[0][0] == corr[0][1] == 0.0)
     assert (corr[1][1] == -1.0)
     assert (corr[2][0] == -0.5 * PREDEF_ENERGIES['H2O'])
     assert (corr[3][0] == U_STD_AGCL)
     assert (corr[4][0] == U_STD_SCE)
+
+    assert reaction.equation()
+    
+    G = reaction.get_free_energy(1.0, 1.0)
+    assert G == pytest.approx(3.044, abs=0.001)
 
 
 def test_species_extras():
