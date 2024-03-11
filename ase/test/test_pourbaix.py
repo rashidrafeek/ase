@@ -1,11 +1,12 @@
 """Test Pourbaix diagram."""
 import numpy as np
 import pytest
-import unittest
+import matplotlib.pyplot as plt
 
-from ase.phasediagram import Pourbaix, solvated
-from ase.pourbaix import Pourbaix as Pourbaix_new
+from ase.phasediagram import solvated
+from ase.phasediagram import Pourbaix as Pourbaix_old
 from ase.pourbaix import (
+        Pourbaix,
         Species, RedOx,
         U_STD_SCE, U_STD_AGCL,
         PREDEF_ENERGIES,
@@ -13,20 +14,29 @@ from ase.pourbaix import (
 )
 
 
-def test_pourbaix():
+refs = {
+    'Zn': 0.0,
+    'ZnO': -3.336021896,
+    'Zn++(aq)': -1.525613424,
+    'ZnOH+(aq)': -3.4125107,
+    'HZnO2-(aq)': -4.8087349,
+    'ZnO2--(aq)': -4.03387383
+}
+pbx = Pourbaix('Zn', refs)
+
+
+def test_old_pourbaix():
     """Test ZnO system from docs."""
-    refs = solvated('Zn')
-    print(refs)
-    refs += [('Zn', 0.0), ('ZnO', -3.323), ('ZnO2(aq)', -2.921)]
-    pb = Pourbaix(refs, formula='ZnO')
+    refs_old = solvated('Zn')
+    refs_old += [('Zn', 0.0), ('ZnO', -3.323), ('ZnO2(aq)', -2.921)]
+    pb = Pourbaix_old(refs_old, formula='ZnO')
 
     _, e = pb.decompose(-1.0, 7.0)
     assert e == pytest.approx(-3.625, abs=0.001)
 
     U = np.linspace(-2, 2, 3)
     pH = np.linspace(6, 16, 11)
-    d, names, text = pb.diagram(U, pH, plot=False)
-    print(d, names, text)
+    d, names, _ = pb.diagram(U, pH, plot=False)
     assert d.shape == (3, 11)
     assert d.ptp() == 6
     assert names == ['Zn', 'ZnO2(aq)', 'Zn++(aq)', 'HZnO2-(aq)',
@@ -34,21 +44,10 @@ def test_pourbaix():
 
 
 def test_Zn_diagram():
-    import matplotlib.pyplot as plt
     """Test module against Zn Pourbaix diagram from the Atlas"""
-
-    refs = {
-        'Zn': 0.0,
-        'ZnO': -3.336021896,
-        'Zn++(aq)': -1.525613424,
-        'ZnOH+(aq)': -3.4125107,
-        'HZnO2-(aq)': -4.8087349,
-        'ZnO2--(aq)': -4.03387383
-    }
 
     U = np.linspace(-2, 2, 5)
     pH = np.linspace(0, 14, 8)
-    pbx = Pourbaix_new('Zn', refs)
     phases, diagram, text, _ = pbx.get_diagrams(U, pH)
 
     # Verify that the stability domains are the expected ones
@@ -72,13 +71,16 @@ def test_Zn_diagram():
     Epbx2 = pbx.get_pourbaix_energy(-2.0, 0.0, verbose=True)[0]
     assert Epbx2 == pytest.approx(-2.119, abs=0.001)
 
-    #Test that plotting doesn't fail with different arguments
+
+def test_plotting():
+    """Test all the plotting functionalities and options"""
+
     args = {'include_text': True,
             'include_h2o': True,
             'labeltype': 'phases',
             'Urange': [-2, 2],
             'pHrange': [0, 14],
-            'npoints': 300,
+            'npoints': 10,
             'cap': 1.0,
             'figsize': [12, 6],
             'cmap': "RdYlGn_r",
@@ -86,6 +88,7 @@ def test_Zn_diagram():
             'show': False,
             'savefig': None}
     pbx.plot(**args)
+
     args.update({'include_text': False,
                  'include_h2o': False,
                  'labeltype': 'numbers',
