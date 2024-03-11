@@ -92,6 +92,12 @@ def test_Zn_diagram():
                  'normalize': False,
                  'cap': [0, 1]})
     pbx.plot(**args)
+    args.update({'labeltype': 'askjglkjh'})
+    try:
+        pbx.plot(**args)
+    except ValueError:
+        fail = True
+    assert fail
     plt.close('all')
 
 
