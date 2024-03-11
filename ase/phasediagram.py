@@ -9,7 +9,6 @@ from scipy.spatial import ConvexHull
 
 import ase.units as units
 from ase.formula import Formula
-from ase.utils import deprecated
 
 _solvated: List[Tuple[str, Dict[str, int], float, bool, float]] = []
 
