@@ -76,7 +76,7 @@ def test_species_extras():
     assert s.mu == -2
 
 
-def trigger_phases_error():
+def test_trigger_phases_error():
     """Produce an error when provided refs don't produce valid reactions"""
     refs = {
         'Zn': 0.0,
@@ -90,7 +90,7 @@ def trigger_phases_error():
     assert fail
         
 
-def trigger_name_exception():
+def test_trigger_name_exception():
     """Trigger target material formula reformatting"""
     refs = {
         'Zn': 0.0,
