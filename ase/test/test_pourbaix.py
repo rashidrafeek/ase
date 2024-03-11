@@ -130,5 +130,3 @@ def test_trigger_name_exception():
     }
     pbx = Pourbaix_new('OZn', refs)
     assert pbx.material.name == 'ZnO'
-
-test_redox_counters()
