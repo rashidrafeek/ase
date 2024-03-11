@@ -1,6 +1,7 @@
 """Test Pourbaix diagram."""
 import numpy as np
 import pytest
+import unittest
 
 from ase.phasediagram import Pourbaix, solvated
 from ase.pourbaix import Pourbaix as Pourbaix_new
@@ -27,7 +28,7 @@ def test_pourbaix():
                      'ZnOH+(aq)', 'ZnO', 'ZnO2--(aq)']
 
 
-def test_new_pourbaix():
+def test_Zn_diagram():
     """Test module against Zn Pourbaix diagram from the Atlas"""
 
     refs = {
@@ -61,3 +62,27 @@ def test_new_pourbaix():
     # Verify that the pourbaix energy at U=1, pH=7 is the expected one
     Epbx = pbx.get_pourbaix_energy(1.0, 7.0, verbose=False)[0]
     assert Epbx == pytest.approx(3.880, abs=0.001)
+
+
+def test_trigger_phases_error():
+    """Produce an error when provided refs don't produce valid reactions"""
+    refs = {
+        'Zn': 0.0,
+        'Mn': 0.0
+    }
+    fail = False
+    try:
+        pbx = Pourbaix_new('Zn', refs)
+    except ValueError:
+        fail = True
+    assert fail
+        
+
+def test_trigger_name_exception():
+    """Trigger target material formula reformatting"""
+    refs = {
+        'Zn': 0.0,
+        'ZnO': -10.0
+    }
+    pbx = Pourbaix_new('OZn', refs)
+    assert pbx.material.name == 'ZnO'
