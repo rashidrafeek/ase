@@ -157,7 +157,7 @@ def test_trigger_phases_error():
     }
     fail = False
     try:
-        pbx = Pourbaix_new('Zn', refs)
+        pbx = Pourbaix('Zn', refs)
     except ValueError:
         fail = True
     assert fail
@@ -169,5 +169,5 @@ def test_trigger_name_exception():
         'Zn': 0.0,
         'ZnO': -10.0
     }
-    pbx = Pourbaix_new('OZn', refs)
+    pbx = Pourbaix('OZn', refs)
     assert pbx.material.name == 'ZnO'
