@@ -86,7 +86,7 @@ def test_Zn_diagram():
     assert ax
     args.update({'include_text': False,
                  'include_h2o': False,
-                 'labeltype': 'numbers'
+                 'labeltype': 'numbers',
                  'normalize': False,
                  'cap': [0, 1]})
     ax = pbx._draw_diagram_axes(**args)
