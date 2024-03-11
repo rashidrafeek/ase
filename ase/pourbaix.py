@@ -647,9 +647,17 @@ class Pourbaix:
         # the pairs of unique simplices that have two neighboring phases
         # in common, diagram frame excluded.
         duplicate_filter = defaultdict(int)
+
+        def are_boundaries_there(comm):
+            bounds = ['b', 't', 'l', 'r']
+            for c in comm:
+                if c in bounds:
+                    return True
+            return False
+
         for (s1, id1), (s2, id2) in combinations(simplices, 2):
 
-            # common neighboring phases
+            # common neighboring phases, diagram frame excluded
             common = list(set(id1).intersection(id2))
 
             # Simplices have to be distinct
@@ -657,7 +665,7 @@ class Pourbaix:
             # Only two phases in common...
             cond2 = (len(common) == 2)
             # ...Diagram frame excluded
-            cond3 = not any(np.isin(common, ['b', 't', 'l', 'r']))
+            cond3 = not are_boundaries_there(common)
 
             # Filtering out duplicates
             if all((cond1, cond2, cond3)):
