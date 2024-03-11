@@ -34,6 +34,7 @@ def test_pourbaix():
 
 
 def test_Zn_diagram():
+    import matplotlib.pyplot as plt
     """Test module against Zn Pourbaix diagram from the Atlas"""
 
     refs = {
@@ -71,7 +72,7 @@ def test_Zn_diagram():
     Epbx2 = pbx.get_pourbaix_energy(-2.0, 0.0, verbose=True)[0]
     assert Epbx2 == pytest.approx(-2.119, abs=0.001)
 
-    #Test that plotting doesn't fail
+    #Test that plotting doesn't fail with different arguments
     args = {'include_text': True,
             'include_h2o': True,
             'labeltype': 'phases',
@@ -81,16 +82,17 @@ def test_Zn_diagram():
             'cap': 1.0,
             'figsize': [12, 6],
             'cmap': "RdYlGn_r",
-            'normalize': True}
-    ax = pbx._draw_diagram_axes(**args)
-    assert ax
+            'normalize': True,
+            'show': False,
+            'savefig': None}
+    pbx.plot(**args)
     args.update({'include_text': False,
                  'include_h2o': False,
                  'labeltype': 'numbers',
                  'normalize': False,
                  'cap': [0, 1]})
-    ax = pbx._draw_diagram_axes(**args)
-    assert ax
+    pbx.plot(**args)
+    plt.close('all')
 
 
 def test_redox():
