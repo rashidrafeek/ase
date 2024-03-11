@@ -76,9 +76,6 @@ def test_species_extras():
     assert s.mu == -2
 
 
-
-
-
 def trigger_phases_error():
     """Produce an error when provided refs don't produce valid reactions"""
     refs = {
@@ -101,5 +98,3 @@ def trigger_name_exception():
     }
     pbx = Pourbaix_new('OZn', refs)
     assert pbx.material.name == 'ZnO'
-
-test_species_extras()
