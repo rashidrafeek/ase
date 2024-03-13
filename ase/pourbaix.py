@@ -703,7 +703,7 @@ class Pourbaix:
         if normalize:
             meta /= self.material.natoms
             cbarlabel = r'$E_{pbx}$ (eV/atom)'
-        else: 
+        else:
             cbarlabel = r'$E_{pbx}$ (eV)'
 
         ax = plt.figure(figsize=figsize).add_subplot(111)
