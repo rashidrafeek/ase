@@ -702,6 +702,9 @@ class Pourbaix:
 
         if normalize:
             meta /= self.material.natoms
+            cbarlabel = r'$E_{pbx}$ (eV/atom)'
+        else: 
+            cbarlabel = r'$E_{pbx}$ (eV)'
 
         ax = plt.figure(figsize=figsize).add_subplot(111)
         extent = [*pHrange, *Urange]
@@ -766,7 +769,7 @@ class Pourbaix:
         cbar.set_ticklabels(ticks)
         cbar.outline.set_linewidth(1.5)
         cbar.ax.tick_params(labelsize=20, width=1.5, length=5)
-        cbar.ax.set_ylabel(r'$E_{pbx}$ (eV/atom)', fontsize=20)
+        cbar.ax.set_ylabel(cbarlabel, fontsize=20)
 
         for axis in ['top', 'bottom', 'left', 'right']:
             ax.spines[axis].set_linewidth(1.5)
