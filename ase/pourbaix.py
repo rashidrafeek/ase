@@ -218,14 +218,14 @@ class Species:
         ase.formula.Formula
 
     """
-    def __init__(self, formula, fmt='metal'):
+    def __init__(self, formula, fmt='metal', reduce=True):
         self.aq = formula.endswith('(aq)')
         formula_strip = formula.replace('(aq)', '').rstrip('+-')
         self.charge = formula.count('+') - formula.count('-')
         formula_obj = Formula(formula_strip, format=fmt)
         self._count = formula_obj.count()
 
-        if self.aq:
+        if self.aq or not reduce:
             self.name = formula
             self.n_fu = 1
             self.count = self._count
