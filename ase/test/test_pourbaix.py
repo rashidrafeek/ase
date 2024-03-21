@@ -62,7 +62,7 @@ def test_Zn_diagram():
     # Verify that Zn++ is the stable phase at U=0, pH=6
     i0 = int(phases[2, 3])
     phase0 = pbx.phases[i0]
-    assert 'Zn++(aq)' in phase0.species
+    assert 'Zn++(aq)' in phase0.count
 
     # Verify that the pourbaix energy at U=1, pH=7 is the expected one
     # and similarly for U=-2, pH=0
@@ -76,7 +76,7 @@ def test_plotting():
     """Test all the plotting functionalities and options"""
 
     args = {'include_text': True,
-            'include_h2o': True,
+            'include_water': True,
             'labeltype': 'phases',
             'Urange': [-2, 2],
             'pHrange': [0, 14],
@@ -90,7 +90,7 @@ def test_plotting():
     pbx.plot(**args)
 
     args.update({'include_text': False,
-                 'include_h2o': False,
+                 'include_water': False,
                  'labeltype': 'numbers',
                  'normalize': False,
                  'cap': [0, 1]})
@@ -107,7 +107,7 @@ def test_plotting():
 
 
 def test_redox():
-    """Test different counter electrode corrections
+    """Test different reference electrode corrections
        Plus other unused RedOx methods
 
     Reaction:
@@ -123,8 +123,8 @@ def test_redox():
     reaction = RedOx(species, coeffs)
 
     corr = []
-    for counter in ['SHE', 'RHE', 'Pt', 'AgCl', 'SCE']:
-        corr.append(reaction.get_counter_correction(counter, alpha=1.0))
+    for reference in ['SHE', 'RHE', 'Pt', 'AgCl', 'SCE']:
+        corr.append(reaction.get_ref_correction(reference, alpha=1.0))
     assert (corr[0][0] == corr[0][1] == 0.0)
     assert (corr[1][1] == -1.0)
     assert (corr[2][0] == -0.5 * PREDEF_ENERGIES['H2O'])

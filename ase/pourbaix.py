@@ -49,7 +49,7 @@ def get_product_combos(reactant, refs):
     return [np.unique(combo) for combo in product(*array)]
 
 
-def get_phases(reactant, refs, T, conc, counter, tol=1e-3):
+def get_phases(reactant, refs, T, conc, reference, tol=1e-3):
     """Obtain all the possible decomposition pathways
        for a given reactant as a collection of RedOx objects.
     """
@@ -67,7 +67,7 @@ def get_phases(reactant, refs, T, conc, counter, tol=1e-3):
             coeffs /= coeffs[0]
             coeffs[0] = -coeffs[0]
             species = (reactant, *products)
-            phase = RedOx(species, coeffs, T, conc, counter)
+            phase = RedOx(species, coeffs, T, conc, reference)
             phases.append(phase)
             phase_matrix.append(phase._vector)
 
@@ -167,7 +167,7 @@ def add_text(text, offset=0.0):
     return 0
 
 
-def add_redox_lines(axes, pH, counter, color='k'):
+def add_redox_lines(axes, pH, reference, color='k'):
     """Add water redox potentials to a Pourbaix diagram"""
     const = - 0.5 * PREDEF_ENERGIES['H2O']
     corr = {
@@ -182,15 +182,15 @@ def add_redox_lines(axes, pH, counter, color='k'):
         'ls': '--',
         'zorder': 2
     }
-    if counter in ['SHE', 'AgCl', 'SCE']:
+    if reference in ['SHE', 'AgCl', 'SCE']:
         slope = -59.2e-3
-        axes.plot(pH, slope * pH + corr[counter], **kwargs)
-        axes.plot(pH, slope * pH + const + corr[counter], **kwargs)
-    elif counter in ['Pt', 'RHE']:
-        axes.axhline(0 + corr[counter], **kwargs)
-        axes.axhline(const + corr[counter], **kwargs)
+        axes.plot(pH, slope * pH + corr[reference], **kwargs)
+        axes.plot(pH, slope * pH + const + corr[reference], **kwargs)
+    elif reference in ['Pt', 'RHE']:
+        axes.axhline(0 + corr[reference], **kwargs)
+        axes.axhline(const + corr[reference], **kwargs)
     else:
-        raise ValueError('The specified counter electrode doesnt exist')
+        raise ValueError('The specified reference electrode doesnt exist')
     return 0
 
 
@@ -316,7 +316,7 @@ class Species:
 class RedOx:
     def __init__(self, species, coeffs,
                  T=298.15, conc=1e-6,
-                 counter='SHE'):
+                 reference='SHE'):
         """RedOx class representing an (electro)chemical reaction.
 
         Initialization
@@ -336,8 +336,8 @@ class RedOx:
         conc
             The concentration of ionic species.
 
-        counter: str
-            The counter electrode. Default: SHE.
+        reference: str
+            The reference electrode. Default: SHE.
             available options: SHE, RHE, AgCl, Pt.
 
 
@@ -356,7 +356,7 @@ class RedOx:
         self.coeffs = coeffs
         self.T = T
         self.conc = conc
-        self.counter = counter
+        self.reference = reference
         self.count = Counter()
 
         alpha = CONST * T   # 0.059 eV @ T=298.15K
@@ -378,28 +378,28 @@ class RedOx:
                 const_term += coef * n * PREDEF_ENERGIES[name]
                 self.count[name] += coef * n
 
-        const_corr, pH_corr = self.get_counter_correction(counter, alpha)
+        const_corr, pH_corr = self.get_ref_correction(reference, alpha)
         self._vector = [
             float(const_term + const_corr),
             float(U_term),
             float(pH_term + pH_corr)
         ]
 
-    def get_counter_correction(self, counter, alpha):
+    def get_ref_correction(self, reference, alpha):
         """Correct the constant and pH contributions to the reaction free energy
-           based on the counter electrode of choice and the temperature
+           based on the reference electrode of choice and the temperature
            (alpha=k_B*T*ln(10))
         """
         n_e = self.count['e-']
         gibbs_corr = 0.0
         pH_corr = 0.0
-        if counter in ['RHE', 'Pt']:
+        if reference in ['RHE', 'Pt']:
             pH_corr += n_e * alpha
-            if counter == 'Pt' and n_e < 0:
+            if reference == 'Pt' and n_e < 0:
                 gibbs_corr += n_e * 0.5 * PREDEF_ENERGIES['H2O']
-        if counter == 'AgCl':
+        if reference == 'AgCl':
             gibbs_corr -= n_e * U_STD_AGCL
-        if counter == 'SCE':
+        if reference == 'SCE':
             gibbs_corr -= n_e * U_STD_SCE
 
         return gibbs_corr, pH_corr
@@ -429,7 +429,7 @@ class RedOx:
         return self.__class__(
             self.components,
             self.T,
-            self.counter,
+            self.reference,
             self.ncells
         )
 
@@ -459,8 +459,8 @@ class Pourbaix:
     conc: float
         Concentration of the ionic species. Default: 1e-6 mol/L.
 
-    counter: str
-        The counter electrode. Default: SHE.
+    reference: str
+        The reference electrode. Default: SHE.
         available options: SHE, RHE, AgCl, Pt.
 
 
@@ -491,7 +491,13 @@ class Pourbaix:
                  refs_dct: dict,
                  T: float = 298.15,
                  conc: float = 1.0e-6,
-                 counter: str = 'SHE'):
+                 reference: str = 'SHE'):
+
+        self.material_name = material_name
+        self.refs = refs_dct
+        self.T = T
+        self.conc = conc
+        self.reference = reference
 
         refs = initialize_refs(refs_dct)
 
@@ -500,9 +506,8 @@ class Pourbaix:
         except KeyError:
             self.material = refs.pop(Species(material_name).name)
 
-        self.counter = counter
         self.phases, phase_matrix = get_phases(
-            self.material, refs, T, conc, counter
+            self.material, refs, T, conc, reference
         )
         self._const = phase_matrix[:, 0]
         self._var = phase_matrix[:, 1:]
@@ -765,12 +770,12 @@ class Pourbaix:
             raise ValueError("The provided label type doesn't exist")
 
         if include_water:
-            add_redox_lines(ax, pH, self.counter, 'w')
+            add_redox_lines(ax, pH, self.reference, 'w')
 
         ax.set_xlim(*pHrange)
         ax.set_ylim(*Urange)
         ax.set_xlabel('pH', fontsize=22)
-        ax.set_ylabel(r'$\it{U}$' + f' vs. {self.counter} (V)', fontsize=22)
+        ax.set_ylabel(r'$\it{U}$' + f' vs. {self.reference} (V)', fontsize=22)
         ax.set_xticks(np.arange(pHrange[0], pHrange[1] + 1, 2))
         ax.set_yticks(np.arange(Urange[0], Urange[1] + 1, 1))
         ax.xaxis.set_tick_params(width=1.5, length=5)
