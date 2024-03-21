@@ -80,18 +80,18 @@ def get_phases(reactant, refs, T, conc, counter, tol=1e-3):
     return phases, np.array(phase_matrix).astype('float64')
 
 
-def get_main_products(species):
+def get_main_products(count):
     """Obtain the reaction products excluded protons,
        water and electrons.
     """
-    return [spec for spec, coef in species.items()
+    return [spec for spec, coef in count.items()
             if coef > 0 and spec not in ['H+', 'H2O', 'e-']]
 
 
-def format_label(species):
+def format_label(count):
     """Obtain phase labels formatted in LaTeX math style."""
     formatted = []
-    for prod in get_main_products(species):
+    for prod in get_main_products(count):
         label = re.sub(r'(\S)([+-]+)', r'\1$^{\2}$', prod)
         label = re.sub(r'(\d+)', r'$_{\1}$', label)
         for symbol in ['+', '-']:
@@ -349,18 +349,23 @@ class RedOx:
 
         get_free_energy(U, pH):
             Obtain the reaction free energy at a given
-            applied potential U and pH.
+            applied potential (U) and pH.
 
         """
+        self.species = species
+        self.coeffs = coeffs
+        self.T = T
+        self.conc = conc
+        self.counter = counter
+        self.count = Counter()
 
         alpha = CONST * T   # 0.059 eV @ T=298.15K
         const_term = 0
         pH_term = 0
         U_term = 0
-        self.species = Counter()
 
         for spec, coef in zip(species, coeffs):
-            self.species[spec.name] = coef
+            self.count[spec.name] = coef
             amounts = spec.balance_electrochemistry()
 
             const_term += coef * (
@@ -371,7 +376,7 @@ class RedOx:
 
             for name, n in zip(['H2O', 'H+', 'e-'], amounts):
                 const_term += coef * n * PREDEF_ENERGIES[name]
-                self.species[name] += coef * n
+                self.count[name] += coef * n
 
         const_corr, pH_corr = self.get_counter_correction(counter, alpha)
         self._vector = [
@@ -385,7 +390,7 @@ class RedOx:
            based on the counter electrode of choice and the temperature
            (alpha=k_B*T*ln(10))
         """
-        n_e = self.species['e-']
+        n_e = self.count['e-']
         gibbs_corr = 0.0
         pH_corr = 0.0
         if counter in ['RHE', 'Pt']:
@@ -404,7 +409,7 @@ class RedOx:
 
         reactants = []
         products = []
-        for s, n in self.species.items():
+        for s, n in self.count.items():
             if abs(n) <= 1e-6:
                 continue
             substr = f'{make_coeff_nice(n, max_denom)}{s}'
@@ -419,6 +424,15 @@ class RedOx:
         """Evaluate the reaction free energy
            at a given applied potential U and pH"""
         return self._vector[0] + self._vector[1] * U + self._vector[2] * pH
+
+    def copy(self):
+        return self.__class__(
+            self.components,
+            self.T,
+            self.counter,
+            self.ncells
+        )
+
 
 
 class Pourbaix:
@@ -533,7 +547,7 @@ class Pourbaix:
             e.g. get_equations(contains='ZnO')
         """
         for i, p in enumerate(self.phases):
-            if contains and contains not in p.species:
+            if contains is not None and contains not in p.count:
                 continue
             print(f'{i}) {p.equation()}')
 
@@ -578,7 +592,7 @@ class Pourbaix:
             else:
                 where = (pour == phase_id)
                 phase = self.phases[int(phase_id)]
-                txt = phase.species
+                txt = phase.count
             x = np.dot(where.sum(1), U) / where.sum()
             y = np.dot(where.sum(0), pH) / where.sum()
             text.append((x, y, txt))
@@ -691,7 +705,7 @@ class Pourbaix:
             npoints, cap,
             figsize, normalize,
             include_text,
-            include_h2o,
+            include_water,
             labeltype, cmap):
         """Backend for drawing Pourbaix diagrams"""
 
@@ -702,9 +716,9 @@ class Pourbaix:
 
         if normalize:
             meta /= self.material.natoms
-            cbarlabel = r'$E_{pbx}$ (eV/atom)'
+            cbarlabel = r'$\Delta G_{pbx}$ (eV/atom)'
         else:
-            cbarlabel = r'$E_{pbx}$ (eV)'
+            cbarlabel = r'$\Delta G_{pbx}$ (eV)'
 
         ax = plt.figure(figsize=figsize).add_subplot(111)
         extent = [*pHrange, *Urange]
@@ -750,7 +764,7 @@ class Pourbaix:
         else:
             raise ValueError("The provided label type doesn't exist")
 
-        if include_h2o:
+        if include_water:
             add_redox_lines(ax, pH, self.counter, 'w')
 
         ax.set_xlim(*pHrange)
@@ -790,7 +804,7 @@ class Pourbaix:
              figsize=[12, 6],
              normalize=True,
              include_text=True,
-             include_h2o=False,
+             include_water=False,
              labeltype='numbers',
              cmap="RdYlGn_r",
              savefig=None,
@@ -851,7 +865,7 @@ class Pourbaix:
             npoints, cap,
             figsize, normalize,
             include_text,
-            include_h2o,
+            include_water,
             labeltype, cmap)
 
         if savefig:
