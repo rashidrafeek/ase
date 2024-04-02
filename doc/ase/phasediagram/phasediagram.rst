@@ -73,8 +73,9 @@ solvated zinc-containing ions and molecules by using the :func:`solvated` functi
 
 .. autofunction:: solvated
 
-We add two solids and one more dissolved molecule to the references, convert them
-to a dictionary and create a :class:`Pourbaix` object using the class default arguments:
+We add two solids and one more dissolved molecule to the references,
+convert them to a dictionary and create a :class:`~ase.pourbaix.Pourbaix`
+object using the class default arguments:
 
 >>> refs += [('Zn', 0.0), ('ZnO', -3.323), ('ZnO2(aq)', -2.921)]
 >>> pb = Pourbaix('ZnO', dict(refs))
@@ -85,13 +86,13 @@ the Pourbaix energy, i.e. the energy of the target material ZnO
 relative to the most stable competing phase:
 
 >>> energy, phase = pbx.get_pourbaix_energy(1.0, 9.0, verbose=True)
-Stable phase: 
+Stable phase:
 ZnO + H2O  ➜  2H+ + 2e- + ZnO2(aq)
 Energy: 0.560 eV
 
 As we can see in these conditions ZnO spontaneously decomposes
 into acqueous :mol:`ZnO2` and lies 560 meV above the latter species.
-This chemical reaction is described by a :class:`RedOx` object.
+This chemical reaction is described by a :class:`ase.pourbaix.RedOx` object.
 We can show that, in the same conditions, the reaction occurs spontaneously
 releasing the opposite of the pourbaix energy, i.e. -560 meV:
 
