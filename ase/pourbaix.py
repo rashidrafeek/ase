@@ -425,13 +425,6 @@ class RedOx:
            at a given applied potential U and pH"""
         return self._vector[0] + self._vector[1] * U + self._vector[2] * pH
 
-    def copy(self):
-        return self.__class__(
-            self.components,
-            self.T,
-            self.reference,
-            self.ncells)
-
 
 class Pourbaix:
     """Pourbaix class for acqueous stability evaluations.
