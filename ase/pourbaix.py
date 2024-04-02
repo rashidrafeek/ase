@@ -430,9 +430,7 @@ class RedOx:
             self.components,
             self.T,
             self.reference,
-            self.ncells
-        )
-
+            self.ncells)
 
 
 class Pourbaix:
