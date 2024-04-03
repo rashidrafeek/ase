@@ -25,6 +25,7 @@ from ase.calculators.calculator import kpts2sizeandoffsets
 from ase.calculators.openmx import parameters as param
 from ase.calculators.openmx.reader import (get_file_name, get_standard_key,
                                            read_electron_valency)
+from ase.config import cfg
 from ase.units import Bohr, Ha, Ry, fs, m, s
 
 keys = [param.tuple_integer_keys, param.tuple_float_keys,
@@ -97,7 +98,7 @@ def parameters_to_keywords(label=None, atoms=None, parameters=None,
     counterparts = {
         'system_currentdirectory': curdir,
         'system_name': prefix,
-        'data_path': os.environ.get('OPENMX_DFT_DATA_PATH'),
+        'data_path': cfg.get('OPENMX_DFT_DATA_PATH'),
         'species_number': len(get_species(atoms.get_chemical_symbols())),
         'atoms_number': len(atoms),
         'scf_restart': 'restart',
@@ -408,7 +409,13 @@ def get_atoms_speciesandcoordinates(atoms, parameters):
 
 
 def get_up_down_spin(magmom, element, xc, data_path, year):
-    magmom = np.linalg.norm(magmom)
+    # for magmom with single number (collinear spin) skip  the normalization
+    if isinstance(magmom, (int, float)):
+        # Collinear spin
+        magmom = float(magmom)
+    else:
+        # Non-collinear spin
+        magmom = np.linalg.norm(magmom)
     suffix = get_pseudo_potential_suffix(element, xc, year)
     filename = os.path.join(data_path, 'VPS/' + suffix + '.vps')
     valence_electron = float(read_electron_valency(filename))

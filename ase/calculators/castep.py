@@ -15,6 +15,7 @@ Contributors:
 
 import difflib
 import glob
+import io
 import json
 import os
 import re
@@ -24,21 +25,22 @@ import sys
 import tempfile
 import time
 import warnings
-from collections import namedtuple
+from collections import defaultdict, namedtuple
 from copy import deepcopy
 from itertools import product
 from pathlib import Path
-from typing import List, Set
+from typing import Any, Dict, List, Optional, Set
 
 import numpy as np
 
-import ase
-import ase.units as units
-from ase.calculators.calculator import (PropertyNotImplementedError,
-                                        compare_atoms, kpts2sizeandoffsets)
-from ase.calculators.general import Calculator
+from ase import Atoms, units
+from ase.calculators.calculator import (
+    BaseCalculator,
+    compare_atoms,
+    kpts2sizeandoffsets,
+)
 from ase.config import cfg
-from ase.constraints import FixCartesian
+from ase.constraints import FixConstraint, FixAtoms, FixCartesian
 from ase.dft.kpoints import BandPath
 from ase.io.castep import read_bands, read_param
 from ase.parallel import paropen
@@ -74,7 +76,7 @@ def _self_getter(getf):
 
 def _parse_tss_block(value, scaled=False):
     # Parse the assigned value for a Transition State Search structure block
-    is_atoms = isinstance(value, ase.atoms.Atoms)
+    is_atoms = isinstance(value, Atoms)
     try:
         is_strlist = all(map(lambda x: isinstance(x, str), value))
     except TypeError:
@@ -103,7 +105,7 @@ def _parse_tss_block(value, scaled=False):
         return text_block
 
 
-class Castep(Calculator):
+class Castep(BaseCalculator):
     r"""
 CASTEP Interface Documentation
 
@@ -485,15 +487,36 @@ End CASTEP Interface Documentation
         '_try_reuse',
         '_pedantic']
 
+    implemented_properties = [
+        'energy',
+        'free_energy',
+        'forces',
+        'stress',
+        'charges',
+        'magmoms',
+    ]
+
+    # specific to this calculator
+    implemented_properties += [
+        'energy_without_dispersion_correction',
+        'free_energy_without_dispersion_correction',
+        'energy_zero_without_dispersion_correction',
+        'energy_with_dispersion_correction',
+        'free_energy_with_dispersion_correction',
+        'energy_zero_with_dispersion_correction',
+        'energy_with_finite_basis_set_correction',
+        'pressure',
+        'hirshfeld_volume_ratios',
+        'hirshfeld_charges',
+        'hirshfeld_magmoms',
+    ]
+
     def __init__(self, directory='CASTEP', label='castep',
                  castep_command=None, check_castep_version=False,
                  castep_pp_path=None, find_pspots=False, keyword_tolerance=1,
                  castep_keywords=None, **kwargs):
 
-        self.__name__ = 'Castep'
-
-        # initialize the ase.calculators.general calculator
-        Calculator.__init__(self)
+        self.results = {}
 
         from ase.io.castep import write_cell
         self._write_cell = write_cell
@@ -571,35 +594,14 @@ End CASTEP Interface Documentation
         ###################################
         self.atoms = None
         # initialize result variables
-        self._forces = None
-        self._energy_total = None
-        self._energy_free = None
-        self._energy_0K = None
-        self._energy_total_corr = None
         self._eigenvalues = None
         self._efermi = None
         self._ibz_kpts = None
         self._ibz_weights = None
         self._band_structure = None
 
-        # dispersion corrections
-        self._dispcorr_energy_total = None
-        self._dispcorr_energy_free = None
-        self._dispcorr_energy_0K = None
-
-        # spins and hirshfeld volumes
-        self._spins = None
-        self._hirsh_volrat = None
-
-        # Mulliken charges
-        self._mulliken_charges = None
-        # Hirshfeld charges
-        self._hirshfeld_charges = None
-
         self._number_of_cell_constraints = None
         self._output_verbosity = None
-        self._stress = None
-        self._pressure = None
         self._unit_cell = None
         self._kpoints = None
 
@@ -641,6 +643,22 @@ End CASTEP Interface Documentation
                 self.cut_off_energy = value
             else:  # the general case
                 self.__setattr__(keyword, value)
+
+        # TODO: to be self.use_cache = True after revising `__setattr__`
+        self.__dict__['use_cache'] = True
+
+    def set_atoms(self, atoms):
+        self.atoms = atoms
+
+    def get_atoms(self):
+        if self.atoms is None:
+            raise ValueError('Calculator has no atoms')
+        atoms = self.atoms.copy()
+        atoms.calc = self
+        return atoms
+
+    def _get_name(self) -> str:
+        return self.__class__.__name__
 
     def band_structure(self, bandfile=None):
         from ase.spectrum.band_structure import BandStructure
@@ -943,31 +961,20 @@ End CASTEP Interface Documentation
         # could be generalized as well to extract trajectory from file
         # holding several outputs
         n_cell_const = 0
-        forces = []
 
-        # HOTFIX:
-        # we have to initialize the _stress variable as a zero array
-        # otherwise the calculator crashes upon pickling trajectories
-        # Alternative would be to raise a NotImplementedError() which
-        # is also kind of not true, since we can extract stresses if
-        # the user configures CASTEP to print them in the outfile
-        # stress = []
-        stress = np.zeros([3, 3])
-        hirsh_volrat = []
-
-        # Two flags to check whether spin-polarized or not, and whether
-        # Hirshfeld volumes are calculated
-        spin_polarized = False
-        calculate_hirshfeld = False
-        mulliken_analysis = False
-        hirshfeld_analysis = False
         kpoints = None
 
-        positions_frac_list = []
-        mulliken_charges = []
-        spins = []
-
         out.seek(record_start)
+
+        # read header
+        parameters_header = _read_header(out)
+        if 'cut_off_energy' in parameters_header:
+            self._cut_off_energy = parameters_header['cut_off_energy']
+            if 'basis_precision' in parameters_header:
+                del parameters_header['cut_off_energy']  # avoid conflict
+        for k, v in parameters_header.items():
+            setattr(self.param, k, v)
+
         while True:
             # TODO: add a switch if we have a geometry optimization: record
             # atoms objects for intermediate steps.
@@ -975,143 +982,10 @@ End CASTEP Interface Documentation
                 line = out.readline()
                 if not line or out.tell() > record_end:
                     break
-                elif 'Hirshfeld Analysis' in line:
-                    hirshfeld_charges = []
-
-                    hirshfeld_analysis = True
-                    # skip the separating line
-                    line = out.readline()
-                    # this is the headline
-                    line = out.readline()
-
-                    if 'Charge' in line:
-                        # skip the next separator line
-                        line = out.readline()
-                        while True:
-                            line = out.readline()
-                            fields = line.split()
-                            if len(fields) == 1:
-                                break
-                            else:
-                                hirshfeld_charges.append(float(fields[-1]))
-                elif 'stress calculation' in line:
-                    if line.split()[-1].strip() == 'on':
-                        self.param.calculate_stress = True
-                elif 'basis set accuracy' in line:
-                    self.param.basis_precision = line.split()[-1]
-                elif 'plane wave basis set cut-off' in line:
-                    # NB this is set as a private "result" attribute to avoid
-                    # conflict with input option basis_precision
-                    cutoff = float(line.split()[-2])
-                    self._cut_off_energy = cutoff
-                    if self.param.basis_precision.value is None:
-                        self.param.cut_off_energy = cutoff
-                elif 'total energy / atom convergence tol.' in line:
-                    elec_energy_tol = float(line.split()[-2])
-                    self.param.elec_energy_tol = elec_energy_tol
-                elif 'convergence tolerance window' in line:
-                    elec_convergence_win = int(line.split()[-2])
-                    self.param.elec_convergence_win = elec_convergence_win
-                elif re.match(r'\sfinite basis set correction\s*:', line):
-                    finite_basis_corr = line.split()[-1]
-                    fbc_possibilities = {'none': 0,
-                                         'manual': 1, 'automatic': 2}
-                    fbc = fbc_possibilities[finite_basis_corr]
-                    self.param.finite_basis_corr = fbc
-                elif 'Treating system as non-metallic' in line:
-                    self.param.fix_occupancy = True
-                elif 'max. number of SCF cycles:' in line:
-                    max_no_scf = float(line.split()[-1])
-                    self.param.max_scf_cycles = max_no_scf
-                elif 'density-mixing scheme' in line:
-                    mixing_scheme = line.split()[-1]
-                    self.param.mixing_scheme = mixing_scheme
-                elif 'dump wavefunctions every' in line:
-                    no_dump_cycles = float(line.split()[-3])
-                    self.param.num_dump_cycles = no_dump_cycles
-                elif 'optimization strategy' in line:
-                    lspl = line.split(":")
-                    if lspl[0].strip() != 'optimization strategy':
-                        # This can happen in iprint: 3 calculations
-                        continue
-                    if 'memory' in line:
-                        self.param.opt_strategy = 'Memory'
-                    if 'speed' in line:
-                        self.param.opt_strategy = 'Speed'
-                elif 'calculation limited to maximum' in line:
-                    calc_limit = float(line.split()[-2])
-                    self.param.run_time = calc_limit
-                elif 'type of calculation' in line:
-                    lspl = line.split(":")
-                    if lspl[0].strip() != 'type of calculation':
-                        # This can happen in iprint: 3 calculations
-                        continue
-                    calc_type = lspl[-1]
-                    calc_type = re.sub(r'\s+', ' ', calc_type)
-                    calc_type = calc_type.strip()
-                    if calc_type != 'single point energy':
-                        calc_type_possibilities = {
-                            'geometry optimization': 'GeometryOptimization',
-                            'band structure': 'BandStructure',
-                            'molecular dynamics': 'MolecularDynamics',
-                            'optical properties': 'Optics',
-                            'phonon calculation': 'Phonon',
-                            'E-field calculation': 'Efield',
-                            'Phonon followed by E-field': 'Phonon+Efield',
-                            'transition state search': 'TransitionStateSearch',
-                            'Magnetic Resonance': 'MagRes',
-                            'Core level spectra': 'Elnes',
-                            'Electronic Spectroscopy': 'ElectronicSpectroscopy'
-                        }
-                        ctype = calc_type_possibilities[calc_type]
-                        self.param.task = ctype
-                elif 'using functional' in line:
-                    used_functional = line.split(":")[-1]
-                    used_functional = re.sub(r'\s+', ' ', used_functional)
-                    used_functional = used_functional.strip()
-                    if used_functional != 'Local Density Approximation':
-                        used_functional_possibilities = {
-                            'Perdew Wang (1991)': 'PW91',
-                            'Perdew Burke Ernzerhof': 'PBE',
-                            'revised Perdew Burke Ernzerhof': 'RPBE',
-                            'PBE with Wu-Cohen exchange': 'WC',
-                            'PBE for solids (2008)': 'PBESOL',
-                            'Hartree-Fock': 'HF',
-                            'Hartree-Fock +': 'HF-LDA',
-                            'Screened Hartree-Fock': 'sX',
-                            'Screened Hartree-Fock + ': 'sX-LDA',
-                            'hybrid PBE0': 'PBE0',
-                            'hybrid B3LYP': 'B3LYP',
-                            'hybrid HSE03': 'HSE03',
-                            'hybrid HSE06': 'HSE06'
-                        }
-                        used_func = used_functional_possibilities[
-                            used_functional]
-                        self.param.xc_functional = used_func
-                elif 'output verbosity' in line:
-                    iprint = int(line.split()[-1][1])
-                    if int(iprint) != 1:
-                        self.param.iprint = iprint
-                elif 'treating system as spin-polarized' in line:
-                    spin_polarized = True
-                    self.param.spin_polarized = spin_polarized
-                elif 'treating system as non-spin-polarized' in line:
-                    spin_polarized = False
                 elif 'Number of kpoints used' in line:
                     kpoints = int(line.split('=')[-1].strip())
                 elif 'Unit Cell' in line:
-                    lattice_real = []
-                    lattice_reci = []
-                    while True:
-                        line = out.readline()
-                        fields = line.split()
-                        if len(fields) == 6:
-                            break
-                    for i in range(3):
-                        lattice_real.append([float(f) for f in fields[0:3]])
-                        lattice_reci.append([float(f) for f in fields[3:7]])
-                        line = out.readline()
-                        fields = line.split()
+                    lattice_real = _read_unit_cell(out)
                 elif 'Cell Contents' in line:
                     while True:
                         line = out.readline()
@@ -1123,28 +997,8 @@ End CASTEP Interface Documentation
                         if len(fields) == 0:
                             break
                 elif 'Fractional coordinates of atoms' in line:
-                    species = []
-                    custom_species = None  # A CASTEP special thing
-                    positions_frac = []
-                    # positions_cart = []
-                    while True:
-                        line = out.readline()
-                        fields = line.split()
-                        if len(fields) == 7:
-                            break
-                    for n in range(n_atoms):
-                        spec_custom = fields[1].split(':', 1)
-                        elem = spec_custom[0]
-                        if len(spec_custom) > 1 and custom_species is None:
-                            # Add it to the custom info!
-                            custom_species = list(species)
-                        species.append(elem)
-                        if custom_species is not None:
-                            custom_species.append(fields[1])
-                        positions_frac.append([float(s) for s in fields[3:6]])
-                        line = out.readline()
-                        fields = line.split()
-                    positions_frac_list.append(positions_frac)
+                    species, custom_species, positions_frac = \
+                        _read_fractional_coordinates(out, n_atoms)
                 elif 'Files used for pseudopotentials' in line:
                     while True:
                         line = out.readline()
@@ -1176,110 +1030,51 @@ End CASTEP Interface Documentation
                             break
                 elif 'Number of cell constraints' in line:
                     n_cell_const = int(line.split()[4])
+
                 elif 'Final energy' in line:
-                    self._energy_total = float(line.split()[-2])
+                    key = 'energy_without_dispersion_correction'
+                    self.results[key] = float(line.split()[-2])
                 elif 'Final free energy' in line:
-                    self._energy_free = float(line.split()[-2])
+                    key = 'free_energy_without_dispersion_correction'
+                    self.results[key] = float(line.split()[-2])
                 elif 'NB est. 0K energy' in line:
-                    self._energy_0K = float(line.split()[-2])
-                # check if we had a finite basis set correction
-                elif 'Total energy corrected for finite basis set' in line:
-                    self._energy_total_corr = float(line.split()[-2])
+                    key = 'energy_zero_without_dispersion_correction'
+                    self.results[key] = float(line.split()[-2])
 
                 # Add support for dispersion correction
                 # filtering due to SEDC is done in get_potential_energy
                 elif 'Dispersion corrected final energy' in line:
-                    self._dispcorr_energy_total = float(line.split()[-2])
+                    key = 'energy_with_dispersion_correlation'
+                    self.results[key] = float(line.split()[-2])
                 elif 'Dispersion corrected final free energy' in line:
-                    self._dispcorr_energy_free = float(line.split()[-2])
-                elif 'dispersion corrected est. 0K energy' in line:
-                    self._dispcorr_energy_0K = float(line.split()[-2])
+                    key = 'free_energy_with_dispersion_correlation'
+                    self.results[key] = float(line.split()[-2])
+                elif 'NB dispersion corrected est. 0K energy' in line:
+                    key = 'energy_zero_with_dispersion_correlation'
+                    self.results[key] = float(line.split()[-2])
 
-                # remember to remove constraint labels in force components
-                # (lacking a space behind the actual floating point number in
-                # the CASTEP output)
-                elif '******************** Forces *********************'\
-                     in line or\
-                     '************** Symmetrised Forces ***************'\
-                     in line or\
-                     '************** Constrained Symmetrised Forces ****'\
-                     '**********'\
-                     in line or\
-                     '******************** Constrained Forces **********'\
-                     '**********'\
-                     in line or\
-                     '******************* Unconstrained Forces *********'\
-                     '**********'\
-                     in line:
-                    fix = []
-                    fix_cart = []
-                    forces = []
-                    while True:
-                        line = out.readline()
-                        fields = line.split()
-                        if len(fields) == 7:
-                            break
-                    for n in range(n_atoms):
-                        consd = np.array([0, 0, 0])
-                        fxyz = [0, 0, 0]
-                        for (i, force_component) in enumerate(fields[-4:-1]):
-                            if force_component.count("(cons'd)") > 0:
-                                consd[i] = 1
-                            fxyz[i] = float(force_component.replace(
-                                "(cons'd)", ''))
-                        if consd.all():
-                            fix.append(n)
-                        elif consd.any():
-                            fix_cart.append(FixCartesian(n, consd))
-                        forces.append(fxyz)
-                        line = out.readline()
-                        fields = line.split()
+                # check if we had a finite basis set correction
+                elif 'Total energy corrected for finite basis set' in line:
+                    key = 'energy_with_finite_basis_set_correction'
+                    self.results[key] = float(line.split()[-2])
 
-                # add support for Hirshfeld analysis
-                elif 'Hirshfeld / free atomic volume :' in line:
-                    # if we are here, then params must be able to cope with
-                    # Hirshfeld flag (if castep_keywords.py matches employed
-                    # castep version)
-                    calculate_hirshfeld = True
-                    hirsh_volrat = []
-                    while True:
-                        line = out.readline()
-                        fields = line.split()
-                        if len(fields) == 1:
-                            break
-                    for n in range(n_atoms):
-                        hirsh_atom = float(fields[0])
-                        hirsh_volrat.append(hirsh_atom)
-                        while True:
-                            line = out.readline()
-                            if 'Hirshfeld / free atomic volume :' in line or\
-                               'Hirshfeld Analysis' in line:
-                                break
-                        line = out.readline()
-                        fields = line.split()
+                # ******************** Forces *********************
+                # ************** Symmetrised Forces ***************
+                # ******************** Constrained Forces ********************
+                # ******************* Unconstrained Forces *******************
+                elif re.search(r'\**.* Forces \**', line):
+                    forces, constraints = _read_forces(out, n_atoms)
+                    self.results['forces'] = np.array(forces)
 
-                elif '***************** Stress Tensor *****************'\
-                     in line or\
-                     '*********** Symmetrised Stress Tensor ***********'\
-                     in line:
-                    stress = []
-                    while True:
-                        line = out.readline()
-                        fields = line.split()
-                        if len(fields) == 6:
-                            break
-                    for n in range(3):
-                        stress.append([float(s) for s in fields[2:5]])
-                        line = out.readline()
-                        fields = line.split()
-                    line = out.readline()
-                    if "Pressure:" in line:
-                        self._pressure = float(line.split()[-2]) * units.GPa
+                # ***************** Stress Tensor *****************
+                # *********** Symmetrised Stress Tensor ***********
+                elif re.search(r'\**.* Stress Tensor \**', line):
+                    self.results.update(_read_stress(out))
+
                 elif ('BFGS: starting iteration' in line
                       or 'BFGS: improving iteration' in line):
                     if n_cell_const < 6:
                         lattice_real = []
-                        lattice_reci = []
                     # backup previous configuration first:
                     # for highly symmetric systems (where essentially only the
                     # stress is optimized, but the atomic positions) positions
@@ -1290,40 +1085,19 @@ End CASTEP Interface Documentation
                         prev_positions_frac = deepcopy(positions_frac)
                     species = []
                     positions_frac = []
-                    forces = []
 
-                    # HOTFIX:
-                    # Same reason for the stress initialization as before
-                    # stress = []
-                    stress = np.zeros([3, 3])
+                    self.results = {}
 
                 # extract info from the Mulliken analysis
                 elif 'Atomic Populations' in line:
-                    # sometimes this appears twice in a castep file
+                    self.results.update(_read_mulliken_charges(out))
 
-                    mulliken_analysis = True
-                    # skip the separating line
-                    line = out.readline()
-                    # this is the headline
-                    line = out.readline()
+                # extract detailed Hirshfeld analysis (iprint > 1)
+                elif 'Hirshfeld total electronic charge (e)' in line:
+                    self.results.update(_read_hirshfeld_details(out, n_atoms))
 
-                    if 'Charge' in line:
-                        # skip the next separator line
-                        line = out.readline()
-                        while True:
-                            line = out.readline()
-                            fields = line.split()
-                            if len(fields) == 1:
-                                break
-
-                            # the check for len==7 is due to CASTEP 18
-                            # outformat changes
-                            if spin_polarized:
-                                if len(fields) != 7:
-                                    spins.append(float(fields[-1]))
-                                    mulliken_charges.append(float(fields[-2]))
-                            else:
-                                mulliken_charges.append(float(fields[-1]))
+                elif 'Hirshfeld Analysis' in line:
+                    self.results.update(_read_hirshfeld_charges(out))
 
                 # There is actually no good reason to get out of the loop
                 # already at this point... or do I miss something?
@@ -1349,6 +1123,8 @@ End CASTEP Interface Documentation
         if _close:
             out.close()
 
+        _set_energy_and_free_energy(self.results)
+
         # in highly summetric crystals, positions and symmetry are only printed
         # upon init, hence we here restore these original values
         if not positions_frac:
@@ -1356,84 +1132,28 @@ End CASTEP Interface Documentation
         if not species:
             species = prev_species
 
-        if not spin_polarized:
-            # set to zero spin if non-spin polarized calculation
-            spins = np.zeros(len(positions_frac))
-        elif len(spins) != len(positions_frac):
-            warnings.warn('Spins could not be read for the atoms despite'
-                          ' spin-polarized calculation; spins will be ignored')
-            spins = np.zeros(len(positions_frac))
-
         positions_frac_atoms = np.array(positions_frac)
-        forces_atoms = np.array(forces)
-        spins_atoms = np.array(spins)
-
-        if mulliken_analysis:
-            if len(mulliken_charges) != len(positions_frac):
-                warnings.warn(
-                    'Mulliken charges could not be read for the atoms;'
-                    ' charges will be ignored')
-                mulliken_charges = np.zeros(len(positions_frac))
-            mulliken_charges_atoms = np.array(mulliken_charges)
-        else:
-            mulliken_charges_atoms = np.zeros(len(positions_frac))
-
-        if hirshfeld_analysis:
-            hirshfeld_charges_atoms = np.array(hirshfeld_charges)
-        else:
-            hirshfeld_charges_atoms = None
-
-        if calculate_hirshfeld:
-            hirsh_atoms = np.array(hirsh_volrat)
-        else:
-            hirsh_atoms = np.zeros_like(spins)
 
         if self.atoms and not self._set_atoms:
             # compensate for internal reordering of atoms by CASTEP
             # using the fact that the order is kept within each species
 
-            # positions_frac_ase = self.atoms.get_scaled_positions(wrap=False)
-            atoms_assigned = [False] * len(self.atoms)
+            indices = _get_indices_to_sort_back(self.atoms.symbols, species)
+            positions_frac_atoms = positions_frac_atoms[indices]
+            keys = [
+                'forces',
+                'charges',
+                'magmoms',
+                'hirshfeld_volume_ratios',
+                'hirshfeld_charges',
+                'hirshfeld_magmoms',
+            ]
+            for k in keys:
+                if k not in self.results:
+                    continue
+                self.results[k] = self.results[k][indices]
 
-            # positions_frac_castep_init = np.array(positions_frac_list[0])
-            positions_frac_castep = np.array(positions_frac_list[-1])
-
-            # species_castep = list(species)
-            forces_castep = np.array(forces)
-            hirsh_castep = np.array(hirsh_volrat)
-            spins_castep = np.array(spins)
-            mulliken_charges_castep = np.array(mulliken_charges_atoms)
-
-            # go through the atoms position list and replace
-            # with the corresponding one from the
-            # castep file corresponding atomic number
-            for iase in range(n_atoms):
-                for icastep in range(n_atoms):
-                    if (species[icastep] == self.atoms[iase].symbol
-                            and not atoms_assigned[icastep]):
-                        positions_frac_atoms[iase] = \
-                            positions_frac_castep[icastep]
-                        forces_atoms[iase] = np.array(forces_castep[icastep])
-                        if iprint > 1 and calculate_hirshfeld:
-                            hirsh_atoms[iase] = np.array(hirsh_castep[icastep])
-                        if spin_polarized:
-                            # reordering not necessary in case all spins == 0
-                            spins_atoms[iase] = np.array(spins_castep[icastep])
-                        mulliken_charges_atoms[iase] = np.array(
-                            mulliken_charges_castep[icastep])
-                        atoms_assigned[icastep] = True
-                        break
-
-            if not all(atoms_assigned):
-                not_assigned = [i for (i, assigned)
-                                in zip(range(len(atoms_assigned)),
-                                       atoms_assigned) if not assigned]
-                warnings.warn(
-                    '%s atoms not assigned. '
-                    ' DEBUGINFO: The following atoms where not assigned: %s' %
-                    (atoms_assigned.count(False), not_assigned))
-            else:
-                self.atoms.set_scaled_positions(positions_frac_atoms)
+            self.atoms.set_scaled_positions(positions_frac_atoms)
 
         else:
             # If no atoms, object has been previously defined
@@ -1444,36 +1164,23 @@ End CASTEP Interface Documentation
             # set_calculator also set atoms in the calculator.
             if self.atoms:
                 constraints = self.atoms.constraints
-            else:
-                constraints = []
-            atoms = ase.atoms.Atoms(species,
-                                    cell=lattice_real,
-                                    constraint=constraints,
-                                    pbc=True,
-                                    scaled_positions=positions_frac,
-                                    )
+            atoms = Atoms(
+                species,
+                cell=lattice_real,
+                constraint=constraints,
+                pbc=True,
+                scaled_positions=positions_frac,
+            )
             if custom_species is not None:
                 atoms.new_array('castep_custom_species',
                                 np.array(custom_species))
 
-            if self.param.spin_polarized:
-                # only set magnetic moments if this was a spin polarized
-                # calculation
-                # this one fails as is
-                atoms.set_initial_magnetic_moments(magmoms=spins_atoms)
+            atoms.set_initial_charges(self.results.get('charges'))
+            atoms.set_initial_magnetic_moments(self.results.get('magmoms'))
 
-            if mulliken_analysis:
-                atoms.set_initial_charges(charges=mulliken_charges_atoms)
             atoms.calc = self
 
         self._kpoints = kpoints
-        self._forces = forces_atoms
-        # stress in .castep file is given in GPa:
-        self._stress = np.array(stress) * units.GPa
-        self._hirsh_volrat = hirsh_atoms
-        self._spins = spins_atoms
-        self._mulliken_charges = mulliken_charges_atoms
-        self._hirshfeld_charges = hirshfeld_charges_atoms
 
         if self._warnings:
             warnings.warn(f'WARNING: {castep_file} contains warnings')
@@ -1497,29 +1204,33 @@ End CASTEP Interface Documentation
                 warnings.warn('Could not load .bands file, eigenvalues and '
                               'Fermi energy are unknown')
 
+    # TODO: deprecate once inheriting BaseCalculator
     def get_hirsh_volrat(self):
         """
-        Return the Hirshfeld volumes.
+        Return the Hirshfeld volume ratios.
         """
-        return self._hirsh_volrat
+        return self.results.get('hirshfeld_volume_ratios')
 
+    # TODO: deprecate once inheriting BaseCalculator
     def get_spins(self):
         """
         Return the spins from a plane-wave Mulliken analysis.
         """
-        return self._spins
+        return self.results['magmoms']
 
+    # TODO: deprecate once inheriting BaseCalculator
     def get_mulliken_charges(self):
         """
         Return the charges from a plane-wave Mulliken analysis.
         """
-        return self._mulliken_charges
+        return self.results['charges']
 
+    # TODO: deprecate once inheriting BaseCalculator
     def get_hirshfeld_charges(self):
         """
         Return the charges from a Hirshfeld analysis.
         """
-        return self._hirshfeld_charges
+        return self.results.get('hirshfeld_charges')
 
     def get_total_time(self):
         """
@@ -1655,103 +1366,37 @@ End CASTEP Interface Documentation
             else:
                 self.cell.species_pot = (elem, pps[0])
 
-    @property
-    def name(self):
-        """Return the name of the calculator (string).  """
-        return self.__name__
-
-    def get_property(self, name, atoms=None, allow_calculation=True):
-        # High-level getter for compliance with the database module...
-        # in principle this would not be necessary any longer if we properly
-        # based this class on `Calculator`
-        if name == 'forces':
-            return self.get_forces(atoms)
-        elif name == 'energy':
-            return self.get_potential_energy(atoms)
-        elif name == 'stress':
-            return self.get_stress(atoms)
-        elif name == 'charges':
-            return self.get_charges(atoms)
-        else:
-            raise PropertyNotImplementedError
-
-    @_self_getter
-    def get_forces(self, atoms):
-        """Run CASTEP calculation if needed and return forces."""
-        self.update(atoms)
-        return np.array(self._forces)
-
     @_self_getter
     def get_total_energy(self, atoms):
         """Run CASTEP calculation if needed and return total energy."""
         self.update(atoms)
-        return self._energy_total
+        return self.results.get('energy_without_dispersion_correction')
 
     @_self_getter
     def get_total_energy_corrected(self, atoms):
         """Run CASTEP calculation if needed and return total energy."""
         self.update(atoms)
-        return self._energy_total_corr
+        return self.results.get('energy_with_finite_basis_set_correction')
 
     @_self_getter
     def get_free_energy(self, atoms):
         """Run CASTEP calculation if needed and return free energy.
            Only defined with smearing."""
         self.update(atoms)
-        return self._energy_free
+        return self.results.get('free_energy_without_dispersion_correction')
 
     @_self_getter
     def get_0K_energy(self, atoms):
         """Run CASTEP calculation if needed and return 0K energy.
            Only defined with smearing."""
         self.update(atoms)
-        return self._energy_0K
-
-    @_self_getter
-    def get_potential_energy(self, atoms, force_consistent=False):
-        # here for compatibility with ase/calculators/general.py
-        # but accessing only _name variables
-        """Return the total potential energy."""
-        self.update(atoms)
-        if force_consistent:
-            # Assumption: If no dispersion correction is applied, then the
-            # respective value will default to None as initialized.
-            if self._dispcorr_energy_free is not None:
-                return self._dispcorr_energy_free
-            else:
-                return self._energy_free
-        else:
-            if self._energy_0K is not None:
-                if self._dispcorr_energy_0K is not None:
-                    return self._dispcorr_energy_0K
-                else:
-                    return self._energy_0K
-            else:
-                if self._dispcorr_energy_total is not None:
-                    return self._dispcorr_energy_total
-                else:
-                    if self._energy_total_corr is not None:
-                        return self._energy_total_corr
-                    else:
-                        return self._energy_total
-
-    @_self_getter
-    def get_stress(self, atoms):
-        """Return the stress."""
-        self.update(atoms)
-        # modification: we return the Voigt form directly to get rid of the
-        # annoying user warnings
-        stress = np.array(
-            [self._stress[0, 0], self._stress[1, 1], self._stress[2, 2],
-             self._stress[1, 2], self._stress[0, 2], self._stress[0, 1]])
-        # return self._stress
-        return stress
+        return self.results.get('energy_zero_without_dispersion_correction')
 
     @_self_getter
     def get_pressure(self, atoms):
         """Return the pressure."""
         self.update(atoms)
-        return self._pressure
+        return self.results.get('pressure')
 
     @_self_getter
     def get_unit_cell(self, atoms):
@@ -1771,32 +1416,14 @@ End CASTEP Interface Documentation
         self.update(atoms)
         return self._number_of_cell_constraints
 
-    @_self_getter
-    def get_charges(self, atoms):
-        """Run CASTEP calculation if needed and return Mulliken charges."""
-        self.update(atoms)
-        return np.array(self._mulliken_charges)
-
-    @_self_getter
-    def get_magnetic_moments(self, atoms):
-        """Run CASTEP calculation if needed and return Mulliken charges."""
-        self.update(atoms)
-        return np.array(self._spins)
-
-    def set_atoms(self, atoms):
-        """Sets the atoms for the calculator and vice versa."""
-        atoms.pbc = [True, True, True]
-        self.__dict__['atoms'] = atoms.copy()
-        self.atoms._calc = self
-
     def update(self, atoms):
         """Checks if atoms object or calculator changed and
         runs calculation if so.
         """
-        if self.calculation_required(atoms):
-            self.calculate(atoms)
+        if self.calculation_required(atoms, None):
+            self.calculate(atoms, [], [])
 
-    def calculation_required(self, atoms, _=None):
+    def calculation_required(self, atoms, properties):
         """Checks wether anything changed in the atoms object or CASTEP
         settings since the last calculation using this instance.
         """
@@ -1814,7 +1441,7 @@ End CASTEP Interface Documentation
             return True
         return False
 
-    def calculate(self, atoms):
+    def calculate(self, atoms, properties, system_changes):
         """Write all necessary input file and call CASTEP."""
         self.prepare_input_files(atoms, force_write=self._force_write)
         if not self._prepare_input_only:
@@ -2040,11 +1667,11 @@ End CASTEP Interface Documentation
             else:
                 self.__dict__[attr] = value
             return
-        elif attr in ['atoms', 'cell', 'param']:
+        elif attr in ['atoms', 'cell', 'param', 'results']:
             if value is not None:
-                if attr == 'atoms' and not isinstance(value, ase.atoms.Atoms):
+                if attr == 'atoms' and not isinstance(value, Atoms):
                     raise TypeError(
-                        f'{value} is not an instance of ase.atoms.Atoms.')
+                        f'{value} is not an instance of Atoms.')
                 elif attr == 'cell' and not isinstance(value, CastepCell):
                     raise TypeError(
                         f'{value} is not an instance of CastepCell.')
@@ -2259,6 +1886,324 @@ ppwarning = ('Warning: PP files have neither been '
              'linked nor copied to the working directory. Make '
              'sure to set the evironment variable PSPOT_DIR '
              'accordingly!')
+
+
+def _read_header(out: io.TextIOBase):
+    """Read the header blocks from a .castep file.
+
+    Returns
+    -------
+    parameters : dict
+        Dictionary storing keys and values of a .param file.
+    """
+    def _parse_on_off(_: str):
+        return {'on': True, 'off': False}[_]
+
+    read_title = False
+    parameters: Dict[str, Any] = {}
+    while True:
+        line = out.readline()
+        if len(line) == 0:  # end of file
+            break
+        if re.search(r'^\s*\*+$', line) and read_title:  # end of header
+            break
+
+        if re.search(r'\**.* Title \**', line):
+            read_title = True
+
+        # General Parameters
+
+        elif 'output verbosity' in line:
+            parameters['iprint'] = int(line.split()[-1][1])
+        elif re.match(r'\stype of calculation\s*:', line):
+            parameters['task'] = {
+                'single point energy': 'SinglePoint',
+                'geometry optimization': 'GeometryOptimization',
+                'band structure': 'BandStructure',
+                'molecular dynamics': 'MolecularDynamics',
+                'optical properties': 'Optics',
+                'phonon calculation': 'Phonon',
+                'E-field calculation': 'Efield',
+                'Phonon followed by E-field': 'Phonon+Efield',
+                'transition state search': 'TransitionStateSearch',
+                'Magnetic Resonance': 'MagRes',
+                'Core level spectra': 'Elnes',
+                'Electronic Spectroscopy': 'ElectronicSpectroscopy',
+            }[line.split(':')[-1].strip()]
+        elif 'stress calculation' in line:
+            parameters['calculate_stress'] = _parse_on_off(line.split()[-1])
+        elif 'calculation limited to maximum' in line:
+            parameters['run_time'] = float(line.split()[-2])
+        elif re.match(r'\soptimization strategy\s*:', line):
+            parameters['opt_strategy'] = {
+                'maximize speed(+++)': 'Speed',
+                'minimize memory(---)': 'Memory',
+                'balance speed and memory': 'Default',
+            }[line.split(':')[-1].strip()]
+
+        # Exchange-Correlation Parameters
+
+        elif re.match(r'\susing functional\s*:', line):
+            parameters['xc_functional'] = {
+                'Local Density Approximation': 'LDA',
+                'Perdew Wang (1991)': 'PW91',
+                'Perdew Burke Ernzerhof': 'PBE',
+                'revised Perdew Burke Ernzerhof': 'RPBE',
+                'PBE with Wu-Cohen exchange': 'WC',
+                'PBE for solids (2008)': 'PBESOL',
+                'Hartree-Fock': 'HF',
+                'Hartree-Fock +': 'HF-LDA',
+                'Screened Hartree-Fock': 'sX',
+                'Screened Hartree-Fock + ': 'sX-LDA',
+                'hybrid PBE0': 'PBE0',
+                'hybrid B3LYP': 'B3LYP',
+                'hybrid HSE03': 'HSE03',
+                'hybrid HSE06': 'HSE06',
+                'RSCAN': 'RSCAN',
+            }[line.split(':')[-1].strip()]
+        elif 'DFT+D: Semi-empirical dispersion correction' in line:
+            parameters['sedc_apply'] = _parse_on_off(line.split()[-1])
+        elif 'SEDC with' in line:
+            parameters['sedc_scheme'] = {
+                'OBS correction scheme': 'OBS',
+                'G06 correction scheme': 'G06',
+                'D3 correction scheme': 'D3',
+                'D3(BJ) correction scheme': 'D3-BJ',
+                'D4 correction scheme': 'D4',
+                'JCHS correction scheme': 'JCHS',
+                'TS correction scheme': 'TS',
+                'TSsurf correction scheme': 'TSSURF',
+                'TS+SCS correction scheme': 'TSSCS',
+                'aperiodic TS+SCS correction scheme': 'ATSSCS',
+                'aperiodic MBD@SCS method': 'AMBD',
+                'MBD@SCS method': 'MBD',
+                'aperiodic MBD@rsSCS method': 'AMBD*',
+                'MBD@rsSCS method': 'MBD*',
+                'XDM correction scheme': 'XDM',
+            }[line.split(':')[-1].strip()]
+
+        # Basis Set Parameters
+
+        elif 'basis set accuracy' in line:
+            parameters['basis_precision'] = line.split()[-1]
+        elif 'plane wave basis set cut-off' in line:
+            parameters['cut_off_energy'] = float(line.split()[-2])
+        elif re.match(r'\sfinite basis set correction\s*:', line):
+            parameters['finite_basis_corr'] = {
+                'none': 0,
+                'manual': 1,
+                'automatic': 2,
+            }[line.split()[-1]]
+
+        # Electronic Parameters
+
+        elif 'treating system as spin-polarized' in line:
+            parameters['spin_polarized'] = True
+
+        # Electronic Minimization Parameters
+
+        elif 'Treating system as non-metallic' in line:
+            parameters['fix_occupancy'] = True
+        elif 'total energy / atom convergence tol.' in line:
+            parameters['elec_energy_tol'] = float(line.split()[-2])
+        elif 'convergence tolerance window' in line:
+            parameters['elec_convergence_win'] = int(line.split()[-2])
+        elif 'max. number of SCF cycles:' in line:
+            parameters['max_scf_cycles'] = float(line.split()[-1])
+        elif 'dump wavefunctions every' in line:
+            parameters['num_dump_cycles'] = float(line.split()[-3])
+
+        # Density Mixing Parameters
+
+        elif 'density-mixing scheme' in line:
+            parameters['mixing_scheme'] = line.split()[-1]
+
+    return parameters
+
+
+def _read_unit_cell(out: io.TextIOBase):
+    """Read a Unit Cell block from a .castep file."""
+    while True:
+        line = out.readline()
+        fields = line.split()
+        if len(fields) == 6:
+            break
+    lattice_real = []
+    for _ in range(3):
+        lattice_real.append([float(f) for f in fields[0:3]])
+        line = out.readline()
+        fields = line.split()
+    return np.array(lattice_real)
+
+
+def _read_forces(out: io.TextIOBase, n_atoms: int):
+    """Read a block for atomic forces from a .castep file."""
+    constraints: List[FixConstraint] = []
+    forces = []
+    while True:
+        line = out.readline()
+        fields = line.split()
+        if len(fields) == 7:
+            break
+    for n in range(n_atoms):
+        consd = np.array([0, 0, 0])
+        fxyz = [0.0, 0.0, 0.0]
+        for i, force_component in enumerate(fields[-4:-1]):
+            if force_component.count("(cons'd)") > 0:
+                consd[i] = 1
+            # remove constraint labels in force components
+            fxyz[i] = float(force_component.replace("(cons'd)", ''))
+        if consd.all():
+            constraints.append(FixAtoms(n))
+        elif consd.any():
+            constraints.append(FixCartesian(n, consd))
+        forces.append(fxyz)
+        line = out.readline()
+        fields = line.split()
+    return forces, constraints
+
+
+def _read_fractional_coordinates(out: io.TextIOBase, n_atoms: int):
+    """Read fractional coordinates from a .castep file."""
+    species: List[str] = []
+    custom_species: Optional[List[str]] = None  # A CASTEP special thing
+    positions_frac: List[List[float]] = []
+    while True:
+        line = out.readline()
+        fields = line.split()
+        if len(fields) == 7:
+            break
+    for _ in range(n_atoms):
+        spec_custom = fields[1].split(':', 1)
+        elem = spec_custom[0]
+        if len(spec_custom) > 1 and custom_species is None:
+            # Add it to the custom info!
+            custom_species = list(species)
+        species.append(elem)
+        if custom_species is not None:
+            custom_species.append(fields[1])
+        positions_frac.append([float(s) for s in fields[3:6]])
+        line = out.readline()
+        fields = line.split()
+    return species, custom_species, positions_frac
+
+
+def _read_stress(out: io.TextIOBase):
+    """Read a block for the stress tensor from a .castep file."""
+    while True:
+        line = out.readline()
+        fields = line.split()
+        if len(fields) == 6:
+            break
+    results = {}
+    stress = []
+    for _ in range(3):
+        stress.append([float(s) for s in fields[2:5]])
+        line = out.readline()
+        fields = line.split()
+    # stress in .castep file is given in GPa
+    results['stress'] = np.array(stress) * units.GPa
+    results['stress'] = results['stress'].reshape(9)[[0, 4, 8, 5, 2, 1]]
+    line = out.readline()
+    if "Pressure:" in line:
+        results['pressure'] = float(line.split()[-2]) * units.GPa
+    return results
+
+
+def _read_mulliken_charges(out: io.TextIOBase):
+    """Read a block for Mulliken charges from a .castep file."""
+    for i in range(3):
+        line = out.readline()
+        if i == 1:
+            spin_polarized = 'Spin' in line
+    results = defaultdict(list)
+    while True:
+        line = out.readline()
+        fields = line.split()
+        if len(fields) == 1:
+            break
+        if spin_polarized:
+            if len(fields) != 7:  # due to CASTEP 18 outformat changes
+                results['charges'].append(float(fields[-2]))
+                results['magmoms'].append(float(fields[-1]))
+        else:
+            results['charges'].append(float(fields[-1]))
+    return {k: np.array(v) for k, v in results.items()}
+
+
+def _read_hirshfeld_details(out: io.TextIOBase, n_atoms: int):
+    """Read the Hirshfeld analysis when iprint > 1 from a .castep file."""
+    results = defaultdict(list)
+    for _ in range(n_atoms):
+        while True:
+            line = out.readline()
+            if line.strip() == '':
+                break  # end for each atom
+            if 'Hirshfeld / free atomic volume :' in line:
+                line = out.readline()
+                fields = line.split()
+                results['hirshfeld_volume_ratios'].append(float(fields[0]))
+    return {k: np.array(v) for k, v in results.items()}
+
+
+def _read_hirshfeld_charges(out: io.TextIOBase):
+    """Read a block for Hirshfeld charges from a .castep file."""
+    for i in range(3):
+        line = out.readline()
+        if i == 1:
+            spin_polarized = 'Spin' in line
+    results = defaultdict(list)
+    while True:
+        line = out.readline()
+        fields = line.split()
+        if len(fields) == 1:
+            break
+        if spin_polarized:
+            results['hirshfeld_charges'].append(float(fields[-2]))
+            results['hirshfeld_magmoms'].append(float(fields[-1]))
+        else:
+            results['hirshfeld_charges'].append(float(fields[-1]))
+    return {k: np.array(v) for k, v in results.items()}
+
+
+def _get_indices_to_sort_back(symbols, species):
+    """Get indices to sort spicies in .castep back to atoms.symbols."""
+    uniques = np.unique(symbols)
+    indices = np.full(len(symbols), -1, dtype=int)
+    for unique in uniques:
+        where_symbols = [i for i, s in enumerate(symbols) if s == unique]
+        where_species = [j for j, s in enumerate(species) if s == unique]
+        for i, j in zip(where_symbols, where_species):
+            indices[i] = j
+    if -1 in indices:
+        not_assigned = [_ for _ in indices if _ == -1]
+        raise RuntimeError(f'Atoms {not_assigned} where not assigned.')
+    return indices
+
+
+def _set_energy_and_free_energy(results: Dict[str, Any]):
+    """Set values referred to as `energy` and `free_energy`."""
+    if 'energy_with_dispersion_correction' in results:
+        suffix = '_with_dispersion_correction'
+    else:
+        suffix = '_without_dispersion_correction'
+
+    if 'free_energy' + suffix in results:  # metallic
+        keye = 'energy_zero' + suffix
+        keyf = 'free_energy' + suffix
+    else:  # non-metallic
+        # The finite basis set correction is applied to the energy at finite T
+        # (not the energy at 0 K). We should hence refer to the corrected value
+        # as `energy` only when the free energy is unavailable, i.e., only when
+        # FIX_OCCUPANCY : TRUE and thus no smearing is applied.
+        if 'energy_with_finite_basis_set_correction' in results:
+            keye = 'energy_with_finite_basis_set_correction'
+        else:
+            keye = 'energy' + suffix
+        keyf = 'energy' + suffix
+
+    results['energy'] = results[keye]
+    results['free_energy'] = results[keyf]
 
 
 def get_castep_version(castep_command):

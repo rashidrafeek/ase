@@ -4,19 +4,22 @@ from warnings import warn
 
 import numpy as np
 
-# `Filter` classes are imported for backward compatibility.
-from ase.filters import (  # noqa: F401 # pylint: disable=unused-import
-    ExpCellFilter, Filter, StrainFilter, UnitCellFilter)
+from ase import Atoms
+from ase.filters import ExpCellFilter as ExpCellFilterOld
+from ase.filters import Filter as FilterOld
+from ase.filters import StrainFilter as StrainFilterOld
+from ase.filters import UnitCellFilter as UnitCellFilterOld
 from ase.geometry import (conditional_find_mic, find_mic, get_angles,
                           get_angles_derivatives, get_dihedrals,
                           get_dihedrals_derivatives, get_distances_derivatives,
                           wrap_positions)
 from ase.stress import full_3x3_to_voigt_6_stress, voigt_6_to_full_3x3_stress
+from ase.utils import deprecated
 from ase.utils.parsemath import eval_expression
 
 __all__ = [
     'FixCartesian', 'FixBondLength', 'FixedMode',
-    'FixAtoms', 'FixScaled', 'FixCom', 'FixedPlane',
+    'FixAtoms', 'FixScaled', 'FixCom', 'FixSubsetCom', 'FixedPlane',
     'FixConstraint', 'FixedLine', 'FixBondLengths', 'FixLinearTriatomic',
     'FixInternals', 'Hookean', 'ExternalForce', 'MirrorForce', 'MirrorTorque',
     "FixScaledParametricRelations", "FixCartesianParametricRelations"]
@@ -53,7 +56,7 @@ def constrained_indices(atoms, only_include=None):
 class FixConstraint:
     """Base class for classes that fix one or more atoms in some way."""
 
-    def index_shuffle(self, atoms, ind):
+    def index_shuffle(self, atoms: Atoms, ind):
         """Change the indices.
 
         When the ordering of the atoms in the Atoms object changes,
@@ -65,7 +68,7 @@ class FixConstraint:
         """
         raise NotImplementedError
 
-    def repeat(self, m, n):
+    def repeat(self, m: int, n: int):
         """ basic method to multiply by m, needs to know the length
         of the underlying atoms object for the assignment of
         multiplied constraints to work.
@@ -75,12 +78,27 @@ class FixConstraint:
                'remove your constraints.')
         raise NotImplementedError(msg)
 
-    def adjust_momenta(self, atoms, momenta):
-        """Adjusts momenta in identical manner to forces."""
+    def get_removed_dof(self, atoms: Atoms):
+        """Get number of removed degrees of freedom due to constraint."""
+
+    def adjust_positions(self, atoms: Atoms, new):
+        """Adjust positions."""
+
+    def adjust_momenta(self, atoms: Atoms, momenta):
+        """Adjust momenta."""
+        # The default is in identical manner to forces.
+        # TODO: The default is however not always reasonable.
         self.adjust_forces(atoms, momenta)
 
+    def adjust_forces(self, atoms: Atoms, forces):
+        """Adjust forces."""
+
     def copy(self):
+        """Copy constraint."""
         return dict2constraint(self.todict().copy())
+
+    def todict(self):
+        """Convert constraint to dictionary."""
 
 
 class IndexedConstraint(FixConstraint):
@@ -215,30 +233,44 @@ class FixAtoms(IndexedConstraint):
 class FixCom(FixConstraint):
     """Constraint class for fixing the center of mass."""
 
+    index = slice(None)  # all atoms
+
     def get_removed_dof(self, atoms):
         return 3
 
     def adjust_positions(self, atoms, new):
-        masses = atoms.get_masses()
-        old_cm = atoms.get_center_of_mass()
-        new_cm = np.dot(masses, new) / masses.sum()
+        masses = atoms.get_masses()[self.index]
+        old_cm = atoms.get_center_of_mass(indices=self.index)
+        new_cm = masses @ new[self.index] / masses.sum()
         diff = old_cm - new_cm
         new += diff
 
     def adjust_momenta(self, atoms, momenta):
         """Adjust momenta so that the center-of-mass velocity is zero."""
-        masses = atoms.get_masses()
-        velocity_com = momenta.sum(axis=0) / masses.sum()
-        momenta -= masses[:, None] * velocity_com
+        masses = atoms.get_masses()[self.index]
+        velocity_com = momenta[self.index].sum(axis=0) / masses.sum()
+        momenta[self.index] -= masses[:, None] * velocity_com
 
     def adjust_forces(self, atoms, forces):
         # Eqs. (3) and (7) in https://doi.org/10.1021/jp9722824
-        masses = atoms.get_masses()
-        forces -= masses[:, None] * (masses @ forces) / sum(masses**2)
+        masses = atoms.get_masses()[self.index]
+        lmd = masses @ forces[self.index] / sum(masses**2)
+        forces[self.index] -= masses[:, None] * lmd
 
     def todict(self):
         return {'name': 'FixCom',
                 'kwargs': {}}
+
+
+class FixSubsetCom(FixCom, IndexedConstraint):
+    """Constraint class for fixing the center of mass of a subset of atoms."""
+
+    def __init__(self, indices):
+        super().__init__(indices=indices)
+
+    def todict(self):
+        return {'name': self.__class__.__name__,
+                'kwargs': {'indices': self.index.tolist()}}
 
 
 def ints2string(x, threshold=None):
@@ -787,53 +819,71 @@ class FixedLine(IndexedConstraint):
 
 
 class FixCartesian(IndexedConstraint):
-    'Fix an atom index *a* in the directions of the cartesian coordinates.'
+    """Fix atoms in the directions of the cartesian coordinates.
 
-    def __init__(self, a, mask=(1, 1, 1)):
+    Parameters
+    ----------
+    a : Sequence[int]
+        Indices of atoms to be fixed.
+    mask : tuple[bool, bool, bool], default: (True, True, True)
+        Cartesian directions to be fixed. (False: unfixed, True: fixed)
+    """
+
+    def __init__(self, a, mask=(True, True, True)):
         super().__init__(indices=a)
-        self.mask = ~np.asarray(mask, bool)
+        self.mask = np.asarray(mask, bool)
 
-    def get_removed_dof(self, atoms):
-        return (3 - self.mask.sum()) * len(self.index)
+    def get_removed_dof(self, atoms: Atoms):
+        return self.mask.sum() * len(self.index)
 
-    def adjust_positions(self, atoms, new):
-        step = new[self.index] - atoms.positions[self.index]
-        step *= self.mask[None, :]
-        new[self.index] = atoms.positions[self.index] + step
+    def adjust_positions(self, atoms: Atoms, new):
+        new[self.index] = np.where(
+            self.mask[None, :],
+            atoms.positions[self.index],
+            new[self.index],
+        )
 
-    def adjust_forces(self, atoms, forces):
-        forces[self.index] *= self.mask[None, :]
-
-    def __repr__(self):
-        return 'FixCartesian(indices={}, mask={})'.format(
-            self.index.tolist(), list(~self.mask))
+    def adjust_forces(self, atoms: Atoms, forces):
+        forces[self.index] *= ~self.mask[None, :]
 
     def todict(self):
         return {'name': 'FixCartesian',
                 'kwargs': {'a': self.index.tolist(),
-                           'mask': (~self.mask).tolist()}}
+                           'mask': self.mask.tolist()}}
+
+    def __repr__(self):
+        name = type(self).__name__
+        return f'{name}(indices={self.index.tolist()}, {self.mask.tolist()})'
 
 
 class FixScaled(IndexedConstraint):
-    'Fix an atom index *a* in the directions of the unit vectors.'
+    """Fix atoms in the directions of the unit vectors.
 
-    def __init__(self, a, mask=(1, 1, 1), cell=None):
+    Parameters
+    ----------
+    a : Sequence[int]
+        Indices of atoms to be fixed.
+    mask : tuple[bool, bool, bool], default: (True, True, True)
+        Cell directions to be fixed. (False: unfixed, True: fixed)
+    """
+
+    def __init__(self, a, mask=(True, True, True), cell=None):
         # XXX The unused cell keyword is there for compatibility
         # with old trajectory files.
-        super().__init__(a)
-        self.mask = np.array(mask, bool)
+        super().__init__(indices=a)
+        self.mask = np.asarray(mask, bool)
 
-    def get_removed_dof(self, atoms):
+    def get_removed_dof(self, atoms: Atoms):
         return self.mask.sum() * len(self.index)
 
-    def adjust_positions(self, atoms, new):
+    def adjust_positions(self, atoms: Atoms, new):
         cell = atoms.cell
         scaled_old = cell.scaled_positions(atoms.positions[self.index])
         scaled_new = cell.scaled_positions(new[self.index])
         scaled_new[:, self.mask] = scaled_old[:, self.mask]
         new[self.index] = cell.cartesian_positions(scaled_new)
 
-    def adjust_forces(self, atoms, forces):
+    def adjust_forces(self, atoms: Atoms, forces):
         # Forces are covariant to the coordinate transformation,
         # use the inverse transformations
         cell = atoms.cell
@@ -847,7 +897,8 @@ class FixScaled(IndexedConstraint):
                            'mask': self.mask.tolist()}}
 
     def __repr__(self):
-        return f'FixScaled({self.index.tolist()}, {self.mask})'
+        name = type(self).__name__
+        return f'{name}(indices={self.index.tolist()}, {self.mask.tolist()})'
 
 
 # TODO: Better interface might be to use dictionaries in place of very
@@ -2230,3 +2281,45 @@ class MirrorTorque(FixConstraint):
                            'a3': self.indices[2], 'a4': self.indices[3],
                            'max_angle': self.max_angle,
                            'min_angle': self.min_angle, 'fmax': self.fmax}}
+
+
+class Filter(FilterOld):
+    @deprecated('Import Filter from ase.filters')
+    def __init__(self, *args, **kwargs):
+        """
+        .. deprecated:: 3.23.0
+            Import ``Filter`` from :mod:`ase.filters`
+        """
+        super().__init__(*args, **kwargs)
+
+
+class StrainFilter(StrainFilterOld):
+    @deprecated('Import StrainFilter from ase.filters')
+    def __init__(self, *args, **kwargs):
+        """
+        .. deprecated:: 3.23.0
+            Import ``StrainFilter`` from :mod:`ase.filters`
+        """
+        super().__init__(*args, **kwargs)
+
+
+class UnitCellFilter(UnitCellFilterOld):
+    @deprecated('Import UnitCellFilter from ase.filters')
+    def __init__(self, *args, **kwargs):
+        """
+        .. deprecated:: 3.23.0
+            Import ``UnitCellFilter`` from :mod:`ase.filters`
+        """
+        super().__init__(*args, **kwargs)
+
+
+class ExpCellFilter(ExpCellFilterOld):
+    @deprecated('Import ExpCellFilter from ase.filters')
+    def __init__(self, *args, **kwargs):
+        """
+        .. deprecated:: 3.23.0
+            Import ``ExpCellFilter`` from :mod:`ase.filters`
+            or use :class:`~ase.filters.FrechetCellFilter` for better
+            convergence w.r.t. cell variables
+        """
+        super().__init__(*args, **kwargs)

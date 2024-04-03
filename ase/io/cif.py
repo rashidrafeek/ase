@@ -117,6 +117,8 @@ def parse_cif_loop_data(lines: List[str],
         if line.startswith('#'):
             continue
 
+        line = line.split(' #')[0]
+
         if line.startswith(';'):
             moretokens = [parse_multiline_string(lines, line)]
         else:
@@ -132,15 +134,16 @@ def parse_cif_loop_data(lines: List[str],
             for i, token in enumerate(tokens):
                 columns[i].append(convert_value(token))
         else:
-            warnings.warn('Wrong number {} of tokens, expected {}: {}'
-                          .format(len(tokens), ncolumns, tokens))
+            warnings.warn(f'Wrong number {len(tokens)} of tokens, '
+                          f'expected {ncolumns}: {tokens}')
 
         # (Due to continue statements we cannot move this to start of loop)
         tokens = []
 
     if tokens:
         assert len(tokens) < ncolumns
-        raise RuntimeError('CIF loop ended unexpectedly with incomplete row')
+        raise RuntimeError('CIF loop ended unexpectedly with incomplete row: '
+                           f'{tokens}, expected {ncolumns} tokens')
 
     return columns
 
@@ -349,22 +352,27 @@ class CIFBlock(collections.abc.Mapping):
 
     def get_spacegroup(self, subtrans_included) -> Spacegroup:
         # XXX The logic in this method needs serious cleaning up!
-        # The setting needs to be passed as either 1 or two, not None (default)
         no = self._get_spacegroup_number()
+        if isinstance(no, str):
+            # If the value was specified as "key  'value'" with ticks,
+            # then "integer values" become strings and we'll have to
+            # manually convert it:
+            no = int(no)
+
         hm_symbol = self._get_spacegroup_name()
         sitesym = self._get_sitesym()
 
-        setting = 1
-        spacegroup = 1
         if sitesym:
             # Special cases: sitesym can be None or an empty list.
             # The empty list could be replaced with just the identity
             # function, but it seems more correct to try to get the
             # spacegroup number and derive the symmetries for that.
             subtrans = [(0.0, 0.0, 0.0)] if subtrans_included else None
+
             spacegroup = spacegroup_from_data(
-                no=no, symbol=hm_symbol, sitesym=sitesym, subtrans=subtrans,
-                setting=setting)
+                no=no, symbol=hm_symbol, sitesym=sitesym,
+                subtrans=subtrans,
+                setting=1)  # should the setting be passed from somewhere?
         elif no is not None:
             spacegroup = no
         elif hm_symbol is not None:
@@ -374,6 +382,7 @@ class CIFBlock(collections.abc.Mapping):
 
         setting_std = self._get_setting()
 
+        setting = 1
         setting_name = None
         if '_symmetry_space_group_setting' in self:
             assert setting_std is not None
@@ -392,15 +401,14 @@ class CIFBlock(collections.abc.Mapping):
                     setting = 2
                 else:
                     warnings.warn(
-                        'unexpected crystal system {!r} '
-                        'for space group {!r}'.format(
-                            setting_name, spacegroup))
+                        f'unexpected crystal system {repr(setting_name)} '
+                        f'for space group {repr(spacegroup)}')
             # FIXME - check for more crystal systems...
             else:
                 warnings.warn(
-                    'crystal system %r is not interpreted for space group %r. '
-                    'This may result in wrong setting!' % (
-                        setting_name, spacegroup))
+                    f'crystal system {repr(setting_name)} is not '
+                    f'interpreted for space group {repr(spacegroup)}. '
+                    'This may result in wrong setting!')
 
         spg = Spacegroup(spacegroup, setting)
         if no is not None:

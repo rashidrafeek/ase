@@ -4,33 +4,39 @@ T. Demeyere, T.Demeyere@soton.ac.uk (2023)
 
 https://onetep.org"""
 
-from pathlib import Path
+from os import environ
 
-from ase.calculators.genericfileio import (CalculatorTemplate,
+from ase.calculators.genericfileio import (BaseProfile, CalculatorTemplate,
                                            GenericFileIOCalculator,
-                                           read_stdout,
-                                           BaseProfile)
+                                           read_stdout)
 from ase.io import read, write
-
-# TARP: New setup exc should be the onetep binary itself
-# def find_onetep_command(cmd):
-#     exploded_cmd = cmd.split()
-#     n_cmd = len(exploded_cmd)
-#     if n_cmd == 1:
-#         return cmd
-#     for substring in exploded_cmd:
-#         if 'onetep' in substring:
-#             return substring
-#     return None
 
 
 class OnetepProfile(BaseProfile):
-    def __init__(self, binary, **kwargs):
+    """
+    ONETEP profile class, additional "old" parameter
+    is automatically passed for now if the user uses the
+    now deprecated "ASE_ONETEP_COMMAND".
+    """
+
+    def __init__(self, binary, old=False, **kwargs):
+        """
+        Parameters
+        ----------
+        binary: str
+            Path to the ONETEP binary.
+        old: bool
+            If True, will use the old ASE_ONETEP_COMMAND
+            interface.
+        **kwargs: dict
+            Additional kwargs are passed to the BaseProfile
+            class.
+        """
         super().__init__(**kwargs)
         self.binary = binary
+        self.old = old
 
     def version(self):
-        # onetep_exec = find_onetep_command(self.argv)
         lines = read_stdout(self.binary)
         return self.parse_version(lines)
 
@@ -38,35 +44,39 @@ class OnetepProfile(BaseProfile):
         return '1.0.0'
 
     def get_calculator_command(self, inputfile):
-        return [self.binary, str(inputfile)]
+        if self.old:
+            return self.binary.split() + [str(inputfile)]
+        else:
+            return [self.binary, str(inputfile)]
 
 
 class OnetepTemplate(CalculatorTemplate):
-    def __init__(self, label, append):
+    _label = 'onetep'
+
+    def __init__(self, append):
         super().__init__(
-            name='ONETEP',
+            'ONETEP',
             implemented_properties=[
                 'energy',
                 'free_energy',
                 'forces',
                 'stress'])
-        self.label = label
-        self.input = label + '.dat'
-        self.output = label + '.out'
-        self.error = label + '.err'
+        self.inputname = f'{self._label}.dat'
+        self.outputname = f'{self._label}.out'
+        self.errorname = f'{self._label}.err'
         self.append = append
 
     def execute(self, directory, profile):
-        profile.run(directory, self.input, self.output, self.error,
-                    self.append)
+        profile.run(directory, self.inputname, self.outputname,
+                    self.errorname, append=self.append)
 
     def read_results(self, directory):
-        output_path = directory / self.output
+        output_path = directory / self.outputname
         atoms = read(output_path, format='onetep-out')
         return dict(atoms.calc.properties())
 
-    def write_input(self, directory, atoms, parameters, properties):
-        input_path = directory / self.input
+    def write_input(self, profile, directory, atoms, parameters, properties):
+        input_path = directory / self.inputname
         write(input_path, atoms, format='onetep-in',
               properties=properties, **parameters)
 
@@ -93,8 +103,6 @@ class Onetep(GenericFileIOCalculator):
         keywords with lists as values will be
         treated like blocks, with each element
         of list being a different line.
-    label: str
-        Name used for the ONETEP prefix.
     xc: str
         DFT xc to use e.g (PBE, RPBE, ...).
     ngwfs_count: int|list|dict
@@ -135,40 +143,30 @@ class Onetep(GenericFileIOCalculator):
            via the keyword dictionary, it is the user responsibility that they
            are valid ONETEP keywords.
     """
-    # TARP: I thought GenericFileIO calculators no longer had  atoms attached
-    # to them
+
     def __init__(
             self,
-            label='onetep',
-            directory='.',
+            *,
             profile=None,
-            append=False,
-            autorestart=True,
-            atoms=None,
+            directory='.',
             parallel_info=None,
             parallel=True,
             **kwargs):
 
-        self.directory = Path(directory)
-        self.autorestart = autorestart
-        self.label = label
         self.keywords = kwargs.get('keywords', None)
-        self.append = append
-        self.template = OnetepTemplate(label, append=self.append)
+        self.template = OnetepTemplate(
+            append=kwargs.pop('append', False)
+        )
 
-        kwargs['autorestart'] = self.autorestart
-        kwargs['directory'] = self.directory
-        kwargs['label'] = self.label
+        if 'ASE_ONETEP_COMMAND' in environ and profile is None:
+            import warnings
+            warnings.warn("using ASE_ONETEP_COMMAND env is \
+                          deprecated, please use OnetepProfile",
+                          FutureWarning)
+            profile = OnetepProfile(environ['ASE_ONETEP_COMMAND'], old=True)
+
         super().__init__(profile=profile, template=self.template,
                          directory=directory,
                          parameters=kwargs,
                          parallel=parallel,
                          parallel_info=parallel_info)
-        # Copy is probably not needed, but just in case
-        if atoms is not None:
-            self.atoms = atoms.copy()
-            if atoms.calc is not None:
-                # TARP: Does this make sense? Why append the previous
-                # calculators results to a new calculator. Especially
-                # without checking if the parameters are the same as well.
-                self.results = atoms.calc.results.copy()

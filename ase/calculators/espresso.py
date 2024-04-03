@@ -5,15 +5,14 @@ Run pw.x jobs.
 
 
 import os
+from pathlib import Path
 import warnings
 
-from ase.calculators.genericfileio import (
-    CalculatorTemplate,
-    GenericFileIOCalculator,
-    read_stdout,
-    BaseProfile,
-)
+from ase.calculators.genericfileio import (BaseProfile, CalculatorTemplate,
+                                           GenericFileIOCalculator,
+                                           read_stdout)
 from ase.io import read, write
+from ase.io.espresso import Namelist
 
 compatibility_msg = (
     'Espresso calculator is being restructured.  Please use e.g. '
@@ -30,10 +29,10 @@ compatibility_msg = (
 
 
 class EspressoProfile(BaseProfile):
-    def __init__(self, binary, pseudo_path, **kwargs):
+    def __init__(self, binary, pseudo_dir, **kwargs):
         super().__init__(**kwargs)
         self.binary = binary
-        self.pseudo_path = pseudo_path
+        self.pseudo_dir = Path(pseudo_dir)
 
     @staticmethod
     def parse_version(stdout):
@@ -58,27 +57,37 @@ class EspressoProfile(BaseProfile):
 
 
 class EspressoTemplate(CalculatorTemplate):
+    _label = 'espresso'
+
     def __init__(self):
         super().__init__(
             'espresso',
             ['energy', 'free_energy', 'forces', 'stress', 'magmoms', 'dipole'],
         )
-        self.inputname = 'espresso.pwi'
-        self.outputname = 'espresso.pwo'
+        self.inputname = f'{self._label}.pwi'
+        self.outputname = f'{self._label}.pwo'
+        self.errorname = f"{self._label}.err"
 
     def write_input(self, profile, directory, atoms, parameters, properties):
         dst = directory / self.inputname
+
+        input_data = Namelist(parameters.pop("input_data", None))
+        input_data.to_nested("pw")
+        input_data["control"].setdefault("pseudo_dir", str(profile.pseudo_dir))
+
+        parameters["input_data"] = input_data
+
         write(
             dst,
             atoms,
             format='espresso-in',
             properties=properties,
-            pseudo_dir=str(profile.pseudo_path),
             **parameters,
         )
 
     def execute(self, directory, profile):
-        profile.run(directory, self.inputname, directory / self.outputname)
+        profile.run(directory, self.inputname, self.outputname,
+                    errorfile=self.errorname)
 
     def read_results(self, directory):
         path = directory / self.outputname

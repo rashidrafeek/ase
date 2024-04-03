@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from os import PathLike
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any, Iterable, List, Mapping, Optional
 
 from ase.calculators.abc import GetOutputsMixin
 from ase.calculators.calculator import BaseCalculator, EnvironmentError
@@ -50,7 +50,7 @@ class BaseProfile(ABC):
                 translation_keys[trans_key] = value
         return translation_keys
 
-    def get_command(self, inputfile, calc_command=None) -> Iterable[str]:
+    def get_command(self, inputfile, calc_command=None) -> List[str]:
         """
         Get the command to run. This should be a list of strings.
 
@@ -108,8 +108,10 @@ class BaseProfile(ABC):
         ...
 
     def run(
-        self, directory, inputfile, outputfile, errorfile=None, append=False
-    ):
+        self, directory: Path, inputfile: Optional[str],
+        outputfile: str, errorfile: Optional[str] = None,
+        append: bool = False
+    ) -> None:
         """
         Run the command in the given directory.
 
@@ -117,11 +119,11 @@ class BaseProfile(ABC):
         ----------
         directory : pathlib.Path
             The directory to run the command in.
-        inputfile : str
+        inputfile : Optional[str]
             The name of the input file.
         outputfile : str
             The name of the output file.
-        errorfile: str
+        errorfile: Optional[str]
             the stderror file
         append: bool
             if True then use append mode
@@ -134,9 +136,11 @@ class BaseProfile(ABC):
         mode = 'wb' if not append else 'ab'
 
         with ExitStack() as stack:
-            fd_out = stack.enter_context(open(outputfile, mode))
+            output_path = directory / outputfile
+            fd_out = stack.enter_context(open(output_path, mode))
             if errorfile is not None:
-                fd_err = stack.enter_context(open(errorfile, mode))
+                error_path = directory / errorfile
+                fd_err = stack.enter_context(open(error_path, mode))
             else:
                 fd_err = None
             check_call(
@@ -181,11 +185,18 @@ class BaseProfile(ABC):
         parallel_info = parallel_info if parallel_info is not None else {}
         parallel_config.update(parallel_info)
 
-        return cls(
-            **cfg.parser[section_name],
-            parallel_info=parallel_config,
-            parallel=parallel,
-        )
+        try:
+            return cls(
+                **cfg.parser[section_name],
+                parallel_info=parallel_config,
+                parallel=parallel,
+            )
+        except TypeError as err:
+            raise BadConfiguration(*err.args)
+
+
+class BadConfiguration(Exception):
+    pass
 
 
 def read_stdout(args, createfile=None):
@@ -208,7 +219,7 @@ def read_stdout(args, createfile=None):
             stderr=PIPE,
             stdin=PIPE,
             cwd=directory,
-            encoding='ascii',
+            encoding='utf-8',  # Make this a parameter if any non-utf8/ascii
         )
         stdout, _ = proc.communicate()
         # Exit code will be != 0 because there isn't an input file

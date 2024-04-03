@@ -1,4 +1,5 @@
 """Tests for FixCom."""
+import numpy as np
 import pytest
 
 from ase import Atoms
@@ -29,7 +30,7 @@ def test_center_of_mass_position(atoms: Atoms):
 
     cnew = atoms.get_center_of_mass()
 
-    assert max(abs(cnew - cold)) < 1e-8
+    assert max(cnew - cold) == pytest.approx(0.0, abs=1e-8)
 
 
 @pytest.mark.optimize
@@ -42,4 +43,13 @@ def test_center_of_mass_velocity(atoms: Atoms):
 
     velocity_com = atoms.get_momenta().sum(axis=0) / atoms.get_masses().sum()
 
-    assert max(abs(velocity_com)) < 1e-8
+    assert max(velocity_com) == pytest.approx(0.0, abs=1e-8)
+
+
+@pytest.mark.optimize
+def test_center_of_mass_force(atoms: Atoms):
+    """Test if the corrected forces are along the COM-preserving direction."""
+    rnd = np.random.default_rng(42)
+    forces = rnd.random(size=atoms.positions.shape)
+    FixCom().adjust_forces(atoms, forces)
+    np.testing.assert_allclose(atoms.get_masses() @ forces, 0.0, atol=1e-12)

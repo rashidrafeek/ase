@@ -6,6 +6,7 @@ import pytest
 from ase import Atoms
 from ase.calculators.calculator import CalculatorSetupError
 
+
 """
 These tests monkeypatch Popen so as to abort execution and verify that
 a particular command as executed.
@@ -49,6 +50,7 @@ calculators = {
     'demonnano': dict(input_arguments={},
                       basis_path='hello'),
     'dftb': {},
+    'dftd3': {},
     'dmol': {},
     'elk': {},
     'gamess_us': {},
@@ -77,7 +79,7 @@ def miscellaneous_hacks(monkeypatch, tmp_path):
     from ase.calculators.gamess_us import GAMESSUS
     from ase.calculators.gulp import GULP
     from ase.calculators.openmx import OpenMX
-    from ase.calculators.siesta import Siesta
+    from ase.calculators.siesta.siesta import FDFWriter
     from ase.calculators.vasp import Vasp
 
     def do_nothing(returnval=None):
@@ -101,7 +103,7 @@ def miscellaneous_hacks(monkeypatch, tmp_path):
     # Attempts to read too many files.
     monkeypatch.setattr(OpenMX, 'write_input', do_nothing())
 
-    monkeypatch.setattr(Siesta, '_write_species', do_nothing())
+    monkeypatch.setattr(FDFWriter, 'link_pseudos_into_directory', do_nothing())
     monkeypatch.setattr(Vasp, '_build_pp_list', do_nothing(returnval=[]))
 
 
@@ -140,6 +142,7 @@ envvars = {
     'demon': 'ASE_DEMON_COMMAND',
     'demonnano': 'ASE_DEMONNANO_COMMAND',
     'dftb': 'DFTB_COMMAND',
+    'dftd3': 'ASE_DFTD3_COMMAND',
     'dmol': 'DMOL_COMMAND',  # XXX Crashes when it runs along other tests
     'elk': 'ASE_ELK_COMMAND',
     'gamess_us': 'ASE_GAMESSUS_COMMAND',
@@ -159,6 +162,10 @@ envvars = {
 }
 
 
+dftd3_boilerplate = (
+    'ase_dftd3.POSCAR -func pbe -grad -pbc -cnthr 40.0 -cutoff 95.0 -zero')
+
+
 def get_expected_command(command, name, tmp_path, from_envvar):
     if name == 'castep':
         return f'{command} castep'  # crazy
@@ -166,6 +173,9 @@ def get_expected_command(command, name, tmp_path, from_envvar):
     if name == 'dftb' and from_envvar:
         # dftb modifies DFTB_COMMAND from envvar but not if given as keyword
         return f'{command} > dftb.out'
+
+    if name == 'dftd3':
+        return f'{command} {dftd3_boilerplate}'.split()
 
     if name == 'dmol' and from_envvar:
         return f'{command} tmp > tmp.out'
@@ -200,7 +210,8 @@ def test_envvar_command(monkeypatch, name, tmp_path):
     expected_command = get_expected_command(command, name, tmp_path,
                                             from_envvar=True)
     monkeypatch.setenv(envvars[name], command)
-    assert intercept_command(name) == expected_command
+    actual_command = intercept_command(name)
+    assert actual_command == expected_command
 
 
 def keyword_calculator_list():
@@ -240,8 +251,10 @@ default_commands = {
     'castep': 'castep castep',  # wth?
     'cp2k': 'cp2k_shell',
     'dftb': 'dftb+ > dftb.out',
+    'dftd3': f'dftd3 {dftd3_boilerplate}'.split(),
     'elk': 'elk > elk.out',
     'gamess_us': 'rungms gamess_us.inp > gamess_us.log 2> gamess_us.err',
+    'gaussian': 'g16 < Gaussian.com > Gaussian.log',
     'gulp': 'gulp < gulp.gin > gulp.got',
     'lammpsrun': ['lammps', '-echo', 'log', '-screen', 'none',
                   '-log', '/dev/stdout'],
@@ -259,7 +272,6 @@ calculators_which_raise = [
     'crystal',
     'demon',
     'dmol',
-    'gaussian',
     'gromacs',
     # Fixme: onetep raises AttributError
     # Should be handled universally by GenericFileIO system
@@ -268,7 +280,7 @@ calculators_which_raise = [
 
 
 @pytest.mark.parametrize('name', list(default_commands))
-def test_nocommand_default(name, monkeypatch):
+def test_nocommand_default(name, monkeypatch, override_config):
     if name in envvars:
         monkeypatch.delenv(envvars[name], raising=False)
 
@@ -276,7 +288,7 @@ def test_nocommand_default(name, monkeypatch):
 
 
 @pytest.mark.parametrize('name', calculators_which_raise)
-def test_nocommand_raise(name, monkeypatch):
+def test_nocommand_raise(name, monkeypatch, override_config):
     if name in envvars:
         monkeypatch.delenv(envvars[name], raising=False)
 

@@ -15,10 +15,11 @@ ESPRESSO.
 import operator as op
 import re
 import warnings
-from collections import OrderedDict
+from collections import defaultdict
+from copy import deepcopy
+from pathlib import Path
 
 import numpy as np
-
 from ase.atoms import Atoms
 from ase.calculators.calculator import kpts2ndarray, kpts2sizeandoffsets
 from ase.calculators.singlepoint import (SinglePointDFTCalculator,
@@ -26,8 +27,10 @@ from ase.calculators.singlepoint import (SinglePointDFTCalculator,
 from ase.constraints import FixAtoms, FixCartesian
 from ase.data import chemical_symbols
 from ase.dft.kpoints import kpoint_convert
+from ase.io.espresso_namelist.keys import pw_keys
+from ase.io.espresso_namelist.namelist import Namelist
 from ase.units import create_units
-from ase.utils import iofunction
+from ase.utils import deprecated, reader, writer
 
 # Quantum ESPRESSO uses CODATA 2006 internally
 units = create_units('2006')
@@ -58,26 +61,7 @@ ibrav_error_message = (
     'to a high level of precision.')
 
 
-class Namelist(OrderedDict):
-    """Case insensitive dict that emulates Fortran Namelists."""
-
-    def __contains__(self, key):
-        return super().__contains__(key.lower())
-
-    def __delitem__(self, key):
-        return super().__delitem__(key.lower())
-
-    def __getitem__(self, key):
-        return super().__getitem__(key.lower())
-
-    def __setitem__(self, key, value):
-        super().__setitem__(key.lower(), value)
-
-    def get(self, key, default=None):
-        return super().get(key.lower(), default)
-
-
-@iofunction('r')
+@reader
 def read_espresso_out(fileobj, index=slice(None), results_required=True):
     """Reads Quantum ESPRESSO output files.
 
@@ -519,7 +503,7 @@ def parse_position_line(line):
     return sym, float(x), float(y), float(z)
 
 
-@iofunction('r')
+@reader
 def read_espresso_in(fileobj):
     """Parse a Quantum ESPRESSO input files, '.in', '.pwi'.
 
@@ -582,12 +566,14 @@ def read_espresso_in(fileobj):
 
     symbols = [label_to_symbol(position[0]) for position in positions_card]
     positions = [position[1] for position in positions_card]
+    constraint_flags = [position[2] for position in positions_card]
     magmoms = [species_info[symbol]["magmom"] for symbol in symbols]
 
     # TODO: put more info into the atoms object
     # e.g magmom, forces.
     atoms = Atoms(symbols=symbols, positions=positions, cell=cell, pbc=True,
                   magmoms=magmoms)
+    atoms.set_constraint(convert_constraint_flags(constraint_flags))
 
     return atoms
 
@@ -608,7 +594,7 @@ def get_atomic_positions(lines, n_atoms, cell=None, alat=None):
 
     Returns
     -------
-    positions : list[(str, (float, float, float), (float, float, float))]
+    positions : list[(str, (float, float, float), (int, int, int))]
         A list of the ordered atomic positions in the format:
         label, (x, y, z), (if_x, if_y, if_z)
         Force multipliers are set to None if not present.
@@ -649,16 +635,14 @@ def get_atomic_positions(lines, n_atoms, cell=None, alat=None):
                 cell = np.identity(3) * alat
 
             positions = []
-            for _dummy in range(n_atoms):
+            for _ in range(n_atoms):
                 split_line = next(trimmed_lines).split()
                 # These can be fractions and other expressions
                 position = np.dot((infix_float(split_line[1]),
                                    infix_float(split_line[2]),
                                    infix_float(split_line[3])), cell)
                 if len(split_line) > 4:
-                    force_mult = (float(split_line[4]),
-                                  float(split_line[5]),
-                                  float(split_line[6]))
+                    force_mult = tuple(int(split_line[i]) for i in (4, 5, 6))
                 else:
                     force_mult = None
 
@@ -784,6 +768,66 @@ def get_cell_parameters(lines, alat=None):
     return cell, cell_alat
 
 
+def convert_constraint_flags(constraint_flags):
+    """Convert Quantum ESPRESSO constraint flags to ASE Constraint objects.
+
+    Parameters
+    ----------
+    constraint_flags : list[tuple[int, int, int]]
+        List of constraint flags (0: fixed, 1: moved) for all the atoms.
+        If the flag is None, there are no constraints on the atom.
+
+    Returns
+    -------
+    constraints : list[FixAtoms | FixCartesian]
+        List of ASE Constraint objects.
+    """
+    constraints = []
+    for i, constraint in enumerate(constraint_flags):
+        if constraint is None:
+            continue
+        # mask: False (0): moved, True (1): fixed
+        mask = ~np.asarray(constraint, bool)
+        constraints.append(FixCartesian(i, mask))
+    return canonicalize_constraints(constraints)
+
+
+def canonicalize_constraints(constraints):
+    """Canonicalize ASE FixCartesian constraints.
+
+    If the given FixCartesian constraints share the same `mask`, they can be
+    merged into one. Further, if `mask == (True, True, True)`, they can be
+    converted as `FixAtoms`. This method "canonicalizes" FixCartesian objects
+    in such a way.
+
+    Parameters
+    ----------
+    constraints : List[FixCartesian]
+        List of ASE FixCartesian constraints.
+
+    Returns
+    -------
+    constrants_canonicalized : List[FixAtoms | FixCartesian]
+        List of ASE Constraint objects.
+    """
+    # https://docs.python.org/3/library/collections.html#defaultdict-examples
+    indices_for_masks = defaultdict(list)
+    for constraint in constraints:
+        key = tuple((constraint.mask).tolist())
+        indices_for_masks[key].extend(constraint.index.tolist())
+
+    constraints_canonicalized = []
+    for mask, indices in indices_for_masks.items():
+        if mask == (False, False, False):  # no directions are fixed
+            continue
+        if mask == (True, True, True):  # all three directions are fixed
+            constraints_canonicalized.append(FixAtoms(indices))
+        else:
+            constraints_canonicalized.append(FixCartesian(indices, mask))
+
+    return constraints_canonicalized
+
+
 def str_to_value(string):
     """Attempt to convert string into int, float (including fortran double),
     or bool, in that order, otherwise return the string.
@@ -857,8 +901,8 @@ def read_fortran_namelist(fileobj):
         in the input file.
 
     """
-    # Espresso requires the correct order
-    data = Namelist()
+
+    data = {}
     card_lines = []
     in_namelist = False
     section = 'none'  # can't be in a section without changing this
@@ -873,7 +917,7 @@ def read_fortran_namelist(fileobj):
                 # Repeated sections are completely ignored.
                 # (Note that repeated keys overwrite within a section)
                 section = "_ignored"
-            data[section] = Namelist()
+            data[section] = {}
             in_namelist = True
         if not in_namelist and line:
             # Stripped line is Truthy, so safe to index first character
@@ -911,7 +955,7 @@ def read_fortran_namelist(fileobj):
                 data[section][''.join(key).strip()] = str_to_value(
                     ''.join(value).strip())
 
-    return data, card_lines
+    return Namelist(data), card_lines
 
 
 def ffloat(string):
@@ -1041,57 +1085,6 @@ def infix_float(text):
 
     return float(eval_no_bracket_expr(text))
 
-###
-# Input file writing
-###
-
-
-# Ordered and case insensitive
-KEYS = Namelist((
-    ('CONTROL', [
-        'calculation', 'title', 'verbosity', 'restart_mode', 'wf_collect',
-        'nstep', 'iprint', 'tstress', 'tprnfor', 'dt', 'outdir', 'wfcdir',
-        'prefix', 'lkpoint_dir', 'max_seconds', 'etot_conv_thr',
-        'forc_conv_thr', 'disk_io', 'pseudo_dir', 'tefield', 'dipfield',
-        'lelfield', 'nberrycyc', 'lorbm', 'lberry', 'gdir', 'nppstr',
-        'lfcpopt', 'monopole']),
-    ('SYSTEM', [
-        'ibrav', 'nat', 'ntyp', 'nbnd', 'tot_charge', 'tot_magnetization',
-        'starting_magnetization', 'ecutwfc', 'ecutrho', 'ecutfock', 'nr1',
-        'nr2', 'nr3', 'nr1s', 'nr2s', 'nr3s', 'nosym', 'nosym_evc', 'noinv',
-        'no_t_rev', 'force_symmorphic', 'use_all_frac', 'occupations',
-        'one_atom_occupations', 'starting_spin_angle', 'degauss', 'smearing',
-        'nspin', 'noncolin', 'ecfixed', 'qcutz', 'q2sigma', 'input_dft',
-        'exx_fraction', 'screening_parameter', 'exxdiv_treatment',
-        'x_gamma_extrapolation', 'ecutvcut', 'nqx1', 'nqx2', 'nqx3',
-        'lda_plus_u', 'lda_plus_u_kind', 'Hubbard_U', 'Hubbard_J0',
-        'Hubbard_alpha', 'Hubbard_beta', 'Hubbard_J',
-        'starting_ns_eigenvalue', 'U_projection_type', 'edir',
-        'emaxpos', 'eopreg', 'eamp', 'angle1', 'angle2',
-        'constrained_magnetization', 'fixed_magnetization', 'lambda',
-        'report', 'lspinorb', 'assume_isolated', 'esm_bc', 'esm_w',
-        'esm_efield', 'esm_nfit', 'fcp_mu', 'vdw_corr', 'london',
-        'london_s6', 'london_c6', 'london_rvdw', 'london_rcut',
-        'ts_vdw_econv_thr', 'ts_vdw_isolated', 'xdm', 'xdm_a1', 'xdm_a2',
-        'space_group', 'uniqueb', 'origin_choice', 'rhombohedral', 'zmon',
-        'realxz', 'block', 'block_1', 'block_2', 'block_height']),
-    ('ELECTRONS', [
-        'electron_maxstep', 'scf_must_converge', 'conv_thr', 'adaptive_thr',
-        'conv_thr_init', 'conv_thr_multi', 'mixing_mode', 'mixing_beta',
-        'mixing_ndim', 'mixing_fixed_ns', 'diagonalization', 'ortho_para',
-        'diago_thr_init', 'diago_cg_maxiter', 'diago_david_ndim',
-        'diago_full_acc', 'efield', 'efield_cart', 'efield_phase',
-        'startingpot', 'startingwfc', 'tqr']),
-    ('IONS', [
-        'ion_dynamics', 'ion_positions', 'pot_extrapolation',
-        'wfc_extrapolation', 'remove_rigid_rot', 'ion_temperature', 'tempw',
-        'tolp', 'delta_t', 'nraise', 'refold_pos', 'upscale', 'bfgs_ndim',
-        'trust_radius_max', 'trust_radius_min', 'trust_radius_ini', 'w_1',
-        'w_2']),
-    ('CELL', [
-        'cell_dynamics', 'press', 'wmass', 'cell_factor', 'press_conv_thr',
-        'cell_dofree'])))
-
 
 # Number of valence electrons in the pseudopotentials recommended by
 # http://materialscloud.org/sssp/. These are just used as a fallback for
@@ -1105,110 +1098,6 @@ SSSP_VALENCE = [
     7.0, 18.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0,
     19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 36.0, 27.0, 14.0, 15.0, 30.0,
     15.0, 32.0, 19.0, 12.0, 13.0, 14.0, 15.0, 16.0, 18.0]
-
-
-def construct_namelist(parameters=None, warn=False, **kwargs):
-    """
-    Construct an ordered Namelist containing all the parameters given (as
-    a dictionary or kwargs). Keys will be inserted into their appropriate
-    section in the namelist and the dictionary may contain flat and nested
-    structures. Any kwargs that match input keys will be incorporated into
-    their correct section. All matches are case-insensitive, and returned
-    Namelist object is a case-insensitive dict.
-
-    If a key is not known to ase, but in a section within `parameters`,
-    it will be assumed that it was put there on purpose and included
-    in the output namelist. Anything not in a section will be ignored (set
-    `warn` to True to see ignored keys).
-
-    Keys with a dimension (e.g. Hubbard_U(1)) will be incorporated as-is
-    so the `i` should be made to match the output.
-
-    The priority of the keys is:
-        kwargs[key] > parameters[key] > parameters[section][key]
-    Only the highest priority item will be included.
-
-    Parameters
-    ----------
-    parameters: dict
-        Flat or nested set of input parameters.
-    warn: bool
-        Enable warnings for unused keys.
-
-    Returns
-    -------
-    input_namelist: Namelist
-        pw.x compatible namelist of input parameters.
-
-    """
-    # Convert everything to Namelist early to make case-insensitive
-    if parameters is None:
-        parameters = Namelist()
-    else:
-        # Maximum one level of nested dict
-        # Don't modify in place
-        parameters_namelist = Namelist()
-        for key, value in parameters.items():
-            if isinstance(value, dict):
-                parameters_namelist[key] = Namelist(value)
-            else:
-                parameters_namelist[key] = value
-        parameters = parameters_namelist
-
-    # Just a dict
-    kwargs = Namelist(kwargs)
-
-    # Final parameter set
-    input_namelist = Namelist()
-
-    # Collect
-    for section in KEYS:
-        sec_list = Namelist()
-        for key in KEYS[section]:
-            # Check all three separately and pop them all so that
-            # we can check for missing values later
-            value = None
-
-            if key in parameters.get(section, {}):
-                value = parameters[section].pop(key)
-            if key in parameters:
-                value = parameters.pop(key)
-            if key in kwargs:
-                value = kwargs.pop(key)
-
-            if value is not None:
-                sec_list[key] = value
-
-            # Check if there is a key(i) version (no extra parsing)
-            for arg_key in list(parameters.get(section, {})):
-                if arg_key.split('(')[0].strip().lower() == key.lower():
-                    sec_list[arg_key] = parameters[section].pop(arg_key)
-            cp_parameters = parameters.copy()
-            for arg_key in cp_parameters:
-                if arg_key.split('(')[0].strip().lower() == key.lower():
-                    sec_list[arg_key] = parameters.pop(arg_key)
-            cp_kwargs = kwargs.copy()
-            for arg_key in cp_kwargs:
-                if arg_key.split('(')[0].strip().lower() == key.lower():
-                    sec_list[arg_key] = kwargs.pop(arg_key)
-
-        # Add to output
-        input_namelist[section] = sec_list
-
-    unused_keys = list(kwargs)
-    # pass anything else already in a section
-    for key, value in parameters.items():
-        if key in KEYS and isinstance(value, dict):
-            input_namelist[key].update(value)
-        elif isinstance(value, dict):
-            unused_keys.extend(list(value))
-        else:
-            unused_keys.append(key)
-
-    if warn and unused_keys:
-        warnings.warn('Unused keys: {}'.format(', '.join(unused_keys)))
-
-    return input_namelist
 
 
 def kspacing_to_grid(atoms, spacing, calculated_spacing=None):
@@ -1296,9 +1185,11 @@ def format_atom_position(atom, crystal_coordinates, mask='', tidx=None):
     return astr
 
 
+@writer
 def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
                       kspacing=None, kpts=None, koffset=(0, 0, 0),
-                      crystal_coordinates=False, **kwargs):
+                      crystal_coordinates=False, additional_cards=None,
+                      **kwargs):
     """
     Create an input file for pw.x.
 
@@ -1333,8 +1224,8 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
 
     Parameters
     ----------
-    fd: file
-        A file like object to write the input file to.
+    fd: file | str
+        A file to which the input is written.
     atoms: Atoms
         A single atomistic configuration to write to `fd`.
     input_data: dict
@@ -1372,25 +1263,25 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
     # Convert to a namelist to make working with parameters much easier
     # Note that the name ``input_data`` is chosen to prevent clash with
     # ``parameters`` in Calculator objects
-    input_parameters = construct_namelist(input_data, **kwargs)
+    input_parameters = Namelist(input_data)
+    input_parameters.to_nested('pw', **kwargs)
 
     # Convert ase constraints to QE constraints
     # Nx3 array of force multipliers matches what QE uses
     # Do this early so it is available when constructing the atoms card
-    constraint_mask = np.ones((len(atoms), 3), dtype='int')
+    moved = np.ones((len(atoms), 3), dtype=bool)
     for constraint in atoms.constraints:
         if isinstance(constraint, FixAtoms):
-            constraint_mask[constraint.index] = 0
+            moved[constraint.index] = False
         elif isinstance(constraint, FixCartesian):
-            constraint_mask[constraint.a] = constraint.mask
+            moved[constraint.index] = ~constraint.mask
         else:
             warnings.warn(f'Ignored unknown constraint {constraint}')
     masks = []
     for atom in atoms:
         # only inclued mask if something is fixed
-        if not all(constraint_mask[atom.index]):
-            mask = ' {mask[0]} {mask[1]} {mask[2]}'.format(
-                mask=constraint_mask[atom.index])
+        if not all(moved[atom.index]):
+            mask = ' {:d} {:d} {:d}'.format(*moved[atom.index])
         else:
             mask = ''
         masks.append(mask)
@@ -1411,7 +1302,7 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
     # the same pseudopotential (e.g. an up and a down for AFM).
     # if any magmom are > 0 or nspin == 2 then use species labels.
     # Rememeber: magnetisation uses 1 based indexes
-    atomic_species = OrderedDict()
+    atomic_species = {}
     atomic_species_str = []
     atomic_positions_str = []
 
@@ -1479,22 +1370,7 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
         input_parameters['system']['ibrav'] = 0
 
     # Construct input file into this
-    pwi = []
-
-    # Assume sections are ordered (taken care of in namelist construction)
-    # and that repr converts to a QE readable representation (except bools)
-    for section in input_parameters:
-        pwi.append(f'&{section.upper()}\n')
-        for key, value in input_parameters[section].items():
-            if value is True:
-                pwi.append(f'   {key:16} = .true.\n')
-            elif value is False:
-                pwi.append(f'   {key:16} = .false.\n')
-            else:
-                # repr format to get quotes around strings
-                pwi.append(f'   {key:16} = {value!r}\n')
-        pwi.append('/\n')  # terminate section
-    pwi.append('\n')
+    pwi = input_parameters.to_string(list_form=True)
 
     # Pseudopotentials
     pwi.append('ATOMIC_SPECIES\n')
@@ -1557,3 +1433,644 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
 
     # DONE!
     fd.write(''.join(pwi))
+
+    if additional_cards:
+        if isinstance(additional_cards, list):
+            additional_cards = "\n".join(additional_cards)
+            additional_cards += "\n"
+
+        fd.write(additional_cards)
+
+
+def write_espresso_ph(
+        fd,
+        input_data=None,
+        qpts=None,
+        nat_todo_indices=None,
+        **kwargs) -> None:
+    """
+    Function that write the input file for a ph.x calculation. Normal namelist
+    cards are passed in the input_data dictionary. Which can be either nested
+    or flat, ASE style. The q-points are passed in the qpts list. If qplot is
+    set to True then qpts is expected to be a list of list|tuple of length 4.
+    Where the first three elements are the coordinates of the q-point in units
+    of 2pi/alat and the last element is the weight of the q-point. if qplot is
+    set to False then qpts is expected to be a simple list of length 4 (single
+    q-point). Finally if ldisp is set to True, the above is discarded and the
+    q-points are read from the nq1, nq2, nq3 cards in the input_data dictionary.
+
+    Additionally, a nat_todo_indices kwargs (list[int]) can be specified in the
+    kwargs. It will be used if nat_todo is set to True in the input_data
+    dictionary.
+
+    Globally, this function follows the convention set in the ph.x documentation
+    (https://www.quantum-espresso.org/Doc/INPUT_PH.html)
+
+    Parameters
+    ----------
+    fd
+        The file descriptor of the input file.
+
+    kwargs
+        kwargs dictionary possibly containing the following keys:
+
+        - input_data: dict
+        - qpts: list[list[float]] | list[tuple[float]] | list[float]
+        - nat_todo_indices: list[int]
+
+    Returns
+    -------
+    None
+    """
+
+    input_data = Namelist(input_data)
+    input_data.to_nested('ph', **kwargs)
+
+    input_ph = input_data["inputph"]
+
+    inp_nat_todo = input_ph.get("nat_todo", 0)
+    qpts = qpts or (0, 0, 0)
+
+    pwi = input_data.to_string()
+
+    fd.write(pwi)
+
+    qplot = input_ph.get("qplot", False)
+    ldisp = input_ph.get("ldisp", False)
+
+    if qplot:
+        fd.write(f"{len(qpts)}\n")
+        for qpt in qpts:
+            fd.write(
+                f"{qpt[0]:0.8f} {qpt[1]:0.8f} {qpt[2]:0.8f} {qpt[3]:1d}\n"
+            )
+    elif not (qplot or ldisp):
+        fd.write(f"{qpts[0]:0.8f} {qpts[1]:0.8f} {qpts[2]:0.8f}\n")
+    if inp_nat_todo:
+        tmp = [str(i) for i in nat_todo_indices]
+        fd.write(" ".join(tmp))
+        fd.write("\n")
+
+
+def read_espresso_ph(fileobj):
+    """
+    Function that reads the output of a ph.x calculation.
+    It returns a dictionary where each q-point is a key and
+    the value is a dictionary with the following keys if available:
+
+    - qpoints: The q-point in cartesian coordinates.
+    - kpoints: The k-points in cartesian coordinates.
+    - dieltensor: The dielectric tensor.
+    - borneffcharge: The effective Born charges.
+    - borneffcharge_dfpt: The effective Born charges from DFPT.
+    - polarizability: The polarizability tensor.
+    - modes: The phonon modes.
+    - eqpoints: The symmetrically equivalent q-points.
+    - freqs: The phonon frequencies.
+    - mode_symmetries: The symmetries of the modes.
+    - atoms: The atoms object.
+
+    Some notes:
+
+        - For some reason, the cell is not defined to high level of
+        precision with ph.x. Be careful when using the atoms object
+        retrieved from this function.
+        - This function can be called on incomplete calculations i.e.
+        if the calculation couldn't diagonalize the dynamical matrix
+        for some q-points, the results for the other q-points will
+        still be returned.
+
+    Parameters
+    ----------
+    fileobj
+        The file descriptor of the output file.
+
+    Returns
+    -------
+    dict
+        The results dictionnary as described above.
+    """
+    freg = re.compile(r"-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+\-]?\d+)?")
+
+    QPOINTS = r"(?i)^\s*Calculation\s*of\s*q"
+    NKPTS = r"(?i)^\s*number\s*of\s*k\s*points\s*"
+    DIEL = r"(?i)^\s*Dielectric\s*constant\s*in\s*cartesian\s*axis\s*$"
+    BORN = r"(?i)^\s*Effective\s*charges\s*\(d\s*Force\s*/\s*dE\)"
+    POLA = r"(?i)^\s*Polarizability\s*(a.u.)\^3"
+    REPR = r"(?i)^\s*There\s*are\s*\d+\s*irreducible\s*representations\s*$"
+    EQPOINTS = r"(?i)^\s*Number\s*of\s*q\s*in\s*the\s*star\s*=\s*"
+    DIAG = r"(?i)^\s*Diagonalizing\s*the\s*dynamical\s*matrix\s*$"
+    MODE_SYM = r"(?i)^\s*Mode\s*symmetry,\s*"
+    BORN_DFPT = r"(?i)^\s*Effective\s*charges\s*\(d\s*P\s*/\s*du\)"
+    POSITIONS = r"(?i)^\s*site\s*n\..*\(alat\s*units\)"
+    ALAT = r"(?i)^\s*celldm\(1\)="
+    CELL = (
+        r"^\s*crystal\s*axes:\s*\(cart.\s*coord.\s*in\s*units\s*of\s*alat\)"
+    )
+    ELECTRON_PHONON = r"(?i)^\s*electron-phonon\s*interaction\s*...\s*$"
+
+    output = {
+        QPOINTS: [],
+        NKPTS: [],
+        DIEL: [],
+        BORN: [],
+        BORN_DFPT: [],
+        POLA: [],
+        REPR: [],
+        EQPOINTS: [],
+        DIAG: [],
+        MODE_SYM: [],
+        POSITIONS: [],
+        ALAT: [],
+        CELL: [],
+        ELECTRON_PHONON: [],
+    }
+
+    names = {
+        QPOINTS: "qpoints",
+        NKPTS: "kpoints",
+        DIEL: "dieltensor",
+        BORN: "borneffcharge",
+        BORN_DFPT: "borneffcharge_dfpt",
+        POLA: "polarizability",
+        REPR: "representations",
+        EQPOINTS: "eqpoints",
+        DIAG: "freqs",
+        MODE_SYM: "mode_symmetries",
+        POSITIONS: "positions",
+        ALAT: "alat",
+        CELL: "cell",
+        ELECTRON_PHONON: "ep_data",
+    }
+
+    unique = {
+        QPOINTS: True,
+        NKPTS: False,
+        DIEL: True,
+        BORN: True,
+        BORN_DFPT: True,
+        POLA: True,
+        REPR: True,
+        EQPOINTS: True,
+        DIAG: True,
+        MODE_SYM: True,
+        POSITIONS: True,
+        ALAT: True,
+        CELL: True,
+        ELECTRON_PHONON: True,
+    }
+
+    results = {}
+    fdo_lines = [i for i in fileobj.read().splitlines() if i]
+    n_lines = len(fdo_lines)
+
+    for idx, line in enumerate(fdo_lines):
+        for key in output:
+            if bool(re.match(key, line)):
+                output[key].append(idx)
+
+    output = {key: np.array(value) for key, value in output.items()}
+
+    def _read_qpoints(idx):
+        match = re.findall(freg, fdo_lines[idx])
+        return tuple(round(float(x), 7) for x in match)
+
+    def _read_kpoints(idx):
+        n_kpts = int(re.findall(freg, fdo_lines[idx])[0])
+        kpts = []
+        for line in fdo_lines[idx + 2: idx + 2 + n_kpts]:
+            if bool(re.search(r"^\s*k\(.*wk", line)):
+                kpts.append([round(float(x), 7)
+                            for x in re.findall(freg, line)[1:]])
+        return np.array(kpts)
+
+    def _read_repr(idx):
+        n_repr, curr, n = int(re.findall(freg, fdo_lines[idx])[0]), 0, 0
+        representations = {}
+        while idx + n < n_lines:
+            if re.search(r"^\s*Representation.*modes", fdo_lines[idx + n]):
+                curr = int(re.findall(freg, fdo_lines[idx + n])[0])
+                representations[curr] = {"done": False, "modes": []}
+            if re.search(r"Calculated\s*using\s*symmetry", fdo_lines[idx + n]) \
+                    or re.search(r"-\s*Done\s*$", fdo_lines[idx + n]):
+                representations[curr]["done"] = True
+            if re.search(r"(?i)^\s*(mode\s*#\s*\d\s*)+", fdo_lines[idx + n]):
+                representations[curr]["modes"] = _read_modes(idx + n)
+                if curr == n_repr:
+                    break
+            n += 1
+        return representations
+
+    def _read_modes(idx):
+        n = 1
+        n_modes = len(re.findall(r"mode", fdo_lines[idx]))
+        modes = []
+        while not modes or bool(re.match(r"^\s*\(", fdo_lines[idx + n])):
+            tmp = re.findall(freg, fdo_lines[idx + n])
+            modes.append([round(float(x), 5) for x in tmp])
+            n += 1
+        return np.hsplit(np.array(modes), n_modes)
+
+    def _read_eqpoints(idx):
+        n_star = int(re.findall(freg, fdo_lines[idx])[0])
+        return np.loadtxt(
+            fdo_lines[idx + 2: idx + 2 + n_star], usecols=(1, 2, 3)
+        ).reshape(-1, 3)
+
+    def _read_freqs(idx):
+        n = 0
+        freqs = []
+        stop = 0
+        while not freqs or stop < 2:
+            if bool(re.search(r"^\s*freq", fdo_lines[idx + n])):
+                tmp = re.findall(freg, fdo_lines[idx + n])[1]
+                freqs.append(float(tmp))
+            if bool(re.search(r"\*{5,}", fdo_lines[idx + n])):
+                stop += 1
+            n += 1
+        return np.array(freqs)
+
+    def _read_sym(idx):
+        n = 1
+        sym = {}
+        while bool(re.match(r"^\s*freq", fdo_lines[idx + n])):
+            r = re.findall("\\d+", fdo_lines[idx + n])
+            r = tuple(range(int(r[0]), int(r[1]) + 1))
+            sym[r] = fdo_lines[idx + n].split("-->")[1].strip()
+            sym[r] = re.sub(r"\s+", " ", sym[r])
+            n += 1
+        return sym
+
+    def _read_epsil(idx):
+        epsil = np.zeros((3, 3))
+        for n in range(1, 4):
+            tmp = re.findall(freg, fdo_lines[idx + n])
+            epsil[n - 1] = [round(float(x), 9) for x in tmp]
+        return epsil
+
+    def _read_born(idx):
+        n = 1
+        born = []
+        while idx + n < n_lines:
+            if re.search(r"^\s*atom\s*\d\s*\S", fdo_lines[idx + n]):
+                pass
+            elif re.search(r"^\s*E\*?(x|y|z)\s*\(", fdo_lines[idx + n]):
+                tmp = re.findall(freg, fdo_lines[idx + n])
+                born.append([round(float(x), 5) for x in tmp])
+            else:
+                break
+            n += 1
+        born = np.array(born)
+        return np.vsplit(born, len(born) // 3)
+
+    def _read_born_dfpt(idx):
+        n = 1
+        born = []
+        while idx + n < n_lines:
+            if re.search(r"^\s*atom\s*\d\s*\S", fdo_lines[idx + n]):
+                pass
+            elif re.search(r"^\s*P(x|y|z)\s*\(", fdo_lines[idx + n]):
+                tmp = re.findall(freg, fdo_lines[idx + n])
+                born.append([round(float(x), 5) for x in tmp])
+            else:
+                break
+            n += 1
+        born = np.array(born)
+        return np.vsplit(born, len(born) // 3)
+
+    def _read_pola(idx):
+        pola = np.zeros((3, 3))
+        for n in range(1, 4):
+            tmp = re.findall(freg, fdo_lines[idx + n])[:3]
+            pola[n - 1] = [round(float(x), 2) for x in tmp]
+        return pola
+
+    def _read_positions(idx):
+        positions = []
+        symbols = []
+        n = 1
+        while re.findall(r"^\s*\d+", fdo_lines[idx + n]):
+            symbols.append(fdo_lines[idx + n].split()[1])
+            positions.append(
+                [round(float(x), 5)
+                 for x in re.findall(freg, fdo_lines[idx + n])[-3:]]
+            )
+            n += 1
+        atoms = Atoms(positions=positions, symbols=symbols)
+        atoms.pbc = True
+        return atoms
+
+    def _read_alat(idx):
+        return round(float(re.findall(freg, fdo_lines[idx])[1]), 5)
+
+    def _read_cell(idx):
+        cell = []
+        n = 1
+        while re.findall(r"^\s*a\(\d\)", fdo_lines[idx + n]):
+            cell.append([round(float(x), 4)
+                         for x in re.findall(freg, fdo_lines[idx + n])[-3:]])
+            n += 1
+        return np.array(cell)
+
+    def _read_electron_phonon(idx):
+        results = {}
+
+        broad_re = (
+            r"^\s*Gaussian\s*Broadening:\s+([\d.]+)\s+Ry, ngauss=\s+\d+"
+        )
+        dos_re = (
+            r"^\s*DOS\s*=\s*([\d.]+)\s*states/"
+            r"spin/Ry/Unit\s*Cell\s*at\s*Ef=\s+([\d.]+)\s+eV"
+        )
+        lg_re = (
+            r"^\s*lambda\(\s+(\d+)\)=\s+([\d.]+)\s+gamma=\s+([\d.]+)\s+GHz"
+        )
+        end_re = r"^\s*Number\s*of\s*q\s*in\s*the\s*star\s*=\s+(\d+)$"
+
+        lambdas = []
+        gammas = []
+
+        current = None
+
+        n = 1
+        while idx + n < n_lines:
+            line = fdo_lines[idx + n]
+
+            broad_match = re.match(broad_re, line)
+            dos_match = re.match(dos_re, line)
+            lg_match = re.match(lg_re, line)
+            end_match = re.match(end_re, line)
+
+            if broad_match:
+                if lambdas:
+                    results[current]["lambdas"] = lambdas
+                    results[current]["gammas"] = gammas
+                    lambdas = []
+                    gammas = []
+                current = float(broad_match[1])
+                results[current] = {}
+            elif dos_match:
+                results[current]["dos"] = float(dos_match[1])
+                results[current]["fermi"] = float(dos_match[2])
+            elif lg_match:
+                lambdas.append(float(lg_match[2]))
+                gammas.append(float(lg_match[3]))
+
+            if end_match:
+                results[current]["lambdas"] = lambdas
+                results[current]["gammas"] = gammas
+                break
+
+            n += 1
+
+        return results
+
+    properties = {
+        NKPTS: _read_kpoints,
+        DIEL: _read_epsil,
+        BORN: _read_born,
+        BORN_DFPT: _read_born_dfpt,
+        POLA: _read_pola,
+        REPR: _read_repr,
+        EQPOINTS: _read_eqpoints,
+        DIAG: _read_freqs,
+        MODE_SYM: _read_sym,
+        POSITIONS: _read_positions,
+        ALAT: _read_alat,
+        CELL: _read_cell,
+        ELECTRON_PHONON: _read_electron_phonon,
+    }
+
+    iblocks = np.append(output[QPOINTS], n_lines)
+
+    for qnum, (past, future) in enumerate(zip(iblocks[:-1], iblocks[1:])):
+        qpoint = _read_qpoints(past)
+        results[qnum + 1] = curr_result = {"qpoint": qpoint}
+        for prop in properties:
+            p = (past < output[prop]) & (output[prop] < future)
+            selected = output[prop][p]
+            if len(selected) == 0:
+                continue
+            if unique[prop]:
+                idx = output[prop][p][-1]
+                curr_result[names[prop]] = properties[prop](idx)
+            else:
+                tmp = {k + 1: 0 for k in range(len(selected))}
+                for k, idx in enumerate(selected):
+                    tmp[k + 1] = properties[prop](idx)
+                curr_result[names[prop]] = tmp
+        alat = curr_result.pop("alat", 1.0)
+        atoms = curr_result.pop("positions", None)
+        cell = curr_result.pop("cell", np.eye(3))
+        if atoms:
+            atoms.positions *= alat * units["Bohr"]
+            atoms.cell = cell * alat * units["Bohr"]
+            atoms.wrap()
+            curr_result["atoms"] = atoms
+
+    return results
+
+
+def write_fortran_namelist(
+        fd,
+        input_data=None,
+        binary=None,
+        additional_cards=None,
+        **kwargs) -> None:
+    """
+    Function which writes input for simple espresso binaries.
+    List of supported binaries are in the espresso_keys.py file.
+    Non-exhaustive list (to complete)
+
+    Note: "EOF" is appended at the end of the file.
+    (https://lists.quantum-espresso.org/pipermail/users/2020-November/046269.html)
+
+    Additional fields are written 'as is' in the input file. It is expected
+    to be a string or a list of strings.
+
+    Parameters
+    ----------
+    fd
+        The file descriptor of the input file.
+    input_data: dict
+        A flat or nested dictionary with input parameters for the binary.x
+    binary: str
+        Name of the binary
+    additional_cards: str | list[str]
+        Additional fields to be written at the end of the input file, after
+        the namelist. It is expected to be a string or a list of strings.
+
+    Returns
+    -------
+    None
+    """
+    input_data = Namelist(input_data)
+
+    if binary:
+        input_data.to_nested(binary, **kwargs)
+
+    pwi = input_data.to_string()
+
+    fd.write(pwi)
+
+    if additional_cards:
+        if isinstance(additional_cards, list):
+            additional_cards = "\n".join(additional_cards)
+            additional_cards += "\n"
+
+        fd.write(additional_cards)
+
+    fd.write("EOF")
+
+
+@deprecated('Please use the ase.io.espresso.Namelist class',
+            DeprecationWarning)
+def construct_namelist(parameters=None, keys=None, warn=False, **kwargs):
+    """
+    Construct an ordered Namelist containing all the parameters given (as
+    a dictionary or kwargs). Keys will be inserted into their appropriate
+    section in the namelist and the dictionary may contain flat and nested
+    structures. Any kwargs that match input keys will be incorporated into
+    their correct section. All matches are case-insensitive, and returned
+    Namelist object is a case-insensitive dict.
+
+    If a key is not known to ase, but in a section within `parameters`,
+    it will be assumed that it was put there on purpose and included
+    in the output namelist. Anything not in a section will be ignored (set
+    `warn` to True to see ignored keys).
+
+    Keys with a dimension (e.g. Hubbard_U(1)) will be incorporated as-is
+    so the `i` should be made to match the output.
+
+    The priority of the keys is:
+        kwargs[key] > parameters[key] > parameters[section][key]
+    Only the highest priority item will be included.
+
+    .. deprecated:: 3.23.0
+        Please use :class:`ase.io.espresso.Namelist` instead.
+
+    Parameters
+    ----------
+    parameters: dict
+        Flat or nested set of input parameters.
+    keys: Namelist | dict
+        Namelist to use as a template for the output.
+    warn: bool
+        Enable warnings for unused keys.
+
+    Returns
+    -------
+    input_namelist: Namelist
+        pw.x compatible namelist of input parameters.
+
+    """
+
+    if keys is None:
+        keys = deepcopy(pw_keys)
+    # Convert everything to Namelist early to make case-insensitive
+    if parameters is None:
+        parameters = Namelist()
+    else:
+        # Maximum one level of nested dict
+        # Don't modify in place
+        parameters_namelist = Namelist()
+        for key, value in parameters.items():
+            if isinstance(value, dict):
+                parameters_namelist[key] = Namelist(value)
+            else:
+                parameters_namelist[key] = value
+        parameters = parameters_namelist
+
+    # Just a dict
+    kwargs = Namelist(kwargs)
+
+    # Final parameter set
+    input_namelist = Namelist()
+
+    # Collect
+    for section in keys:
+        sec_list = Namelist()
+        for key in keys[section]:
+            # Check all three separately and pop them all so that
+            # we can check for missing values later
+            value = None
+
+            if key in parameters.get(section, {}):
+                value = parameters[section].pop(key)
+            if key in parameters:
+                value = parameters.pop(key)
+            if key in kwargs:
+                value = kwargs.pop(key)
+
+            if value is not None:
+                sec_list[key] = value
+
+            # Check if there is a key(i) version (no extra parsing)
+            for arg_key in list(parameters.get(section, {})):
+                if arg_key.split('(')[0].strip().lower() == key.lower():
+                    sec_list[arg_key] = parameters[section].pop(arg_key)
+            cp_parameters = parameters.copy()
+            for arg_key in cp_parameters:
+                if arg_key.split('(')[0].strip().lower() == key.lower():
+                    sec_list[arg_key] = parameters.pop(arg_key)
+            cp_kwargs = kwargs.copy()
+            for arg_key in cp_kwargs:
+                if arg_key.split('(')[0].strip().lower() == key.lower():
+                    sec_list[arg_key] = kwargs.pop(arg_key)
+
+        # Add to output
+        input_namelist[section] = sec_list
+
+    unused_keys = list(kwargs)
+    # pass anything else already in a section
+    for key, value in parameters.items():
+        if key in keys and isinstance(value, dict):
+            input_namelist[key].update(value)
+        elif isinstance(value, dict):
+            unused_keys.extend(list(value))
+        else:
+            unused_keys.append(key)
+
+    if warn and unused_keys:
+        warnings.warn('Unused keys: {}'.format(', '.join(unused_keys)))
+
+    return input_namelist
+
+
+@deprecated('Please use the .to_string() method of Namelist instead.',
+            DeprecationWarning)
+def namelist_to_string(input_parameters):
+    """Format a Namelist object as a string for writing to a file.
+    Assume sections are ordered (taken care of in namelist construction)
+    and that repr converts to a QE readable representation (except bools)
+
+    .. deprecated:: 3.23.0
+        Please use the :meth:`ase.io.espresso.Namelist.to_string` method
+        instead.
+
+    Parameters
+    ----------
+    input_parameters : Namelist | dict
+        Expecting a nested dictionary of sections and key-value data.
+
+    Returns
+    -------
+    pwi : List[str]
+        Input line for the namelist
+    """
+    pwi = []
+    for section in input_parameters:
+        pwi.append(f'&{section.upper()}\n')
+        for key, value in input_parameters[section].items():
+            if value is True:
+                pwi.append(f'   {key:16} = .true.\n')
+            elif value is False:
+                pwi.append(f'   {key:16} = .false.\n')
+            elif isinstance(value, Path):
+                pwi.append(f'   {key:16} = "{value}"\n')
+            else:
+                # repr format to get quotes around strings
+                pwi.append(f'   {key:16} = {value!r}\n')
+        pwi.append('/\n')  # terminate section
+    pwi.append('\n')
+    return pwi
