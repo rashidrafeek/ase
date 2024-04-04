@@ -2,6 +2,7 @@ import re
 from collections import Counter
 from itertools import product, chain, combinations
 from typing import Union
+from dataclasses import dataclass
 
 from fractions import Fraction
 import numpy as np
@@ -23,13 +24,45 @@ U_STD_AGCL = 0.222  # Standard redox potential of AgCl electrode
 U_STD_SCE = 0.244   # Standard redox potential of SCE electrode
 
 
-def initialize_refs(refs_dct):
+# TODO move to ASR
+"""
+def get_formation_energy(self, energy, refs):
+    Evaluate the formation energy.
+
+    Requires the material chemical potential (e.g. DFT total energy)
+    and a dictionary with the elemental references and corresponding
+    chemical potentials.
+    
+    elem_energy = sum([refs[s] * n for s, n in self._count.items()])
+    hof = (energy - elem_energy) / self.n_fu
+    return hof
+"""
+
+
+def parse_formula(formula, fmt='metal'):
+    aq = formula.endswith('(aq)')
+    charge = formula.count('+') - formula.count('-')
+    formula_strip = formula.replace('(aq)', '').rstrip('+-')
+    formula_obj = Formula(formula_strip, format=fmt)
+    return formula_obj, charge, aq
+
+
+def initialize_refs(refs_dct, reduce=False, fmt='metal'):
     """Convert dictionary entries to Species instances"""
     refs = {}
-    for name, energy in refs_dct.items():
-        spec = Species(name)
-        spec.set_chemical_potential(energy, None)
-        refs[spec.name] = spec
+    for label, energy in refs_dct.items():
+        formula, charge, aq = parse_formula(label, fmt=fmt)
+
+        if not aq:
+            if reduce:
+                formula, n_fu = formula.reduce()
+                energy /= n_fu
+            name = str(formula)
+        else:
+            name = label
+
+        spec = Species(name, formula, charge, aq, energy)
+        refs[label] = spec
     return refs
 
 
@@ -41,12 +74,13 @@ def get_product_combos(reactant, refs):
     different combinations of products to be inserted
     in (electro)chemical reactions.
     """
-    array = [[] for i in range(len(reactant.elements))]
+    ref_elem = reactant._main_elements
+    allcombos = [[] for _ in range(len(ref_elem))]
     for ref in refs.values():
-        contained = ref.contains(reactant.elements)
+        contained = ref.contains(ref_elem)
         for w in np.argwhere(contained).flatten():
-            array[w].append(ref)
-    return [np.unique(combo) for combo in product(*array)]
+            allcombos[w].append(ref)
+    return [np.unique(combo) for combo in product(*allcombos)]
 
 
 def get_phases(reactant, refs, T, conc, reference, tol=1e-3):
@@ -57,12 +91,14 @@ def get_phases(reactant, refs, T, conc, reference, tol=1e-3):
 
     phases = []
     phase_matrix = []
-    reac_elem = [-reactant._count_array(reactant.elements)]
+    reac_elem = reactant._main_elements
+    reac_count = [-reactant._count_array(reac_elem)]
 
     for products in get_product_combos(reactant, refs):
-        prod_elem = [p._count_array(reactant.elements) for p in products]
-        elem_matrix = np.array(reac_elem + prod_elem).T
+        prod_count = [p._count_array(reac_elem) for p in products]
+        elem_matrix = np.array(reac_count + prod_count).T
         coeffs = null_space(elem_matrix).flatten()
+
         if len(coeffs) > 0 and all(coeffs > tol):
             coeffs /= coeffs[0]
             coeffs[0] = -coeffs[0]
@@ -218,29 +254,24 @@ class Species:
         ase.formula.Formula
 
     """
-    def __init__(self, formula, fmt='metal', reduce=True):
-        self.aq = formula.endswith('(aq)')
-        formula_strip = formula.replace('(aq)', '').rstrip('+-')
-        self.charge = formula.count('+') - formula.count('-')
-        formula_obj = Formula(formula_strip, format=fmt)
-        self._count = formula_obj.count()
+    def __init__(self,
+                 name,
+                 formula: Formula,
+                 charge: int,
+                 aq: bool,
+                 energy: float):
 
-        if self.aq or not reduce:
-            self.name = formula
-            self.n_fu = 1
-            self.count = self._count
-        else:
-            reduced, self.n_fu = formula_obj.reduce()
-            self.count = reduced.count()
-            self.name = str(reduced)
+        self.name = name
+        self.formula = formula
+        self.energy = energy
+        self.charge = charge
+        self.aq = aq
 
-        self._elements = [elem for elem in self.count]
-        self.elements = [
-            elem for elem in self._elements if elem not in ['H', 'O']
-        ]
+        self.count = formula.count()
         self.natoms = sum(self.count.values())
-        self.energy = None
-        self.mu = None
+        self._main_elements = [
+            e for e in self.count.keys() if e not in ['H', 'O']
+        ]
 
     def get_chemsys(self):
         """Get the possible combinations of elements based
@@ -251,7 +282,7 @@ class Species:
         chemsys = list(
             chain.from_iterable(
                 [combinations(elements, i + 1)
-                 for i, _ in enumerate(list(elements))]
+                 for i in range(len(elements))]
             )
         )
         return chemsys
@@ -269,7 +300,7 @@ class Species:
         return np.array([self.count.get(e, 0) for e in elements])
 
     def contains(self, elements):
-        return [True if elem in self.elements else False for elem in elements]
+        return [elem in self._main_elements for elem in elements]
 
     def get_fractional_composition(self, elements):
         """Obtain the fractional content of each element."""
@@ -277,34 +308,8 @@ class Species:
         N_elem = sum([self.count.get(e, 0) for e in elements])
         return N_elem / N_all
 
-    def get_formation_energy(self, energy, refs):
-        """Evaluate the formation energy.
-
-        Requires the material chemical potential (e.g. DFT total energy)
-        and a dictionary with the elemental references and corresponding
-        chemical potentials.
-        """
-        elem_energy = sum([refs[s] * n for s, n in self._count.items()])
-        hof = (energy - elem_energy) / self.n_fu
-        return hof
-
-    def set_chemical_potential(self, energy, refs=None):
-        """Set the chemical potential of the species.
-
-        If a reference dictionary with the elements and their
-        chemical potentials is provided, the chemical potential
-        will be calculated as a formation energy.
-        Otherwise the provided energy will be used directly as the
-        chemical potential.
-        """
-        self.energy = energy
-        if refs is None:
-            self.mu = energy / self.n_fu
-        else:
-            self.mu = self.get_formation_energy(energy, refs)
-
     def __repr__(self):
-        return f'({self.name}, μ={self.mu})'
+        return f'Species({str(self.formula)})'
 
     def __lt__(self, other):
         return self.name < other.name
@@ -369,7 +374,7 @@ class RedOx:
             amounts = spec.balance_electrochemistry()
 
             const_term += coef * (
-                spec.mu + alpha * (spec.aq * np.log10(conc))
+                spec.energy + alpha * (spec.aq * np.log10(conc))
             )
             pH_term += - coef * alpha * amounts[1]
             U_term += - coef * amounts[2]
@@ -491,12 +496,7 @@ class Pourbaix:
         self.reference = reference
 
         refs = initialize_refs(refs_dct)
-
-        try:
-            self.material = refs.pop(material_name)
-        except KeyError:
-            self.material = refs.pop(Species(material_name).name)
-
+        self.material = refs.pop(material_name)
         self.phases, phase_matrix = get_phases(
             self.material, refs, T, conc, reference
         )
