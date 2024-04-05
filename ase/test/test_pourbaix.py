@@ -10,7 +10,6 @@ from ase.pourbaix import (
     Species, RedOx,
     U_STD_SCE, U_STD_AGCL,
     PREDEF_ENERGIES,
-    initialize_refs,
     get_main_products
 )
 
