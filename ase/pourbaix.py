@@ -213,7 +213,7 @@ class Species:
 
     aq: bool
         whether the species is solid (False)
-        or acqueous (True) 
+        or acqueous (True)
 
     energy: float
         the chemical potential of the species
@@ -239,7 +239,7 @@ class Species:
 
     @classmethod
     def from_string(cls, string: str, energy: float,
-            reduce: bool = True, fmt: str = 'metal'):
+                    reduce: bool = True, fmt: str = 'metal'):
         """Initialize the class provided a formula and an energy.
 
         string: str
@@ -257,7 +257,7 @@ class Species:
 
         energy: float
             the energy (chemical potential) associated with the species.
-            
+
         reduce: bool
             reduce to the unit formula and normalize the energy accordingly.
             Formulae and energies of acqueous species are never reduced.
@@ -351,10 +351,10 @@ class RedOx:
 
         Relevant methods
         ----------------
-        
+
         from_species(reactant, products, T, conc, reference)
             Initialize the class from the reactant as a Species object
-            and the product(s) a list of Species objects 
+            and the product(s) a list of Species objects.
 
         equation()
             Print the chemical equation of the reaction.
@@ -404,7 +404,7 @@ class RedOx:
         """Initialize the class from a combination of
            reactant and products. The stoichiometric
            coefficients are automatically determined.
-    
+
            reactant: Species
            products: list[Species]
         """
@@ -413,14 +413,14 @@ class RedOx:
         prod_count = [p._count_array(reac_elem) for p in products]
         elem_matrix = np.array(reac_count + prod_count).T
         coeffs = null_space(elem_matrix).flatten()
-    
+
         if len(coeffs) > 0 and all(coeffs > tol):
             coeffs /= coeffs[0]
             coeffs[0] = -coeffs[0]
             species = (reactant, *products)
             phase = cls(species, coeffs, T, conc, reference)
             return phase
-        
+
         return None
 
     def get_ref_correction(self, reference, alpha):
