@@ -114,18 +114,19 @@ def test_redox():
     Reaction:
         Zn + H2O + e-  ➜  H+ + HZnO--(aq)
     """
-    species = [
-        Species('Zn'),
-        Species('HZnO--(aq)')
-    ]
-    species[0].set_chemical_potential(0.0)
-    species[1].set_chemical_potential(0.0)
-    coeffs = [-1, 1]
-    reaction = RedOx(species, coeffs)
+    reactant = Species.from_string('Zn', 0.0)
+    products = [Species.from_string('HZnO--(aq)', 0.0)]
+    products_noredox = [Species.from_string('Pt', 0.0)]
+
+    reaction = RedOx.from_species(reactant, products)
+    noreaction = RedOx.from_species(reactant, products_noredox)
+    assert reaction is not None
+    assert noreaction is None
 
     corr = []
     for reference in ['SHE', 'RHE', 'Pt', 'AgCl', 'SCE']:
         corr.append(reaction.get_ref_correction(reference, alpha=1.0))
+
     assert (corr[0][0] == corr[0][1] == 0.0)
     assert (corr[1][1] == -1.0)
     assert (corr[2][0] == -0.5 * PREDEF_ENERGIES['H2O'])
@@ -140,14 +141,11 @@ def test_redox():
 
 def test_species_extras():
     """Test some methods of Species not used by Pourbaix"""
-    s = Species('H2O')
+    s = Species.from_string('H2O', 0.0)
     chemsys = s.get_chemsys()
     assert len(chemsys) == 3
     frac = s.get_fractional_composition('H')
     assert frac == 2 / 3
-    refs = {'H': -3, 'O': -4}
-    s.set_chemical_potential(-12, refs)
-    assert s.mu == -2
 
 
 def test_trigger_phases_error():
@@ -162,15 +160,3 @@ def test_trigger_phases_error():
     except ValueError:
         fail = True
     assert fail
-
-
-"""
-def test_trigger_name_exception():
-    Trigger target material formula reformatting
-    refs = {
-        'Zn': 0.0,
-        'ZnO': -10.0
-    }
-    pbx = Pourbaix('OZn', refs)
-    assert pbx.material.name == 'ZnO'
-"""

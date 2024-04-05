@@ -2,9 +2,10 @@ import re
 from collections import Counter
 from itertools import product, chain, combinations
 from typing import Union
-from dataclasses import dataclass
 
 from fractions import Fraction
+from scipy.linalg import null_space
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -24,21 +25,6 @@ U_STD_AGCL = 0.222  # Standard redox potential of AgCl electrode
 U_STD_SCE = 0.244   # Standard redox potential of SCE electrode
 
 
-# TODO move to ASR
-"""
-def get_formation_energy(self, energy, refs):
-    Evaluate the formation energy.
-
-    Requires the material chemical potential (e.g. DFT total energy)
-    and a dictionary with the elemental references and corresponding
-    chemical potentials.
-    
-    elem_energy = sum([refs[s] * n for s, n in self._count.items()])
-    hof = (energy - elem_energy) / self.n_fu
-    return hof
-"""
-
-
 def parse_formula(formula, fmt='metal'):
     aq = formula.endswith('(aq)')
     charge = formula.count('+') - formula.count('-')
@@ -51,19 +37,6 @@ def initialize_refs(refs_dct, reduce=False, fmt='metal'):
     """Convert dictionary entries to Species instances"""
     refs = {}
     for label, energy in refs_dct.items():
-        '''
-        formula, charge, aq = parse_formula(label, fmt=fmt)
-
-        if not aq:
-            if reduce:
-                formula, n_fu = formula.reduce()
-                energy /= n_fu
-            name = str(formula)
-        else:
-            name = label
-
-        spec = Species(name, formula, charge, aq, energy)
-        '''
         spec = Species.from_string(label, energy, reduce, fmt)
         refs[label] = spec
     return refs
@@ -90,23 +63,14 @@ def get_phases(reactant, refs, T, conc, reference, tol=1e-3):
     """Obtain all the possible decomposition pathways
        for a given reactant as a collection of RedOx objects.
     """
-    from scipy.linalg import null_space
-
     phases = []
     phase_matrix = []
-    reac_elem = reactant._main_elements
-    reac_count = [-reactant._count_array(reac_elem)]
 
     for products in get_product_combos(reactant, refs):
-        prod_count = [p._count_array(reac_elem) for p in products]
-        elem_matrix = np.array(reac_count + prod_count).T
-        coeffs = null_space(elem_matrix).flatten()
-
-        if len(coeffs) > 0 and all(coeffs > tol):
-            coeffs /= coeffs[0]
-            coeffs[0] = -coeffs[0]
-            species = (reactant, *products)
-            phase = RedOx(species, coeffs, T, conc, reference)
+        phase = RedOx.from_species(
+            reactant, products, T, conc, reference, tol
+        )
+        if phase is not None:
             phases.append(phase)
             phase_matrix.append(phase._vector)
 
@@ -275,7 +239,7 @@ class Species:
 
     @classmethod
     def from_string(cls, string: str, energy: float,
-            reduce: bool = False, fmt: str = 'metal'):
+            reduce: bool = True, fmt: str = 'metal'):
         """Initialize the class provided a formula and an energy.
 
         string: str
@@ -428,6 +392,32 @@ class RedOx:
             float(U_term),
             float(pH_term + pH_corr)
         ]
+
+    @classmethod
+    def from_species(cls, reactant: Species, products,
+                     T=298.15, conc=1e-6,
+                     reference='SHE', tol=1e-3):
+        """Initialize the class from a combination of
+           reactant and products. The stoichiometric
+           coefficients are automatically determined.
+    
+           reactant: Species
+           products: list[Species]
+        """
+        reac_elem = reactant._main_elements
+        reac_count = [-reactant._count_array(reac_elem)]
+        prod_count = [p._count_array(reac_elem) for p in products]
+        elem_matrix = np.array(reac_count + prod_count).T
+        coeffs = null_space(elem_matrix).flatten()
+    
+        if len(coeffs) > 0 and all(coeffs > tol):
+            coeffs /= coeffs[0]
+            coeffs[0] = -coeffs[0]
+            species = (reactant, *products)
+            phase = cls(species, coeffs, T, conc, reference)
+            return phase
+        
+        return None
 
     def get_ref_correction(self, reference, alpha):
         """Correct the constant and pH contributions to the reaction free energy
