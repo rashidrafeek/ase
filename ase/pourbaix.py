@@ -51,6 +51,7 @@ def initialize_refs(refs_dct, reduce=False, fmt='metal'):
     """Convert dictionary entries to Species instances"""
     refs = {}
     for label, energy in refs_dct.items():
+        '''
         formula, charge, aq = parse_formula(label, fmt=fmt)
 
         if not aq:
@@ -62,6 +63,8 @@ def initialize_refs(refs_dct, reduce=False, fmt='metal'):
             name = label
 
         spec = Species(name, formula, charge, aq, energy)
+        '''
+        spec = Species.from_string(label, energy, reduce, fmt)
         refs[label] = spec
     return refs
 
@@ -236,23 +239,20 @@ class Species:
 
     Initialization
     --------------
+    name: str
+        A label representing the species
 
-    formula: str
-        The chemical formula of the species (e.g. ``ZnO``).
-        For solid species, the formula is automatically reduced to the
-        unit formula, and the chemical potential normalized accordingly.
-        Acqueous species are specified by expliciting
-        all the positive or negative charges and by appending ``(aq)``.
-        Parentheses for grouping functional groups are acceptable.
-            e.g.
-                Be3(OH)3[3+]    ➜  wrong
-                Be3(OH)3+++     ➜  wrong
-                Be3(OH)3+++(aq) ➜  correct
-                Be3O3H3+++(aq)  ➜  correct
-    fmt: str
-        Formula formatting according to the available options in
-        ase.formula.Formula
+    formula: Formula
 
+    charge: int
+        the electric charge of the species, if ionic
+
+    aq: bool
+        whether the species is solid (False)
+        or acqueous (True) 
+
+    energy: float
+        the chemical potential of the species
     """
     def __init__(self,
                  name,
@@ -272,6 +272,45 @@ class Species:
         self._main_elements = [
             e for e in self.count.keys() if e not in ['H', 'O']
         ]
+
+    @classmethod
+    def from_string(cls, string: str, energy: float,
+            reduce: bool = False, fmt: str = 'metal'):
+        """Initialize the class provided a formula and an energy.
+
+        string: str
+            The chemical formula of the species (e.g. ``ZnO``).
+            For solid species, the formula is automatically reduced to the
+            unit formula, and the chemical potential normalized accordingly.
+            Acqueous species are specified by expliciting
+            all the positive or negative charges and by appending ``(aq)``.
+            Parentheses for grouping functional groups are acceptable.
+                e.g.
+                    Be3(OH)3[3+]    ➜  wrong
+                    Be3(OH)3+++     ➜  wrong
+                    Be3(OH)3+++(aq) ➜  correct
+                    Be3O3H3+++(aq)  ➜  correct
+
+        energy: float
+            the energy (chemical potential) associated with the species.
+            
+        reduce: bool
+            reduce to the unit formula and normalize the energy accordingly.
+            Formulae and energies of acqueous species are never reduced.
+
+        fmt: str
+            Formula formatting according to the available options in
+            ase.formula.Formula
+        """
+        formula, charge, aq = parse_formula(string, fmt=fmt)
+        if not aq:
+            if reduce:
+                formula, n_fu = formula.reduce()
+                energy /= n_fu
+            name = str(formula)
+        else:
+            name = string
+        return cls(name, formula, charge, aq, energy)
 
     def get_chemsys(self):
         """Get the possible combinations of elements based
@@ -309,7 +348,7 @@ class Species:
         return N_elem / N_all
 
     def __repr__(self):
-        return f'Species({str(self.formula)})'
+        return f'Species({self.name})'
 
     def __lt__(self, other):
         return self.name < other.name
