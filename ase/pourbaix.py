@@ -330,19 +330,19 @@ class RedOx:
         Initialization
         --------------
 
-        species
+        species: list[Species]
             The reactant and products excluded H2O, protons and electrons.
 
-        coeffs
+        coeffs: list[float]
             The stoichiometric coefficients of the above species.
             Positive coefficients are associated with the products,
             negative coefficients with the reactants.
 
-        T
-            The temperature in Kelvin.
+        T: float
+            The temperature in Kelvin. Default: 298.15 K.
 
-        conc
-            The concentration of ionic species.
+        conc: float
+            The concentration of ionic species. Default: 1.0e-6 M.
 
         reference: str
             The reference electrode. Default: SHE.
@@ -351,6 +351,10 @@ class RedOx:
 
         Relevant methods
         ----------------
+        
+        from_species(reactant, products, T, conc, reference)
+            Initialize the class from the reactant as a Species object
+            and the product(s) a list of Species objects 
 
         equation()
             Print the chemical equation of the reaction.
@@ -394,7 +398,7 @@ class RedOx:
         ]
 
     @classmethod
-    def from_species(cls, reactant: Species, products,
+    def from_species(cls, reactant, products,
                      T=298.15, conc=1e-6,
                      reference='SHE', tol=1e-3):
         """Initialize the class from a combination of
