@@ -483,10 +483,10 @@ class Siesta(FileIOCalculator):
                 name = f"{name}.ghost"
                 atomic_number = -atomic_number
 
-            if label not in ion_results:
-                fname = self.getpath(label, 'ion.xml')
+            if name not in ion_results:
+                fname = self.getpath(name, 'ion.xml')
                 if fname.is_file():
-                    ion_results[label] = get_ion(str(fname))
+                    ion_results[name] = get_ion(str(fname))
 
         return ion_results
 
