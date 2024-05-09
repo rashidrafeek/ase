@@ -609,10 +609,9 @@ class SpeciesInfo:
             if not src_path.exists():
                 src_path = self.pseudo_path / f"{symbol}.psml"
 
-            current_dir = os.getcwd()
             rel_pseudo_path = ''
-            if str(src_path.parent) != current_dir or src_path.suffix != 'psf':
-                rel_pseudo_path = str(src_path.relative_to(os.getcwd()))
+            if src_path.parent != self.pseudo_path or src_path.suffix != 'psf':
+                rel_pseudo_path = str(src_path.relative_to(self.pseudo_path))
 
             name = src_path.name
             name = name.split('.')
