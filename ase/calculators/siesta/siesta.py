@@ -609,6 +609,11 @@ class SpeciesInfo:
             if not src_path.exists():
                 src_path = self.pseudo_path / f"{symbol}.psml"
 
+            current_dir = os.getcwd()
+            rel_pseudo_path = ''
+            if str(src_path.parent) != current_dir or src_path.suffix != 'psf':
+                rel_pseudo_path = str(src_path.relative_to(os.getcwd()))
+
             name = src_path.name
             name = name.split('.')
             name.insert(-1, str(species_number))
@@ -622,7 +627,7 @@ class SpeciesInfo:
             file_instructions.append(instr)
 
             label = '.'.join(np.array(name.split('.'))[:-1])
-            string = '    %d %d %s' % (species_number, atomic_number, label)
+            string = '    %d %d %s %s' % (species_number, atomic_number, label, rel_pseudo_path)
             chemical_labels.append(string)
             if isinstance(spec['basis_set'], PAOBasisBlock):
                 pao_basis.append(spec['basis_set'].script(label))
