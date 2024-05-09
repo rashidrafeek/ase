@@ -1,5 +1,4 @@
 import pytest
-import os
 
 from ase.build import bulk
 from ase.io.siesta import _read_fdf_lines
@@ -12,8 +11,6 @@ def test_fdf_io(factory):
     atoms = bulk('Ti')
     calc = factory.calc()
     atoms.calc = calc
-    calc['pseudo_path'] = f'{os.getcwd()}/pseudo'
-    calc['species'] = [{'symbol': 'Ti', 'tag' : None,'pseudopotential': 'Ti.psf', 'basis_set': 'DZP'}]
     calc.write_input(atoms, properties=['energy'])
     # Should produce siesta.fdf but really we should be more explicit
 
