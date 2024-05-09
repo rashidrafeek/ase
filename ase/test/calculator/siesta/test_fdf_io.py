@@ -24,5 +24,3 @@ def test_fdf_io(factory):
     print(thing)
 
     assert thing[0].split() == ['SystemName', 'siesta']
-    print(thing)
-    assert 1 == 0
