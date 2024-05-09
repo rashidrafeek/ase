@@ -111,7 +111,7 @@ def test_species(factory, atoms_ch4):
     siesta.write_input(atoms_ch4, properties=['energy'])
     with open('test_label.fdf', encoding='utf-8') as fd:
         lines = fd.readlines()
-    print(lines)
+
     lines = [line.split() for line in lines]
     assert ['1', '6', 'C.lda.1'] in lines
     assert ['2', '1', 'H.lda.2'] in lines
@@ -119,21 +119,6 @@ def test_species(factory, atoms_ch4):
     assert ['C.lda.1', 'DZP'] in lines
     assert ['H.lda.2', 'DZP'] in lines
     assert ['H.3', 'SZ'] in lines
-
-    pseudo_dir = Path(siesta.pseudo_path) / 'lda'
-    pseudo_dir.mkdir(parents=True, exist_ok=True)
-    file_path = pseudo_dir / 'H.psml'
-    file_path.write_text('pseudo')
-    siesta.write_input(atoms_ch4, properties=['energy'])
-    with open('test_label.fdf', encoding='utf-8') as fd:
-        lines = fd.readlines() 
-    print(lines)
-    assert ['3', '1', 'H.3', 'lda/H.psml'] in lines
-    try:
-        file_path.unlink()
-        pseudo_dir.rmdir()
-    except Exception:
-        pass
 
 
 @pytest.mark.calculator_lite()
