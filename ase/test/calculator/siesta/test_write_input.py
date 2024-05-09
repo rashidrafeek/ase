@@ -1,7 +1,6 @@
 """Test write_input"""
 import numpy as np
 import pytest
-from pathlib import Path
 
 from ase import Atoms
 from ase.calculators.siesta.parameters import PAOBasisBlock, Species
