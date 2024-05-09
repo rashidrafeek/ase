@@ -594,7 +594,6 @@ class SpeciesInfo:
         for species_number, spec in enumerate(self.species, start=1):
             symbol = spec['symbol']
             atomic_number = atomic_numbers[symbol]
-            print(spec['pseudopotential'])
 
             if spec['pseudopotential'] is None:
                 if self.pseudo_qualifier == '':
@@ -612,7 +611,7 @@ class SpeciesInfo:
 
             rel_pseudo_path = ''
             if src_path.parent != self.pseudo_path or src_path.suffix != '.psf':
-                rel_pseudo_path = str(src_path.relative_to(self.pseudo_path))
+                rel_pseudo_path = str(src_path.relative_to(os.getcwd()))
 
             name = src_path.name
             name = name.split('.')
