@@ -110,6 +110,7 @@ def test_species(factory, atoms_ch4):
     siesta.write_input(atoms_ch4, properties=['energy'])
     with open('test_label.fdf', encoding='utf-8') as fd:
         lines = fd.readlines()
+    print(lines)
     lines = [line.split() for line in lines]
     assert ['1', '6', 'C.lda.1', ''] in lines
     assert ['2', '1', 'H.lda.2', ''] in lines
