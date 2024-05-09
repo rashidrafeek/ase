@@ -594,6 +594,7 @@ class SpeciesInfo:
         for species_number, spec in enumerate(self.species, start=1):
             symbol = spec['symbol']
             atomic_number = atomic_numbers[symbol]
+            print(spec['pseudopotential'])
 
             if spec['pseudopotential'] is None:
                 if self.pseudo_qualifier == '':
@@ -604,14 +605,20 @@ class SpeciesInfo:
             else:
                 src_path = Path(spec['pseudopotential'])
                 label = src_path.stem
+            print(src_path)
             if not src_path.is_absolute():
                 src_path = self.pseudo_path / src_path
             if not src_path.exists():
                 src_path = self.pseudo_path / f"{symbol}.psml"
+            print(src_path)
+            print(src_path.parent)
+            print(src_path.suffix)
+            print(self.pseudo_path)
 
             rel_pseudo_path = ''
             if src_path.parent != self.pseudo_path or src_path.suffix != 'psf':
                 rel_pseudo_path = str(src_path.relative_to(self.pseudo_path))
+            print(rel_pseudo_path)
 
             name = src_path.name
             name = name.split('.')
