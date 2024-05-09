@@ -627,8 +627,8 @@ class SpeciesInfo:
             file_instructions.append(instr)
 
             label = '.'.join(np.array(name.split('.'))[:-1])
-            string = '    %d %d %s %s' % (species_number, 
-                                atomic_number, label, rel_pseudo_path)
+            string = '    %d %d %s %s' % (species_number,
+                atomic_number, label, rel_pseudo_path)
             chemical_labels.append(string)
             if isinstance(spec['basis_set'], PAOBasisBlock):
                 pao_basis.append(spec['basis_set'].script(label))
