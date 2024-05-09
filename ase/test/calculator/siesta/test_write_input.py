@@ -97,7 +97,7 @@ def test_species(factory, atoms_ch4):
     atoms_ch4.set_tags([0, 0, 0, 1, 0])
     species, numbers = siesta.species(atoms_ch4)
     assert all(numbers == np.array([1, 2, 2, 2, 2]))
-    
+
     current_dir = Path(os.getcwd())
     siesta = factory.calc(
         species=[
@@ -105,7 +105,7 @@ def test_species(factory, atoms_ch4):
                 symbol='H',
                 tag=1,
                 basis_set='SZ',
-                pseudopotential=str(current_dir/'new_dir/H_file.psml'))])
+                pseudopotential=str(current_dir / 'new_dir/H_file.psml'))])
     dir_path = current_dir / 'new_dir'
     dir_path.mkdir(exist_ok=True, parents=True)
     file_path = dir_path / 'file.psml'
