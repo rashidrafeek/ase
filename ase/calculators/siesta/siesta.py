@@ -611,10 +611,12 @@ class SpeciesInfo:
 
             rel_pseudo_path = ''
             if src_path.parent != self.pseudo_path or src_path.suffix != '.psf':
-                rel_pseudo_path = src_path
-                current_dir = os.getcwd()
+                rel_pseudo_path = str(src_path)
+                print(rel_pseudo_path)
+                current_dir = Path(os.getcwd())
                 if src_path.is_relative_to(current_dir):
                     rel_pseudo_path = str(src_path.relative_to(current_dir))
+                print(rel_pseudo_path)
 
             name = src_path.name
             name = name.split('.')
