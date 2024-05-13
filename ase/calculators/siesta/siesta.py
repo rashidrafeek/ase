@@ -595,10 +595,6 @@ class SpeciesInfo:
             symbol = spec['symbol']
             atomic_number = atomic_numbers[symbol]
 
-        for species_number, spec in enumerate(self.species, start=1):
-            symbol = spec['symbol']
-            atomic_number = atomic_numbers[symbol]
-
             if spec['pseudopotential'] is None:
                 if self.pseudo_qualifier == '':
                     label = symbol
