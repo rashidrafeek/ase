@@ -595,6 +595,7 @@ class SpeciesInfo:
             symbol = spec['symbol']
             atomic_number = atomic_numbers[symbol]
 
+            rel_pseudo_path = ''
             if spec['pseudopotential'] is None:
                 if self.pseudo_qualifier == '':
                     label = symbol
@@ -604,10 +605,19 @@ class SpeciesInfo:
             else:
                 src_path = Path(spec['pseudopotential'])
                 label = src_path.stem
+                current_dir = Path(os.getcwd())
+                if src_path.is_relative_to(current_dir):
+                    rel_pseudo_path = str(src_path.relative_to(current_dir))
+                elif src_path.is_relative_to(self.pseudo_path):
+                    rel_path = src_path.relative_to(self.pseudo_path)
+                    rel_pseudo_path = str(rel_path)
+
             if not src_path.is_absolute():
                 src_path = self.pseudo_path / src_path
+                rel_pseudo_path = str(src_path)
             if not src_path.exists():
                 src_path = self.pseudo_path / f"{symbol}.psml"
+                rel_pseudo_path = f"{symbol}.psml"
 
             name = src_path.name
             name = name.split('.')
@@ -622,7 +632,8 @@ class SpeciesInfo:
             file_instructions.append(instr)
 
             label = '.'.join(np.array(name.split('.'))[:-1])
-            string = '    %d %d %s' % (species_number, atomic_number, label)
+            string = '    %d %d %s %s' % (species_number, atomic_number, label,
+                                          rel_pseudo_path)
             chemical_labels.append(string)
             if isinstance(spec['basis_set'], PAOBasisBlock):
                 pao_basis.append(spec['basis_set'].script(label))

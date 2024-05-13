@@ -101,7 +101,9 @@ def test_species(factory, atoms_ch4):
             Species(
                 symbol='H',
                 tag=1,
-                basis_set='SZ')])
+                basis_set='SZ',
+                pseudopotential='somepseudo')])
+
     species, numbers = siesta.species(atoms_ch4)
     assert all(numbers == np.array([1, 2, 2, 3, 2]))
 
@@ -109,13 +111,14 @@ def test_species(factory, atoms_ch4):
     siesta.write_input(atoms_ch4, properties=['energy'])
     with open('test_label.fdf', encoding='utf-8') as fd:
         lines = fd.readlines()
+
     lines = [line.split() for line in lines]
     assert ['1', '6', 'C.lda.1'] in lines
     assert ['2', '1', 'H.lda.2'] in lines
-    assert ['3', '1', 'H.lda.3'] in lines
+    assert ['3', '1', 'H.3', 'H.psml'] in lines
     assert ['C.lda.1', 'DZP'] in lines
     assert ['H.lda.2', 'DZP'] in lines
-    assert ['H.lda.3', 'SZ'] in lines
+    assert ['H.3', 'SZ'] in lines
 
 
 @pytest.mark.calculator_lite()
