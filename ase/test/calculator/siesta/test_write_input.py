@@ -113,7 +113,6 @@ def test_species(factory, atoms_ch4):
         lines = fd.readlines()
 
     lines = [line.split() for line in lines]
-    print(lines)
     assert ['1', '6', 'C.lda.1'] in lines
     assert ['2', '1', 'H.lda.2'] in lines
     assert ['3', '1', 'H.3', 'H.psml'] in lines
