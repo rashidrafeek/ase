@@ -607,12 +607,11 @@ class SpeciesInfo:
                 src_path = self.pseudo_path / f"{label}.psf"
             else:
                 src_path = Path(spec['pseudopotential'])
-                label = src_path.stem
 
             if not src_path.is_absolute():
                 src_path = self.pseudo_path / src_path
             if not src_path.exists():
-                src_path = self.pseudo_path / f"{label}.psml"
+                src_path = self.pseudo_path / f"{symbol}.psml"
 
             name = src_path.name
             name = name.split('.')
