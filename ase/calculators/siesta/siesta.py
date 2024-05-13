@@ -609,8 +609,8 @@ class SpeciesInfo:
                 if src_path.is_relative_to(current_dir):
                     rel_pseudo_path = str(src_path.relative_to(current_dir))
                 elif src_path.is_relative_to(self.pseudo_path):
-                    rel_pseudo_path = str(
-                                    src_path.relative_to(self.pseudo_path))
+                    rel_path = src_path.relative_to(self.pseudo_path)
+                    rel_pseudo_path = str(rel_path)
 
             if not src_path.is_absolute():
                 src_path = self.pseudo_path / src_path
