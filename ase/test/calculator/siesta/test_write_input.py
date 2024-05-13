@@ -98,19 +98,13 @@ def test_species(factory, atoms_ch4):
     species, numbers = siesta.species(atoms_ch4)
     assert all(numbers == np.array([1, 2, 2, 2, 2]))
 
-    current_dir = Path(os.getcwd())
-    pseudo_path = str(current_dir / 'new_dir/H_file.psml')
     siesta = factory.calc(
         species=[
             Species(
                 symbol='H',
                 tag=1,
                 basis_set='SZ',
-                pseudopotential=pseudo_path)])
-    dir_path = current_dir / 'new_dir'
-    dir_path.mkdir(exist_ok=True, parents=True)
-    file_path = dir_path / 'file.psml'
-    file_path.write_text('some text')
+                pseudopotential='somepseudo')])
 
     species, numbers = siesta.species(atoms_ch4)
     assert all(numbers == np.array([1, 2, 2, 3, 2]))
@@ -121,19 +115,12 @@ def test_species(factory, atoms_ch4):
         lines = fd.readlines()
 
     lines = [line.split() for line in lines]
-    print(lines)
     assert ['1', '6', 'C.lda.1'] in lines
     assert ['2', '1', 'H.lda.2'] in lines
-    assert ['3', '1', 'H.3', pseudo_path] in lines
+    assert ['3', '1', 'H.3', 'H.psml'] in lines
     assert ['C.lda.1', 'DZP'] in lines
     assert ['H.lda.2', 'DZP'] in lines
     assert ['H.3', 'SZ'] in lines
-
-    try:
-        file_path.unlink()
-        dir_path.rmdir()
-    except Exception:
-        pass
 
 
 @pytest.mark.calculator_lite()
