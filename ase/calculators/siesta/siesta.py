@@ -612,7 +612,7 @@ class SpeciesInfo:
             if not src_path.is_absolute():
                 src_path = self.pseudo_path / src_path
             if not src_path.exists():
-                src_path = self.pseudo_path / f"{symbol}.psml"
+                src_path = self.pseudo_path / f"{label}.psml"
 
             name = src_path.name
             name = name.split('.')
