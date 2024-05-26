@@ -899,7 +899,7 @@ class Atoms:
             stresses_3x3 = [voigt_6_to_full_3x3_stress(s) for s in stresses]
             return np.array(stresses_3x3)
 
-    def get_kinetic_stress(self):
+    def get_kinetic_stress(self, voigt=True):
         """Calculate the kinetic part of the Virial stress tensor."""
         stress = np.zeros(6)  # Voigt notation
         stresscomp = np.array([[0, 5, 4], [5, 1, 3], [4, 3, 2]])
@@ -911,9 +911,13 @@ class Atoms:
             for beta in range(alpha, 3):
                 stress[stresscomp[alpha, beta]] -= (
                     p[:, alpha] * p[:, beta] * invmass).sum() * invvol
-        return stress
 
-    def get_kinetic_stresses(self):
+        if voigt:
+            return stress
+        else:
+            return voigt_6_to_full_3x3_stress(stress)
+
+    def get_kinetic_stresses(self, voigt=True):
         """Calculate the kinetic part of the Virial stress of all the atoms."""
         stresses = np.zeros((len(self), 6))  # Voigt notation
         stresscomp = np.array([[0, 5, 4], [5, 1, 3], [4, 3, 2]])
@@ -927,7 +931,12 @@ class Atoms:
             for beta in range(alpha, 3):
                 stresses[:, stresscomp[alpha, beta]] -= (
                     p[:, alpha] * p[:, beta] * invmass * invvol)
-        return stresses
+
+        if voigt:
+            return stresses
+        else:
+            stresses_3x3 = [voigt_6_to_full_3x3_stress(s) for s in stresses]
+            return np.array(stresses_3x3)
 
     def get_dipole_moment(self):
         """Calculate the electric dipole moment for the atoms object.
