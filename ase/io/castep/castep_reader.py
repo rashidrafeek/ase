@@ -9,6 +9,7 @@ import numpy as np
 from ase import Atoms, units
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.constraints import FixAtoms, FixCartesian, FixConstraint
+from ase.io import ParseError
 from ase.utils import reader, string2index
 
 
@@ -28,8 +29,7 @@ def read_castep_castep(fd, index=-1):
     # look for last result, if several CASTEP run are appended
     record_start, record_end, end_found, _ = _castep_find_last_record(fd)
     if not end_found:
-        warnings.warn(f'No regular end found in {fd.name} file.')
-        return  # we return here, because the file has no a regular end
+        raise ParseError(f'No regular end found in {fd.name} file.')
 
     # These variables are finally assigned to `SinglePointCalculator`
     # for backward compatibility with the `Castep` calculator.
