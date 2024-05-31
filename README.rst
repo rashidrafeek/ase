@@ -17,7 +17,7 @@ Requirements
 
 Optional:
 
-* Flask (for ase.db web-interface)
+* Flask_ (for ase.db web-interface)
 * spglib_ (for symmetry operations)
 
 Installation
@@ -95,6 +95,7 @@ This example requires NWChem to be installed.
 .. _NumPy: http://docs.scipy.org/doc/numpy/reference/
 .. _SciPy: http://docs.scipy.org/doc/scipy/reference/
 .. _Matplotlib: http://matplotlib.org/
+.. _flask: https://pypi.org/project/Flask/
 .. _spglib: https://github.com/spglib/spglib
 .. _ase-users: https://listserv.fysik.dtu.dk/mailman/listinfo/ase-users
 .. _Matrix: https://matrix.to/#/!JEiuNJLuxedbohAOuH:matrix.org
