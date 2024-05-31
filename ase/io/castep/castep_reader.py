@@ -9,7 +9,7 @@ import numpy as np
 from ase import Atoms, units
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.constraints import FixAtoms, FixCartesian, FixConstraint
-from ase.parallel import paropen
+from ase.io import ParseError
 from ase.utils import reader, string2index
 
 
@@ -29,8 +29,7 @@ def read_castep_castep(fd, index=-1):
     # look for last result, if several CASTEP run are appended
     record_start, record_end, end_found, _ = _castep_find_last_record(fd)
     if not end_found:
-        warnings.warn(f'No regular end found in {fd.name} file.')
-        return  # we return here, because the file has no a regular end
+        raise ParseError(f'No regular end found in {fd.name} file.')
 
     # These variables are finally assigned to `SinglePointCalculator`
     # for backward compatibility with the `Castep` calculator.
@@ -231,7 +230,7 @@ def read_castep_castep(fd, index=-1):
     return images[index]
 
 
-def _castep_find_last_record(castep_file):
+def _castep_find_last_record(fd):
     """Checks wether a given castep file has a regular
     ending message following the last banner message. If this
     is the case, the line number of the last banner is message
@@ -239,23 +238,18 @@ def _castep_find_last_record(castep_file):
 
     returns (record_start, record_end, end_found, last_record_complete)
     """
-    if isinstance(castep_file, str):
-        castep_file = paropen(castep_file, 'r')
-        file_opened = True
-    else:
-        file_opened = False
     record_starts = []
     while True:
-        line = castep_file.readline()
+        line = fd.readline()
         if (('Welcome' in line or 'Materials Studio' in line)
                 and 'CASTEP' in line):
-            record_starts = [castep_file.tell()] + record_starts
+            record_starts = [fd.tell()] + record_starts
         if not line:
             break
 
     if not record_starts:
         warnings.warn(
-            f'Could not find CASTEP label in result file: {castep_file}.'
+            f'Could not find CASTEP label in result file: {fd.name}.'
             ' Are you sure this is a .castep file?'
         )
         return None
@@ -266,21 +260,18 @@ def _castep_find_last_record(castep_file):
     # and see if
     record_end = -1
     for record_nr, record_start in enumerate(record_starts):
-        castep_file.seek(record_start)
+        fd.seek(record_start)
         while True:
-            line = castep_file.readline()
+            line = fd.readline()
             if not line:
                 break
             if 'Finalisation time   =' in line:
                 end_found = True
-                record_end = castep_file.tell()
+                record_end = fd.tell()
                 break
 
         if end_found:
             break
-
-    if file_opened:
-        castep_file.close()
 
     if end_found:
         # record_nr == 0 corresponds to the last record here
