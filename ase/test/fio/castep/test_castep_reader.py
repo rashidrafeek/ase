@@ -2,6 +2,7 @@
 from io import StringIO
 
 import numpy as np
+import pytest
 
 from ase.io.castep.castep_reader import (
     _read_forces,
@@ -13,6 +14,7 @@ from ase.io.castep.castep_reader import (
     _read_stress,
     _read_unit_cell,
     _set_energy_and_free_energy,
+    read_castep_castep,
 )
 from ase.constraints import FixAtoms, FixCartesian
 from ase.units import GPa
@@ -609,3 +611,33 @@ def test_energy_and_free_energy_non_metallic():
     _set_energy_and_free_energy(results)
     assert results['energy'] == -341.516024
     assert results['free_energy'] == -341.5163888035
+
+
+@pytest.mark.filterwarnings('ignore::UserWarning')
+def test_md_images(datadir):
+    """Test if multiple images can be read for the MolecularDynamics task."""
+    images = read_castep_castep(f'{datadir}/castep/md.castep', index=':')
+
+    assert len(images) == 3  # 0th, 1st, 2nd steps
+
+    # `read_castep_castep_old` could parse multi-images but not forces / stress
+    # check if new `read_castep_castep` can do
+
+    atoms = images[-1]
+
+    forces_ref = [
+        [-0.09963, +0.10729, -0.00665],
+        [+0.09339, +0.01482, +0.01147],
+        [-0.02828, -0.11817, -0.03557],
+        [+0.14991, -0.01604, +0.02132],
+        [-0.03495, +0.04016, -0.03526],
+        [+0.07136, -0.07883, +0.04578],
+        [-0.26870, -0.12445, -0.14684],
+        [+0.11690, +0.17523, +0.14574],
+    ]
+    np.testing.assert_array_almost_equal(atoms.get_forces(), forces_ref)
+
+    stress_ref = [
+        +0.390672, +0.388091, +0.385978, -0.276337, -0.061901, -0.144025,
+    ]
+    np.testing.assert_array_almost_equal(atoms.get_stress() / GPa, stress_ref)
