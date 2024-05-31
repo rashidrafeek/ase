@@ -5,7 +5,7 @@ build-backend = 'setuptools.build_meta'
 [project]
 name = 'ase'
 description='Atomic Simulation Environment'
-version = '3.23.0'
+version = '3.23.1b1'
 readme = 'README.rst'
 license = { text = 'LGPLv2.1+' }
 maintainers = [{ name = 'ASE Community', email = 'ase-users@listserv.fysik.dtu.dk' }]
