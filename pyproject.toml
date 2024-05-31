@@ -5,14 +5,13 @@ build-backend = 'setuptools.build_meta'
 [project]
 name = 'ase'
 description='Atomic Simulation Environment'
-version = '3.23.0b1'  # Change also in ase/__init__.py
+version = '3.23.0'
 readme = 'README.rst'
 license = { text = 'LGPLv2.1+' }
 maintainers = [{ name = 'ASE Community', email = 'ase-users@listserv.fysik.dtu.dk' }]
 classifiers = [
     'Development Status :: 6 - Mature',
-    'License :: OSI Approved :: ',
-    'GNU Lesser General Public License v2 or later (LGPLv2+)',
+    'License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)',
     'Intended Audience :: Science/Research',
     'Operating System :: OS Independent',
     'Programming Language :: Python :: 3',
