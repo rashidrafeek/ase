@@ -61,7 +61,7 @@ def read_castep_castep(fd, index=-1):
     while True:
         line = fd.readline()
 
-        if not line or fd.tell() > record_end:
+        if fd.tell() > record_end:
             break
 
         if 'Number of kpoints used' in line:
