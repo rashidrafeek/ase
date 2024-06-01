@@ -59,8 +59,6 @@ def read_castep_castep(fd, index=-1):
     species_pot = []
     castep_warnings = []
     while True:
-        # TODO: add a switch if we have a geometry optimization: record
-        # atoms objects for intermediate steps.
         try:
             line = fd.readline()
             if not line or fd.tell() > record_end:
