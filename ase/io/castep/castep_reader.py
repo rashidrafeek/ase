@@ -59,142 +59,139 @@ def read_castep_castep(fd, index=-1):
     species_pot = []
     castep_warnings = []
     while True:
-        try:
-            line = fd.readline()
-            if not line or fd.tell() > record_end:
-                break
-            elif 'Number of kpoints used' in line:
-                kpoints = int(line.split('=')[-1].strip())
-            elif 'Unit Cell' in line:
-                lattice_real = _read_unit_cell(fd)
-            elif 'Cell Contents' in line:
-                while True:
-                    line = fd.readline()
-                    if 'Total number of ions in cell' in line:
-                        n_atoms = int(line.split()[7])
-                    if 'Total number of species in cell' in line:
-                        int(line.split()[7])
-                    fields = line.split()
-                    if len(fields) == 0:
-                        break
-            elif 'Fractional coordinates of atoms' in line:
-                species, custom_species, positions_frac = \
-                    _read_fractional_coordinates(fd, n_atoms)
-            elif 'Files used for pseudopotentials' in line:
-                while True:
-                    line = fd.readline()
-                    if 'Pseudopotential generated on-the-fly' in line:
-                        continue
-                    fields = line.split()
-                    if len(fields) == 2:
-                        species_pot.append(fields)
-                    else:
-                        break
-            elif 'k-Points For BZ Sampling' in line:
-                # TODO: generalize for non-Monkhorst Pack case
-                # (i.e. kpoint lists) -
-                # kpoints_offset cannot be read this way and
-                # is hence always set to None
-                while True:
-                    line = fd.readline()
-                    if not line.strip():
-                        break
-                    if 'MP grid size for SCF calculation' in line:
-                        # kpoints =  ' '.join(line.split()[-3:])
-                        # self.kpoints_mp_grid = kpoints
-                        # self.kpoints_mp_offset = '0. 0. 0.'
-                        # not set here anymore because otherwise
-                        # two calculator objects go out of sync
-                        # after each calculation triggering unnecessary
-                        # recalculation
-                        break
+        line = fd.readline()
 
-            elif 'Final energy' in line:
-                key = 'energy_without_dispersion_correction'
-                results[key] = float(line.split()[-2])
-            elif 'Final free energy' in line:
-                key = 'free_energy_without_dispersion_correction'
-                results[key] = float(line.split()[-2])
-            elif 'NB est. 0K energy' in line:
-                key = 'energy_zero_without_dispersion_correction'
-                results[key] = float(line.split()[-2])
+        if not line or fd.tell() > record_end:
+            break
 
-            # Add support for dispersion correction
-            # filtering due to SEDC is done in get_potential_energy
-            elif 'Dispersion corrected final energy' in line:
-                key = 'energy_with_dispersion_correlation'
-                results[key] = float(line.split()[-2])
-            elif 'Dispersion corrected final free energy' in line:
-                key = 'free_energy_with_dispersion_correlation'
-                results[key] = float(line.split()[-2])
-            elif 'NB dispersion corrected est. 0K energy' in line:
-                key = 'energy_zero_with_dispersion_correlation'
-                results[key] = float(line.split()[-2])
+        if 'Number of kpoints used' in line:
+            kpoints = int(line.split('=')[-1].strip())
+        elif 'Unit Cell' in line:
+            lattice_real = _read_unit_cell(fd)
+        elif 'Cell Contents' in line:
+            while True:
+                line = fd.readline()
+                if 'Total number of ions in cell' in line:
+                    n_atoms = int(line.split()[7])
+                if 'Total number of species in cell' in line:
+                    int(line.split()[7])
+                fields = line.split()
+                if len(fields) == 0:
+                    break
+        elif 'Fractional coordinates of atoms' in line:
+            species, custom_species, positions_frac = \
+                _read_fractional_coordinates(fd, n_atoms)
+        elif 'Files used for pseudopotentials' in line:
+            while True:
+                line = fd.readline()
+                if 'Pseudopotential generated on-the-fly' in line:
+                    continue
+                fields = line.split()
+                if len(fields) == 2:
+                    species_pot.append(fields)
+                else:
+                    break
+        elif 'k-Points For BZ Sampling' in line:
+            # TODO: generalize for non-Monkhorst Pack case
+            # (i.e. kpoint lists) -
+            # kpoints_offset cannot be read this way and
+            # is hence always set to None
+            while True:
+                line = fd.readline()
+                if not line.strip():
+                    break
+                if 'MP grid size for SCF calculation' in line:
+                    # kpoints =  ' '.join(line.split()[-3:])
+                    # self.kpoints_mp_grid = kpoints
+                    # self.kpoints_mp_offset = '0. 0. 0.'
+                    # not set here anymore because otherwise
+                    # two calculator objects go out of sync
+                    # after each calculation triggering unnecessary
+                    # recalculation
+                    break
 
-            # check if we had a finite basis set correction
-            elif 'Total energy corrected for finite basis set' in line:
-                key = 'energy_with_finite_basis_set_correction'
-                results[key] = float(line.split()[-2])
+        elif 'Final energy' in line:
+            key = 'energy_without_dispersion_correction'
+            results[key] = float(line.split()[-2])
+        elif 'Final free energy' in line:
+            key = 'free_energy_without_dispersion_correction'
+            results[key] = float(line.split()[-2])
+        elif 'NB est. 0K energy' in line:
+            key = 'energy_zero_without_dispersion_correction'
+            results[key] = float(line.split()[-2])
 
-            # ******************** Forces *********************
-            # ************** Symmetrised Forces ***************
-            # ******************** Constrained Forces ********************
-            # ******************* Unconstrained Forces *******************
-            elif re.search(r'\**.* Forces \**', line):
-                forces, constraints = _read_forces(fd, n_atoms)
-                results['forces'] = np.array(forces)
+        # Add support for dispersion correction
+        # filtering due to SEDC is done in get_potential_energy
+        elif 'Dispersion corrected final energy' in line:
+            key = 'energy_with_dispersion_correlation'
+            results[key] = float(line.split()[-2])
+        elif 'Dispersion corrected final free energy' in line:
+            key = 'free_energy_with_dispersion_correlation'
+            results[key] = float(line.split()[-2])
+        elif 'NB dispersion corrected est. 0K energy' in line:
+            key = 'energy_zero_with_dispersion_correlation'
+            results[key] = float(line.split()[-2])
 
-            # ***************** Stress Tensor *****************
-            # *********** Symmetrised Stress Tensor ***********
-            elif re.search(r'\**.* Stress Tensor \**', line):
-                results.update(_read_stress(fd))
+        # check if we had a finite basis set correction
+        elif 'Total energy corrected for finite basis set' in line:
+            key = 'energy_with_finite_basis_set_correction'
+            results[key] = float(line.split()[-2])
 
-            elif any(_ in line for _ in markers_new_iteration):
-                _add_atoms(
-                    images,
-                    lattice_real,
-                    species,
-                    custom_species,
-                    positions_frac,
-                    constraints,
-                    results,
-                )
-                # reset for the next step
-                lattice_real = None
-                species = None
-                positions_frac = None
-                results = {}
+        # ******************** Forces *********************
+        # ************** Symmetrised Forces ***************
+        # ******************** Constrained Forces ********************
+        # ******************* Unconstrained Forces *******************
+        elif re.search(r'\**.* Forces \**', line):
+            forces, constraints = _read_forces(fd, n_atoms)
+            results['forces'] = np.array(forces)
 
-            # extract info from the Mulliken analysis
-            elif 'Atomic Populations' in line:
-                results.update(_read_mulliken_charges(fd))
+        # ***************** Stress Tensor *****************
+        # *********** Symmetrised Stress Tensor ***********
+        elif re.search(r'\**.* Stress Tensor \**', line):
+            results.update(_read_stress(fd))
 
-            # extract detailed Hirshfeld analysis (iprint > 1)
-            elif 'Hirshfeld total electronic charge (e)' in line:
-                results.update(_read_hirshfeld_details(fd, n_atoms))
+        elif any(_ in line for _ in markers_new_iteration):
+            _add_atoms(
+                images,
+                lattice_real,
+                species,
+                custom_species,
+                positions_frac,
+                constraints,
+                results,
+            )
+            # reset for the next step
+            lattice_real = None
+            species = None
+            positions_frac = None
+            results = {}
 
-            elif 'Hirshfeld Analysis' in line:
-                results.update(_read_hirshfeld_charges(fd))
+        # extract info from the Mulliken analysis
+        elif 'Atomic Populations' in line:
+            results.update(_read_mulliken_charges(fd))
 
-            # There is actually no good reason to get out of the loop
-            # already at this point... or do I miss something?
-            # elif 'BFGS: Final Configuration:' in line:
-            #    break
-            elif 'warn' in line.lower():
-                castep_warnings.append(line)
+        # extract detailed Hirshfeld analysis (iprint > 1)
+        elif 'Hirshfeld total electronic charge (e)' in line:
+            results.update(_read_hirshfeld_details(fd, n_atoms))
 
-            # fetch some last info
-            elif 'Total time' in line:
-                pattern = r'.*=\s*([\d\.]+) s'
-                total_time = float(re.search(pattern, line).group(1))
+        elif 'Hirshfeld Analysis' in line:
+            results.update(_read_hirshfeld_charges(fd))
 
-            elif 'Peak Memory Use' in line:
-                pattern = r'.*=\s*([\d]+) kB'
-                peak_memory = int(re.search(pattern, line).group(1))
+        # There is actually no good reason to get out of the loop
+        # already at this point... or do I miss something?
+        # elif 'BFGS: Final Configuration:' in line:
+        #    break
+        elif 'warn' in line.lower():
+            castep_warnings.append(line)
 
-        except Exception as exception:
-            msg = f'{line}|-> line triggered exception: {str(exception)}'
-            raise Exception(msg) from exception
+        # fetch some last info
+        elif 'Total time' in line:
+            pattern = r'.*=\s*([\d\.]+) s'
+            total_time = float(re.search(pattern, line).group(1))
+
+        elif 'Peak Memory Use' in line:
+            pattern = r'.*=\s*([\d]+) kB'
+            peak_memory = int(re.search(pattern, line).group(1))
 
     # add the last image
     _add_atoms(
