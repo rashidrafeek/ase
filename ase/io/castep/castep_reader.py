@@ -72,8 +72,7 @@ def read_castep_castep(fd, index=-1):
         elif 'Unit Cell' in line:
             lattice_real = _read_unit_cell(fd)
         elif 'Cell Contents' in line:
-            while True:
-                line = fd.readline()
+            for line in fd:
                 if 'Total number of ions in cell' in line:
                     n_atoms = int(line.split()[7])
                 if 'Total number of species in cell' in line:
@@ -85,7 +84,7 @@ def read_castep_castep(fd, index=-1):
             species, custom_species, positions_frac = \
                 _read_fractional_coordinates(fd, n_atoms)
         elif 'Files used for pseudopotentials' in line:
-            while True:
+            for line in fd:
                 line = fd.readline()
                 if 'Pseudopotential generated on-the-fly' in line:
                     continue
@@ -99,8 +98,7 @@ def read_castep_castep(fd, index=-1):
             # (i.e. kpoint lists) -
             # kpoints_offset cannot be read this way and
             # is hence always set to None
-            while True:
-                line = fd.readline()
+            for line in fd:
                 if not line.strip():
                     break
                 if 'MP grid size for SCF calculation' in line:
@@ -284,8 +282,7 @@ def _read_header(out: io.TextIOBase):
 
     read_title = False
     parameters: Dict[str, Any] = {}
-    while True:
-        line = out.readline()
+    for line in out:
         if len(line) == 0:  # end of file
             break
         if re.search(r'^\s*\*+$', line) and read_title:  # end of header
@@ -406,8 +403,7 @@ def _read_header(out: io.TextIOBase):
 
 def _read_unit_cell(out: io.TextIOBase):
     """Read a Unit Cell block from a .castep file."""
-    while True:
-        line = out.readline()
+    for line in out:
         fields = line.split()
         if len(fields) == 6:
             break
@@ -423,8 +419,7 @@ def _read_forces(out: io.TextIOBase, n_atoms: int):
     """Read a block for atomic forces from a .castep file."""
     constraints: List[FixConstraint] = []
     forces = []
-    while True:
-        line = out.readline()
+    for line in out:
         fields = line.split()
         if len(fields) == 7:
             break
@@ -451,8 +446,7 @@ def _read_fractional_coordinates(out: io.TextIOBase, n_atoms: int):
     species: List[str] = []
     custom_species: Optional[List[str]] = None  # A CASTEP special thing
     positions_frac: List[List[float]] = []
-    while True:
-        line = out.readline()
+    for line in out:
         fields = line.split()
         if len(fields) == 7:
             break
@@ -473,8 +467,7 @@ def _read_fractional_coordinates(out: io.TextIOBase, n_atoms: int):
 
 def _read_stress(out: io.TextIOBase):
     """Read a block for the stress tensor from a .castep file."""
-    while True:
-        line = out.readline()
+    for line in out:
         fields = line.split()
         if len(fields) == 6:
             break
@@ -548,8 +541,7 @@ def _read_mulliken_charges(out: io.TextIOBase):
         if i == 1:
             spin_polarized = 'Spin' in line
     results = defaultdict(list)
-    while True:
-        line = out.readline()
+    for line in out:
         fields = line.split()
         if len(fields) == 1:
             break
@@ -566,8 +558,7 @@ def _read_hirshfeld_details(out: io.TextIOBase, n_atoms: int):
     """Read the Hirshfeld analysis when iprint > 1 from a .castep file."""
     results = defaultdict(list)
     for _ in range(n_atoms):
-        while True:
-            line = out.readline()
+        for line in out:
             if line.strip() == '':
                 break  # end for each atom
             if 'Hirshfeld / free atomic volume :' in line:
@@ -584,8 +575,7 @@ def _read_hirshfeld_charges(out: io.TextIOBase):
         if i == 1:
             spin_polarized = 'Spin' in line
     results = defaultdict(list)
-    while True:
-        line = out.readline()
+    for line in out:
         fields = line.split()
         if len(fields) == 1:
             break
