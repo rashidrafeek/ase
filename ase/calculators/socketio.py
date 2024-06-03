@@ -235,9 +235,13 @@ class FileIOSocketClientLauncher:
 
             self.calc.write_inputfiles(atoms, properties)
             if unixsocket is not None:
-                argv = template.socketio_argv(profile, unixsocket=unixsocket, port=None)
+                argv = template.socketio_argv(
+                    profile, unixsocket=unixsocket, port=None
+                )
             else:
-                argv = template.socketio_argv(profile, unixsocket=None, port=port)
+                argv = template.socketio_argv(
+                    profile, unixsocket=None, port=port
+                )
             return Popen(argv, cwd=cwd, env=os.environ)
         else:
             # Old FileIOCalculator:

@@ -168,7 +168,7 @@ class AimsTemplate(CalculatorTemplate):
         return AimsProfile.from_config(cfg, self.name, **kwargs)
 
     def socketio_argv(self, profile, unixsocket, port):
-        return []
+        return [profile.command]
 
     def socketio_parameters(self, unixsocket, port):
         if port:
