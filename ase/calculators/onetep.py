@@ -4,8 +4,6 @@ T. Demeyere, T.Demeyere@soton.ac.uk (2023)
 
 https://onetep.org"""
 
-from os import environ
-
 from ase.calculators.genericfileio import (BaseProfile, CalculatorTemplate,
                                            GenericFileIOCalculator,
                                            read_stdout)
