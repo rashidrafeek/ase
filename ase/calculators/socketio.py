@@ -231,12 +231,17 @@ class FileIOSocketClientLauncher:
         profile = getattr(self.calc, 'profile', None)
         if isinstance(self.calc, GenericFileIOCalculator):
             # New GenericFileIOCalculator:
+            template = getattr(self.calc, 'template')
 
             self.calc.write_inputfiles(atoms, properties)
             if unixsocket is not None:
-                argv = profile.socketio_argv_unix(socket=unixsocket)
+                argv = template.socketio_argv(
+                    profile, unixsocket=unixsocket, port=None
+                )
             else:
-                argv = profile.socketio_argv_inet(port=port)
+                argv = template.socketio_argv(
+                    profile, unixsocket=None, port=port
+                )
             return Popen(argv, cwd=cwd, env=os.environ)
         else:
             # Old FileIOCalculator:
