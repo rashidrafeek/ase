@@ -17,6 +17,8 @@ class OnetepProfile(BaseProfile):
     ONETEP profile class.
     """
 
+    configvars = {'pseudo_path'}
+
     def __init__(self, command, pseudo_path, **kwargs):
         """
         Parameters
