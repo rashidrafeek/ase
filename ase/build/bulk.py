@@ -156,9 +156,7 @@ def bulk(
     if orthorhombic and crystalstructure not in ['sc', 'tetragonal',
                                                  'orthorhombic']:
         atoms = _orthorhombic_bulk(name, crystalstructure, a, covera, u)
-    elif cubic and crystalstructure in ['bcc', 'cesiumchloride']:
-        atoms = _orthorhombic_bulk(name, crystalstructure, a, covera)
-    elif cubic and crystalstructure != 'sc':
+    elif cubic:
         atoms = _cubic_bulk(name, crystalstructure, a)
     elif crystalstructure == 'sc':
         atoms = Atoms(name, cell=(a, a, a), pbc=True)
@@ -256,9 +254,6 @@ def _orthorhombic_bulk(name, crystalstructure, a, covera=None, u=None):
         b = a / sqrt(2)
         atoms = Atoms(2 * name, cell=(b, b, a), pbc=True,
                       scaled_positions=[(0, 0, 0), (0.5, 0.5, 0.5)])
-    elif crystalstructure == 'bcc':
-        atoms = Atoms(2 * name, cell=(a, a, a), pbc=True,
-                      scaled_positions=[(0, 0, 0), (0.5, 0.5, 0.5)])
     elif crystalstructure == 'hcp':
         atoms = Atoms(4 * name,
                       cell=(a, a * sqrt(3), covera * a),
@@ -281,9 +276,6 @@ def _orthorhombic_bulk(name, crystalstructure, a, covera=None, u=None):
         atoms = Atoms(2 * name, cell=(b, b, a), pbc=True,
                       scaled_positions=[(0, 0, 0), (0.5, 0.5, 0),
                                         (0.5, 0.5, 0.5), (0, 0, 0.5)])
-    elif crystalstructure == 'cesiumchloride':
-        atoms = Atoms(name, cell=(a, a, a), pbc=True,
-                      scaled_positions=[(0, 0, 0), (0.5, 0.5, 0.5)])
     elif crystalstructure == 'wurtzite':
         u = u or 0.25 + 1 / 3 / covera**2
         atoms = Atoms(4 * name,
@@ -297,6 +289,8 @@ def _orthorhombic_bulk(name, crystalstructure, a, covera=None, u=None):
                                         (0.5, 5 / 6, 0.5),
                                         (0.5, 0.5, 1 - u)],
                       pbc=True)
+    elif crystalstructure in ['bcc', 'cesiumchloride']:
+        atoms = _cubic_bulk(name, crystalstructure, a)
     else:
         raise incompatible_cell(want='orthorhombic', have=crystalstructure)
 
@@ -310,6 +304,17 @@ def _cubic_bulk(name: str, crystalstructure: str, a: float) -> Atoms:
                                         (0.5, 0, 0.5), (0.5, 0.5, 0)])
     elif crystalstructure == 'diamond':
         atoms = _cubic_bulk(2 * name, 'zincblende', a)
+    elif crystalstructure == 'sc':
+        atoms = Atoms(name, cell=(a, a, a), pbc=True)
+    elif crystalstructure == 'bcc':
+        atoms = _cubic_bulk(2 * name, 'cesiumchloride', a)
+    elif crystalstructure == 'cesiumchloride':
+        atoms = Atoms(
+            name,
+            cell=(a, a, a),
+            pbc=True,
+            scaled_positions=[(0.0, 0.0, 0.0), (0.5, 0.5, 0.5)],
+        )
     elif crystalstructure == 'zincblende':
         atoms = Atoms(4 * name, cell=(a, a, a), pbc=True,
                       scaled_positions=[(0, 0, 0), (0.25, 0.25, 0.25),
