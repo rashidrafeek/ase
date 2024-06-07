@@ -4,7 +4,7 @@ T. Demeyere, T.Demeyere@soton.ac.uk (2023)
 
 https://onetep.org"""
 
-from os import environ
+from copy import deepcopy
 
 from ase.calculators.genericfileio import (BaseProfile, CalculatorTemplate,
                                            GenericFileIOCalculator,
@@ -17,7 +17,9 @@ class OnetepProfile(BaseProfile):
     ONETEP profile class.
     """
 
-    def __init__(self, command, **kwargs):
+    configvars = {'pseudo_path'}
+
+    def __init__(self, command, pseudo_path, **kwargs):
         """
         Parameters
         ----------
@@ -28,6 +30,7 @@ class OnetepProfile(BaseProfile):
             class.
         """
         super().__init__(command, **kwargs)
+        self.pseudo_path = pseudo_path
 
     def version(self):
         lines = read_stdout(self._split_command)
@@ -67,6 +70,13 @@ class OnetepTemplate(CalculatorTemplate):
 
     def write_input(self, profile, directory, atoms, parameters, properties):
         input_path = directory / self.inputname
+
+        parameters = deepcopy(parameters)
+
+        keywords = parameters.get('keywords', {})
+        keywords.setdefault('pseudo_path', profile.pseudo_path)
+        parameters['keywords'] = keywords
+
         write(input_path, atoms, format='onetep-in',
               properties=properties, **parameters)
 
@@ -145,14 +155,6 @@ class Onetep(GenericFileIOCalculator):
         self.template = OnetepTemplate(
             append=kwargs.pop('append', False)
         )
-
-        if 'ASE_ONETEP_COMMAND' in environ and profile is None:
-            import warnings
-            import shlex
-            warnings.warn("using ASE_ONETEP_COMMAND env is \
-                          deprecated, please use OnetepProfile",
-                          FutureWarning)
-            profile = OnetepProfile(shlex.split(environ['ASE_ONETEP_COMMAND']))
 
         super().__init__(profile=profile, template=self.template,
                          directory=directory,
