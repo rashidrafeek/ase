@@ -4,6 +4,8 @@ T. Demeyere, T.Demeyere@soton.ac.uk (2023)
 
 https://onetep.org"""
 
+from copy import deepcopy
+
 from ase.calculators.genericfileio import (BaseProfile, CalculatorTemplate,
                                            GenericFileIOCalculator,
                                            read_stdout)
@@ -68,6 +70,8 @@ class OnetepTemplate(CalculatorTemplate):
 
     def write_input(self, profile, directory, atoms, parameters, properties):
         input_path = directory / self.inputname
+
+        parameters = deepcopy(parameters)
 
         keywords = parameters.get('keywords', {})
         keywords.setdefault('pseudo_path', profile.pseudo_path)
