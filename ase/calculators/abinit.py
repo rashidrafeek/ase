@@ -7,20 +7,18 @@ from pathlib import Path
 from subprocess import check_output
 
 import ase.io.abinit as io
-from ase.calculators.genericfileio import (
-    CalculatorTemplate,
-    GenericFileIOCalculator,
-    BaseProfile,
-)
+from ase.calculators.genericfileio import (BaseProfile, CalculatorTemplate,
+                                           GenericFileIOCalculator)
 
 
 class AbinitProfile(BaseProfile):
-    def __init__(self, binary, *, pp_paths=None, **kwargs):
-        super().__init__(**kwargs)
-        self.binary = binary
+    configvars = {'pp_paths'}
+
+    def __init__(self, command, *, pp_paths=None, **kwargs):
+        super().__init__(command, **kwargs)
         # XXX pp_paths is a raw configstring when it gets here.
         # All the config stuff should have been loaded somehow by now,
-        # so this should be refactored.º
+        # so this should be refactored.
         if isinstance(pp_paths, str):
             pp_paths = [path for path in pp_paths.splitlines() if path]
         if pp_paths is None:
@@ -28,16 +26,16 @@ class AbinitProfile(BaseProfile):
         self.pp_paths = pp_paths
 
     def version(self):
-        argv = [self.binary, '--version']
+        argv = [*self._split_command, '--version']
         return check_output(argv, encoding='ascii').strip()
 
     def get_calculator_command(self, inputfile):
-        return [self.binary, str(inputfile)]
+        return [str(inputfile)]
 
     def socketio_argv_unix(self, socket):
         # XXX clean up the passing of the inputfile
         inputfile = AbinitTemplate().input_file
-        return [self.binary, inputfile, '--ipi', f'{socket}:UNIX']
+        return [inputfile, '--ipi', f'{socket}:UNIX']
 
 
 class AbinitTemplate(CalculatorTemplate):
@@ -59,9 +57,11 @@ class AbinitTemplate(CalculatorTemplate):
 
         self.inputname = f'{self._label}.in'
         self.outputname = f'{self._label}.log'
+        self.errorname = f'{self._label}.err'
 
     def execute(self, directory, profile) -> None:
-        profile.run(directory, self.inputname, self.outputname)
+        profile.run(directory, self.inputname, self.outputname,
+                    errorfile=self.errorname)
 
     def write_input(self, profile, directory, atoms, parameters, properties):
         directory = Path(directory)
@@ -109,7 +109,7 @@ class Abinit(GenericFileIOCalculator):
     The default parameters are very close to those that the ABINIT
     Fortran code would use.  These are the exceptions::
 
-      calc = Abinit(label='abinit', xc='LDA', ecut=400, toldfe=1e-5)
+      calc = Abinit(xc='LDA', ecut=400, toldfe=1e-5)
     """
 
     def __init__(
@@ -117,17 +117,9 @@ class Abinit(GenericFileIOCalculator):
         *,
         profile=None,
         directory='.',
-        parallel_info=None,
-        parallel=True,
         **kwargs,
     ):
         """Construct ABINIT-calculator object.
-
-        Parameters
-        ==========
-        label: str
-            Prefix to use for filenames (label.in, label.txt, ...).
-            Default is 'abinit'.
 
         Examples
         ========
@@ -143,7 +135,5 @@ class Abinit(GenericFileIOCalculator):
             template=AbinitTemplate(),
             profile=profile,
             directory=directory,
-            parallel_info=parallel_info,
-            parallel=parallel,
             parameters=kwargs,
         )

@@ -9,6 +9,20 @@ Git master branch
 
 :git:`master <>`.
 
+* No changes yet
+
+
+Version 3.23.0
+==============
+
+31 May 2024: :git:`3.23.0 <../3.23.0>`
+
+* Add :class:`~ase.constraints.FixSubsetCom` to fix the center of mass of the
+  specified subset of atoms (:mr:`3193`).
+
+* Add the ``indices`` option to :meth:`ase.Atoms.get_center_of_mass` to compute
+  the center of mass of the specified subset of atoms (:mr:`3193`).
+
 * All saddle-point search and minimum-energy path methods have been moved
   into a new :mod:`ase.mep` module. You should start importing from this
   location; e.g., ``from ase.mep import NEB, DyNEB`` (:mr:`2974`).
@@ -104,6 +118,8 @@ Git master branch
   calculations to always use the default method (:mr:`3012`)
 
 Calculators:
+
+* Accelerate :class:`~ase.calculators.emt.EMT` using NumPy more (:mr:`3241`)
 
 * Remove ``ase.calculators.vasp.vasp_auxiliary.xdat2traj``. Use ``ase.io`` instead
   (:mr:`2948`)
@@ -214,6 +230,10 @@ Calculators:
 
 Algorithms:
 
+* Fix bugs in :class:`~ase.neighborlist.PrimitiveNeighborList` when used with
+  ``bothways=True`` and either ``self_interaction=True`` or ``sorted=True``
+  (:mr:`3239`)
+
 * Change :func:`ase.optimize.optimize.Dynamics.irun` so that it yields its
   convergence status *after* logging and dumping for the corresponding step
   (:issue:`1339`; :mr:`3072`)
@@ -252,6 +272,9 @@ Thermochemistry:
   cutting them down to the physically appropriate amount.
 
 I/O:
+
+* Add support for reading Mulliken, Löwdin, or Hirshfeld atomic charges in
+  :func:`ase.io.gaussian.read_gaussian_out` (:mr:`3332`)
 
 * Add support for reading POSCAR files with negative and multiple scaling
   factors in :func:`ase.io.vasp.read_vasp` (:mr:`3029`)

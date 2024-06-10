@@ -17,18 +17,10 @@ from typing import Any, Mapping
 
 import ase.io.exciting
 from ase.calculators.calculator import PropertyNotImplementedError
-from ase.calculators.exciting.runner import (
-    SimpleBinaryRunner,
-    SubprocessRunResults,
-)
-
-import ase.calculators.exciting.runner
-
-from ase.calculators.genericfileio import (
-    BaseProfile,
-    CalculatorTemplate,
-    GenericFileIOCalculator,
-)
+from ase.calculators.exciting.runner import (SimpleBinaryRunner,
+                                             SubprocessRunResults)
+from ase.calculators.genericfileio import (BaseProfile, CalculatorTemplate,
+                                           GenericFileIOCalculator)
 
 
 class ExcitingProfile(BaseProfile):
@@ -39,17 +31,17 @@ class ExcitingProfile(BaseProfile):
        * OnlyTypo fix part of the profile used in the base class is the run
          method, which is part of the BinaryRunner class.
     """
+    configvars = {'species_path'}
 
-    def __init__(self, binary, species_path=None, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, command, species_path=None, **kwargs):
+        super().__init__(command, **kwargs)
 
         self.species_path = species_path
-        self.binary = binary
 
     def version(self):
         """Return exciting version."""
         # TARP No way to get the version for the binary in use
-        return None
+        return
 
     # Machine specific config files in the config
     # species_file goes in the config
@@ -62,9 +54,9 @@ class ExcitingProfile(BaseProfile):
         # input_file unused for exciting, it looks for input.xml in run
         # directory.
         if input_file is None:
-            return [self.binary]
+            return []
         else:
-            return [self.binary, str(input_file)]
+            return [str(input_file)]
 
 
 class ExcitingGroundStateTemplate(CalculatorTemplate):
@@ -80,6 +72,7 @@ class ExcitingGroundStateTemplate(CalculatorTemplate):
     output_names = list(parser)
     # Use frozenset since the CalculatorTemplate enforces it.
     implemented_properties = frozenset(['energy', 'forces'])
+    _label = 'exciting'
 
     def __init__(self):
         """Initialise with constant class attributes.
@@ -89,6 +82,7 @@ class ExcitingGroundStateTemplate(CalculatorTemplate):
             calculate/read from output.
         """
         super().__init__('exciting', self.implemented_properties)
+        self.errorname = f'{self._label}.err'
 
     @staticmethod
     def _require_forces(input_parameters):
@@ -165,7 +159,8 @@ class ExcitingGroundStateTemplate(CalculatorTemplate):
 
         :return: Results of the subprocess.run command.
         """
-        return profile.run(directory, f"{directory}/input.xml")
+        return profile.run(directory, f"{directory}/input.xml", None,
+                           erorrfile=self.errorname)
 
     def read_results(self, directory: PathLike) -> Mapping[str, Any]:
         """Parse results from each ground state output file.
@@ -263,8 +258,6 @@ class ExcitingGroundStateCalculator(GenericFileIOCalculator):
         directory='./',
         species_path='./',
         title='ASE-generated input',
-        parallel=None,
-        parallel_info=None,
     ):
         self.runner = runner
         # Package data to be passed to
@@ -290,6 +283,4 @@ class ExcitingGroundStateCalculator(GenericFileIOCalculator):
             template=ExcitingGroundStateTemplate(),
             directory=directory,
             parameters=self.exciting_inputs,
-            parallel_info=parallel_info,
-            parallel=parallel,
         )

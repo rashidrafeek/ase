@@ -21,15 +21,15 @@ import os
 import re
 import sys
 import warnings
+from importlib import import_module
+from importlib.metadata import entry_points
 from pathlib import Path, PurePath
 from typing import (IO, Any, Dict, Iterable, List, Optional, Sequence, Tuple,
                     Union)
 
-from importlib.metadata import entry_points
-from importlib import import_module
-
 from ase.atoms import Atoms
 from ase.parallel import parallel_function, parallel_generator
+from ase.utils import string2index
 from ase.utils.plugins import ExternalIOFormat
 
 PEEK_BYTES = 50000
@@ -127,7 +127,7 @@ class IOFormat:
         return self.can_write and 'append' in writefunc.__code__.co_varnames
 
     def __repr__(self) -> str:
-        tokens = [f'{name}={repr(value)}'
+        tokens = [f'{name}={value!r}'
                   for name, value in vars(self).items()]
         return 'IOFormat({})'.format(', '.join(tokens))
 
@@ -746,7 +746,7 @@ def _write(filename, fd, format, io, images, parallel=None, append=False,
 def read(
         filename: NameOrFile,
         index: Any = None,
-        format: str = None,
+        format: Optional[str] = None,
         parallel: bool = True,
         do_not_split_by_at_sign: bool = False,
         **kwargs
@@ -904,24 +904,6 @@ def match_magic(data: bytes) -> IOFormat:
         if ioformat.match_magic(data):
             return ioformat
     raise UnknownFileTypeError('Cannot guess file type from contents')
-
-
-def string2index(string: str) -> Union[int, slice, str]:
-    """Convert index string to either int or slice"""
-    if ':' not in string:
-        # may contain database accessor
-        try:
-            return int(string)
-        except ValueError:
-            return string
-    i: List[Optional[int]] = []
-    for s in string.split(':'):
-        if s == '':
-            i.append(None)
-        else:
-            i.append(int(s))
-    i += (3 - len(i)) * [None]
-    return slice(*i)
 
 
 def filetype(

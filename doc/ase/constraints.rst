@@ -162,6 +162,10 @@ Example of use::
   >>> c = FixCom()
   >>> atoms.set_constraint(c)
 
+The FixSubsetCom class
+======================
+
+.. autoclass:: FixSubsetCom
 
 The Hookean class
 =================
@@ -270,8 +274,7 @@ This class allows to fix an arbitrary number of bond lengths, angles
 and dihedral angles as well as linear combinations of bond lengths
 ('bondcombos').
 A fixed linear combination of bond lengths fulfils
-:math:`\sum_i \text{coef}_i \times \text{bond_length}_i
-= \text{constant}`.
+:math:`\sum_i \mathrm{coef}_i \times \mathrm{bond_length}_i = \mathrm{constant}`.
 The defined constraints are satisfied self consistently.
 To define the constraints one needs to specify the
 atoms object on which the constraint works (needed for atomic
@@ -396,9 +399,9 @@ will be ignored if missing:
 The FixSymmetry class
 =====================
 
-.. autoclass:: ase.spacegroup.symmetrize.FixSymmetry
+.. autoclass:: ase.constraints.FixSymmetry
 
-The module also provides some utility functions to prepare
+The following are some utility functions to prepare
 symmetrized configurations and to check symmetry.
 
 .. autofunction:: ase.spacegroup.symmetrize.refine_symmetry

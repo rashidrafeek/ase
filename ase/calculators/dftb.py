@@ -11,7 +11,7 @@ import os
 import numpy as np
 
 from ase.calculators.calculator import (FileIOCalculator, kpts2ndarray,
-                                        kpts2sizeandoffsets)
+                                        kpts2sizeandoffsets, BadConfiguration)
 from ase.units import Bohr, Hartree
 
 
@@ -19,6 +19,10 @@ class Dftb(FileIOCalculator):
     implemented_properties = ['energy', 'forces', 'charges',
                               'stress', 'dipole']
     discard_results_on_any_change = True
+
+    fileio_rules = FileIOCalculator.ruleset(
+        configspec=dict(skt_path=None),
+        stdout_name='{prefix}.out')
 
     def __init__(self, restart=None,
                  ignore_bad_restart_file=FileIOCalculator._deprecated,
@@ -89,16 +93,26 @@ class Dftb(FileIOCalculator):
         if command is None:
             if 'DFTB_COMMAND' in self.cfg:
                 command = self.cfg['DFTB_COMMAND'] + ' > PREFIX.out'
-            else:
-                command = 'dftb+ > PREFIX.out'
+
+        if command is None and profile is None:
+            try:
+                profile = self.load_argv_profile(self.cfg, 'dftb')
+            except BadConfiguration:
+                pass
+
+        if command is None:
+            command = 'dftb+ > PREFIX.out'
 
         if slako_dir is None:
-            slako_dir = self.cfg.get('DFTB_PREFIX', './')
+            if profile is not None:
+                slako_dir = profile.configvars.get('skt_path')
+
+            if slako_dir is None:
+                slako_dir = self.cfg.get('DFTB_PREFIX', './')
             if not slako_dir.endswith('/'):
                 slako_dir += '/'
 
         self.slako_dir = slako_dir
-
         if kwargs.get('Hamiltonian_', 'DFTB') == 'DFTB':
             self.default_parameters = dict(
                 Hamiltonian_='DFTB',
@@ -108,18 +122,23 @@ class Dftb(FileIOCalculator):
                 Hamiltonian_SlaterKosterFiles_Suffix='".skf"',
                 Hamiltonian_MaxAngularMomentum_='',
                 Options_='',
-                Options_WriteResultsTag='Yes')
+                Options_WriteResultsTag='Yes',
+                ParserOptions_='',
+                ParserOptions_ParserVersion=1,
+                ParserOptions_IgnoreUnprocessedNodes='Yes')
         else:
             self.default_parameters = dict(
                 Options_='',
-                Options_WriteResultsTag='Yes')
+                Options_WriteResultsTag='Yes',
+                ParserOptions_='',
+                ParserOptions_ParserVersion=1,
+                ParserOptions_IgnoreUnprocessedNodes='Yes')
 
         self.pcpot = None
         self.lines = None
         self.atoms = None
         self.atoms_input = None
         self.do_forces = False
-        self.outfilename = 'dftb.out'
 
         super().__init__(restart, ignore_bad_restart_file,
                          label, atoms, command=command,
@@ -219,15 +238,19 @@ class Dftb(FileIOCalculator):
                     l = read_max_angular_momentum(path)
                     params[s + symbol] = '"{}"'.format('spdf'[l])
 
+        if self.do_forces:
+            params['Analysis_'] = ''
+            params['Analysis_CalculateForces'] = 'Yes'
+
         # --------MAIN KEYWORDS-------
         previous_key = 'dummy_'
         myspace = ' '
         for key, value in sorted(params.items()):
             current_depth = key.rstrip('_').count('_')
             previous_depth = previous_key.rstrip('_').count('_')
-            for my_backsclash in reversed(
+            for my_backslash in reversed(
                     range(previous_depth - current_depth)):
-                outfile.write(3 * (1 + my_backsclash) * myspace + '} \n')
+                outfile.write(3 * (1 + my_backslash) * myspace + '} \n')
             outfile.write(3 * current_depth * myspace)
             if key.endswith('_') and len(value) > 0:
                 outfile.write(key.rstrip('_').rsplit('_')[-1] +
@@ -266,15 +289,8 @@ class Dftb(FileIOCalculator):
                 outfile.write('   } \n')
             previous_key = key
         current_depth = key.rstrip('_').count('_')
-        for my_backsclash in reversed(range(current_depth)):
-            outfile.write(3 * my_backsclash * myspace + '} \n')
-        outfile.write('ParserOptions { \n')
-        outfile.write('   IgnoreUnprocessedNodes = Yes  \n')
-        outfile.write('} \n')
-        if self.do_forces:
-            outfile.write('Analysis { \n')
-            outfile.write('   CalculateForces = Yes  \n')
-            outfile.write('} \n')
+        for my_backslash in reversed(range(current_depth)):
+            outfile.write(3 * my_backslash * myspace + '} \n')
 
     def check_state(self, atoms):
         system_changes = FileIOCalculator.check_state(self, atoms)
@@ -374,7 +390,7 @@ class Dftb(FileIOCalculator):
         gradients = []
         for j in range(index_force_begin, index_force_end):
             word = self.lines[j].split()
-            gradients.append([float(word[k]) for k in range(0, 3)])
+            gradients.append([float(word[k]) for k in range(3)])
 
         return np.array(gradients) * Hartree / Bohr
 
