@@ -304,9 +304,6 @@ def _surface(symbol, structure, face, size, a, c, vacuum, periodic,
 
     numbers = np.ones(size[0] * size[1] * size[2], int) * Z
 
-    tags = np.empty((size[2], size[1], size[0]), int)
-    tags[:] = np.arange(size[2], 0, -1).reshape((-1, 1, 1))
-
     slab = Atoms(numbers,
                  tags=create_tags(size),
                  pbc=(True, True, periodic),
