@@ -1176,18 +1176,7 @@ def identify_lattice(cell, eps=2e-4, *, pbc=True):
                 op = normalization_op @ np.linalg.inv(reduction_op)
                 matching_lattices.append((lat, op))
 
-        # Among any matching lattices, return the one with lowest
-        # orthogonality defect:
-        best = None
-        best_defect = np.inf
-        for lat, op in matching_lattices:
-            cell = lat.tocell()
-            lengths = cell.lengths()[pbc]
-            generalized_volume = cell.complete().volume
-            defect = np.prod(lengths) / generalized_volume
-            if defect < best_defect:
-                best = lat, op
-                best_defect = defect
+        best = pick_best_lattice(matching_lattices)
 
         if best is not None:
             if npbc == 2:
@@ -1206,6 +1195,19 @@ def identify_lattice(cell, eps=2e-4, *, pbc=True):
             return best
 
     raise RuntimeError('Failed to recognize lattice')
+
+
+def pick_best_lattice(matching_lattices):
+    """Return (lat, op) with lowest orthogonality defect."""
+    best = None
+    best_defect = np.inf
+    for lat, op in matching_lattices:
+        cell = lat.tocell().complete()
+        orthogonality_defect = np.prod(cell.lengths()) / cell.volume
+        if orthogonality_defect < best_defect:
+            best = lat, op
+            best_defect = orthogonality_defect
+    return best
 
 
 class LatticeChecker:
