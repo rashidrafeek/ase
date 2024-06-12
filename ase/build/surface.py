@@ -271,9 +271,8 @@ def add_vacuum(atoms, vacuum):
 def create_tags(size) -> np.array:
     """ Function to create layer tags. """
     # tag atoms by layer
-    tags = np.empty((size[2], size[1], size[0]), int)
-    tags[:] = np.arange(size[2], 0, -1).reshape((-1, 1, 1))
-    return tags.ravel()
+    # create blocks of descending integers of length size[0]*size[1]
+    return np.arange(size[2], 0, -1).repeat(size[0] * size[1])
 
 
 def _surface(symbol, structure, face, size, a, c, vacuum, periodic,
