@@ -1198,6 +1198,7 @@ def identify_lattice(cell, eps=2e-4, *, pbc=True):
                 # We repair this by applying an operation that unflips the
                 # z axis and interchanges x/y:
                 if op[2, 2] < 0:
+                    lat, op = best
                     repair_op = np.array([[0, 1, 0], [1, 0, 0], [0, 0, -1]])
                     op = repair_op @ op
                     best = lat, op

@@ -52,3 +52,12 @@ def test_2d_bandpath_handedness(angle):
 
     assert bandpath.cell.rank == 2
     assert np.linalg.det(bandpath.cell[:2, :2]) > 0
+
+
+def test_2d_handedness_obl():
+    # Previous code had a bug where left-handed cell would pick the lattice
+    # object corresponding to the wrong back-transformation.
+    dalpha = 5.1234
+    cell = Cell.new([2, 1, 0, 90, 90, 90 + dalpha])
+    lat = cell.get_bravais_lattice()
+    assert lat.alpha == pytest.approx(90 - dalpha)
