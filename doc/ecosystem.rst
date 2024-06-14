@@ -43,6 +43,12 @@ Listed in alphabetical order, for want of a better approach.
    reactions, such as how much force is required to break a chemical
    bond.
 
+ * `DebyeCalculator <https://github.com/FrederikLizakJohansen/DebyeCalculator>`_:
+   A vectorised implementation of the Debye Scattering Equation on CPU and GPU to calculate the scattering intensity I(Q), the Total Scattering Structure
+   Function S(Q), the Reduced Total Scattering Function F(Q), or the Reduced Atomic Pair Distribution Function G(r) from an atomic structure. Use 
+   DebyeCalculator to simulate powder diffraction, total scattering with pair distribution function or small-angle scattering data of finite systems such as   
+   nanoparticles.
+
  * `effmass <https://github.com/lucydot/effmass/>`_:
    Calculates various definitions of effective mass from the electronic 
    bandstructure of a semiconductor.
