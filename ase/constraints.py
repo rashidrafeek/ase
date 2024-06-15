@@ -83,6 +83,7 @@ class FixConstraint:
 
     def get_removed_dof(self, atoms: Atoms):
         """Get number of removed degrees of freedom due to constraint."""
+        raise NotImplementedError
 
     def adjust_positions(self, atoms: Atoms, new):
         """Adjust positions."""

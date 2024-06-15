@@ -193,13 +193,17 @@ codes = register_codes()
 
 
 def list_codes(names):
+    from ase.config import cfg
+    cfg.print_header()
+    print()
+
     for name in names:
         code = codes[name]
+        print(code.name)
         try:
-            print(code.name)
             print(code.description(indent='  '))
         except Exception as ex:
-            raise RuntimeError(code) from ex
+            print(f'Bad configuration of {name}: {ex!r}')
         print()
 
 

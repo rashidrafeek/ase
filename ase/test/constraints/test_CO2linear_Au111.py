@@ -34,6 +34,8 @@ def test_au111(wrap, testdir):
     constraint = FixLinearTriatomic(triples=[(-2, -3, -1)])
     slab.set_constraint(constraint)
 
+    assert slab.get_number_of_degrees_of_freedom() == 53
+
     with BFGS(slab, trajectory='relax_%d.traj' % wrap) as dyn:
         dyn.run(fmax=0.05)
     assert abs(slab.get_distance(-3, -2, mic=1) - d0) < 1e-9

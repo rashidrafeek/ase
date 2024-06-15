@@ -345,6 +345,12 @@ class Atoms:
     constraints = property(_get_constraints, set_constraint, _del_constraints,
                            'Constraints of the atoms.')
 
+    def get_number_of_degrees_of_freedom(self):
+        """Calculate the number of degrees of freedom in the system."""
+        return len(self) * 3 - sum(
+            c.get_removed_dof(self) for c in self._constraints
+        )
+
     def set_cell(self, cell, scale_atoms=False, apply_constraint=True):
         """Set unit cell vectors.
 
@@ -1317,9 +1323,10 @@ class Atoms:
 
         # Optionally, translate to center about a point in space.
         if about is not None:
-            for vector in self.cell:
-                translation -= vector / 2.0
-            translation += about
+            for n, vector in enumerate(self.cell):
+                if n in axes:
+                    translation -= vector / 2.0
+                    translation[n] += about[n]
 
         self.positions += translation
 
@@ -1926,11 +1933,8 @@ class Atoms:
 
     def get_temperature(self):
         """Get the temperature in Kelvin."""
-        dof = len(self) * 3
-        for constraint in self._constraints:
-            dof -= constraint.get_removed_dof(self)
         ekin = self.get_kinetic_energy()
-        return 2 * ekin / (dof * units.kB)
+        return 2 * ekin / (self.get_number_of_degrees_of_freedom() * units.kB)
 
     def __eq__(self, other):
         """Check for identity of two atoms objects.
