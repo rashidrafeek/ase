@@ -153,8 +153,7 @@ def bulk(
         if c is None and covera is not None:
             c = covera * a
 
-    if orthorhombic and crystalstructure not in ['sc', 'tetragonal',
-                                                 'orthorhombic']:
+    if orthorhombic and crystalstructure not in ['tetragonal', 'orthorhombic']:
         atoms = _orthorhombic_bulk(name, crystalstructure, a, covera, u)
     elif cubic:
         atoms = _cubic_bulk(name, crystalstructure, a)
@@ -202,47 +201,49 @@ def _build_rhl(name, a, alpha, basis):
 
 
 def _orthorhombic_bulk(name, crystalstructure, a, covera=None, u=None):
-    if crystalstructure == 'fcc':
-        b = a / sqrt(2)
-        atoms = Atoms(2 * name, cell=(b, b, a), pbc=True,
-                      scaled_positions=[(0, 0, 0), (0.5, 0.5, 0.5)])
-    elif crystalstructure == 'hcp':
-        atoms = Atoms(4 * name,
-                      cell=(a, a * sqrt(3), covera * a),
-                      scaled_positions=[(0, 0, 0),
-                                        (0.5, 0.5, 0),
-                                        (0.5, 1 / 6, 0.5),
-                                        (0, 2 / 3, 0.5)],
-                      pbc=True)
-    elif crystalstructure == 'diamond':
-        atoms = _orthorhombic_bulk(2 * name, 'zincblende', a)
-    elif crystalstructure == 'zincblende':
-        s1, s2 = string2symbols(name)
-        b = a / sqrt(2)
-        atoms = Atoms(2 * name, cell=(b, b, a), pbc=True,
-                      scaled_positions=[(0, 0, 0), (0.5, 0, 0.25),
-                                        (0.5, 0.5, 0.5), (0, 0.5, 0.75)])
-    elif crystalstructure == 'rocksalt':
-        s1, s2 = string2symbols(name)
-        b = a / sqrt(2)
-        atoms = Atoms(2 * name, cell=(b, b, a), pbc=True,
-                      scaled_positions=[(0, 0, 0), (0.5, 0.5, 0),
-                                        (0.5, 0.5, 0.5), (0, 0, 0.5)])
-    elif crystalstructure == 'wurtzite':
-        u = u or 0.25 + 1 / 3 / covera**2
-        atoms = Atoms(4 * name,
-                      cell=(a, a * 3**0.5, covera * a),
-                      scaled_positions=[(0, 0, 0),
-                                        (0, 1 / 3, 0.5 - u),
-                                        (0, 1 / 3, 0.5),
-                                        (0, 0, 1 - u),
-                                        (0.5, 0.5, 0),
-                                        (0.5, 5 / 6, 0.5 - u),
-                                        (0.5, 5 / 6, 0.5),
-                                        (0.5, 0.5, 1 - u)],
-                      pbc=True)
-    elif crystalstructure in ['bcc', 'cesiumchloride']:
+    if crystalstructure in ('sc', 'bcc', 'cesiumchloride'):
         atoms = _cubic_bulk(name, crystalstructure, a)
+    elif crystalstructure == 'fcc':
+        b = a / sqrt(2)
+        sps = ((0.0, 0.0, 0.0), (0.5, 0.5, 0.5))
+        atoms = Atoms(2 * name, cell=(b, b, a), pbc=True, scaled_positions=sps)
+    elif crystalstructure == 'hcp':
+        cell = (a, a * sqrt(3), covera * a)
+        sps = [
+            (0.0, 0 / 6, 0.0),
+            (0.5, 3 / 6, 0.0),
+            (0.5, 1 / 6, 0.5),
+            (0.0, 4 / 6, 0.5),
+        ]
+        atoms = Atoms(4 * name, cell=cell, pbc=True, scaled_positions=sps)
+    elif crystalstructure == 'diamond':
+        b = a / sqrt(2)
+        sps = [
+            (0.0, 0.0, 0.0), (0.5, 0.0, 0.25),
+            (0.5, 0.5, 0.5), (0.0, 0.5, 0.75),
+        ]
+        atoms = Atoms(4 * name, cell=(b, b, a), pbc=True, scaled_positions=sps)
+    elif crystalstructure == 'rocksalt':
+        b = a / sqrt(2)
+        sps = [
+            (0.0, 0.0, 0.0), (0.5, 0.5, 0.0),
+            (0.5, 0.5, 0.5), (0.0, 0.0, 0.5),
+        ]
+        atoms = Atoms(2 * name, cell=(b, b, a), pbc=True, scaled_positions=sps)
+    elif crystalstructure == 'zincblende':
+        symbol0, symbol1 = string2symbols(name)
+        atoms = _orthorhombic_bulk(symbol0, 'diamond', a)
+        atoms.symbols[[1, 3]] = symbol1
+    elif crystalstructure == 'wurtzite':
+        cell = (a, a * sqrt(3), covera * a)
+        u = u or 0.25 + 1 / 3 / covera**2
+        sps = [
+            (0.0, 0 / 6, 0.0), (0.0, 2 / 6, 0.5 - u),
+            (0.0, 2 / 6, 0.5), (0.0, 0 / 6, 1.0 - u),
+            (0.5, 3 / 6, 0.0), (0.5, 5 / 6, 0.5 - u),
+            (0.5, 5 / 6, 0.5), (0.5, 3 / 6, 1.0 - u),
+        ]
+        atoms = Atoms(4 * name, cell=cell, pbc=True, scaled_positions=sps)
     else:
         raise incompatible_cell(want='orthorhombic', have=crystalstructure)
 
