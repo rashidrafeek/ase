@@ -250,47 +250,54 @@ def _orthorhombic_bulk(name, crystalstructure, a, covera=None, u=None):
 
 
 def _cubic_bulk(name: str, crystalstructure: str, a: float) -> Atoms:
-    if crystalstructure == 'fcc':
-        atoms = Atoms(4 * name, cell=(a, a, a), pbc=True,
-                      scaled_positions=[(0, 0, 0), (0, 0.5, 0.5),
-                                        (0.5, 0, 0.5), (0.5, 0.5, 0)])
-    elif crystalstructure == 'diamond':
-        atoms = _cubic_bulk(2 * name, 'zincblende', a)
-    elif crystalstructure == 'sc':
+    if crystalstructure == 'sc':
         atoms = Atoms(name, cell=(a, a, a), pbc=True)
+    elif crystalstructure == 'fcc':
+        sps = [
+            (0.0, 0.0, 0.0),
+            (0.0, 0.5, 0.5),
+            (0.5, 0.0, 0.5),
+            (0.5, 0.5, 0.0),
+        ]
+        atoms = Atoms(4 * name, cell=(a, a, a), pbc=True, scaled_positions=sps)
     elif crystalstructure == 'bcc':
-        atoms = _cubic_bulk(2 * name, 'cesiumchloride', a)
+        sps = [
+            (0.0, 0.0, 0.0),
+            (0.5, 0.5, 0.5),
+        ]
+        atoms = Atoms(2 * name, cell=(a, a, a), pbc=True, scaled_positions=sps)
+    elif crystalstructure == 'diamond':
+        sps = [
+            (0.0, 0.0, 0.0), (0.25, 0.25, 0.25),
+            (0.0, 0.5, 0.5), (0.25, 0.75, 0.75),
+            (0.5, 0.0, 0.5), (0.75, 0.25, 0.75),
+            (0.5, 0.5, 0.0), (0.75, 0.75, 0.25),
+        ]
+        atoms = Atoms(8 * name, cell=(a, a, a), pbc=True, scaled_positions=sps)
     elif crystalstructure == 'cesiumchloride':
-        atoms = Atoms(
-            name,
-            cell=(a, a, a),
-            pbc=True,
-            scaled_positions=[(0.0, 0.0, 0.0), (0.5, 0.5, 0.5)],
-        )
+        symbol0, symbol1 = string2symbols(name)
+        atoms = _cubic_bulk(symbol0, 'bcc', a)
+        atoms.symbols[[1]] = symbol1
     elif crystalstructure == 'zincblende':
-        atoms = Atoms(4 * name, cell=(a, a, a), pbc=True,
-                      scaled_positions=[(0, 0, 0), (0.25, 0.25, 0.25),
-                                        (0, 0.5, 0.5), (0.25, 0.75, 0.75),
-                                        (0.5, 0, 0.5), (0.75, 0.25, 0.75),
-                                        (0.5, 0.5, 0), (0.75, 0.75, 0.25)])
+        symbol0, symbol1 = string2symbols(name)
+        atoms = _cubic_bulk(symbol0, 'diamond', a)
+        atoms.symbols[[1, 3, 5, 7]] = symbol1
     elif crystalstructure == 'rocksalt':
-        atoms = Atoms(4 * name, cell=(a, a, a), pbc=True,
-                      scaled_positions=[(0, 0, 0), (0.5, 0, 0),
-                                        (0, 0.5, 0.5), (0.5, 0.5, 0.5),
-                                        (0.5, 0, 0.5), (0, 0, 0.5),
-                                        (0.5, 0.5, 0), (0, 0.5, 0)])
+        sps = [
+            (0.0, 0.0, 0.0), (0.5, 0.0, 0.0),
+            (0.0, 0.5, 0.5), (0.5, 0.5, 0.5),
+            (0.5, 0.0, 0.5), (0.0, 0.0, 0.5),
+            (0.5, 0.5, 0.0), (0.0, 0.5, 0.0),
+        ]
+        atoms = Atoms(4 * name, cell=(a, a, a), pbc=True, scaled_positions=sps)
     elif crystalstructure == 'fluorite':
-        atoms = Atoms(
-            4 * name,
-            cell=(a, a, a),
-            pbc=True,
-            scaled_positions=[
-                (0.00, 0.00, 0.00), (0.25, 0.25, 0.25), (0.75, 0.75, 0.75),
-                (0.00, 0.50, 0.50), (0.25, 0.75, 0.75), (0.75, 0.25, 0.25),
-                (0.50, 0.00, 0.50), (0.75, 0.25, 0.75), (0.25, 0.75, 0.25),
-                (0.50, 0.50, 0.00), (0.75, 0.75, 0.25), (0.25, 0.25, 0.75),
-            ],
-        )
+        sps = [
+            (0.00, 0.00, 0.00), (0.25, 0.25, 0.25), (0.75, 0.75, 0.75),
+            (0.00, 0.50, 0.50), (0.25, 0.75, 0.75), (0.75, 0.25, 0.25),
+            (0.50, 0.00, 0.50), (0.75, 0.25, 0.75), (0.25, 0.75, 0.25),
+            (0.50, 0.50, 0.00), (0.75, 0.75, 0.25), (0.25, 0.25, 0.75),
+        ]
+        atoms = Atoms(4 * name, cell=(a, a, a), pbc=True, scaled_positions=sps)
     else:
         raise incompatible_cell(want='cubic', have=crystalstructure)
 
