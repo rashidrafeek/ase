@@ -37,7 +37,6 @@ class Bussi(MolecularDynamics):
         timestep,
         temperature_K,
         taut,
-        fix_com=True,
         rng=np.random.default_rng(),
         **md_kwargs,
     ):
@@ -49,14 +48,10 @@ class Bussi(MolecularDynamics):
 
         self.taut = taut
         self.temp = temperature_K * units.kB
-        self.fix_com = fix_com
         self.communicator = world
         self.rng = rng
 
         self.ndof = self.atoms.get_number_of_degrees_of_freedom()
-
-        if fix_com:
-            self.ndof -= 3
 
         self.target_kinetic_energy = 0.5 * self.temp * self.ndof
 
@@ -64,7 +59,7 @@ class Bussi(MolecularDynamics):
             self.atoms.get_kinetic_energy(), 0.0, rtol=0, atol=1e-12
         ):
             raise ValueError("Initial kinetic energy is zero."
-                             "Please set initial velocities.")
+                             " Please set initial velocities.")
 
         self.transferred_energy = 0.0
 
@@ -112,28 +107,23 @@ class Bussi(MolecularDynamics):
 
     def step(self, forces=None):
         """Move one timestep forward using Bussi NVT molecular dynamics."""
-        self.scale_velocities()
-
-        atoms = self.atoms
-
         if forces is None:
-            forces = atoms.get_forces(md=True)
+            forces = self.atoms.get_forces(md=True)
 
         momenta = self.atoms.get_momenta()
         momenta += 0.5 * self.dt * forces
-
-        if self.fix_com:
-            momenta -= momenta.mean(axis=0)
+        self.atoms.set_momenta(momenta)
 
         self.atoms.set_positions(
             self.atoms.positions
-            + self.dt * momenta / self.atoms.get_masses()[:, np.newaxis]
+            + self.dt * self.atoms.get_momenta() / self.atoms.get_masses()[:, np.newaxis]
         )
 
-        self.atoms.set_momenta(momenta)
         forces = self.atoms.get_forces(md=True)
         self.atoms.set_momenta(
             self.atoms.get_momenta() + 0.5 * self.dt * forces
         )
+    
+        self.scale_velocities()
 
         return forces
