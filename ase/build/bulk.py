@@ -179,11 +179,8 @@ def bulk(
         magmoms = [magmom_per_atom] * len(atoms)
         atoms.set_initial_magnetic_moments(magmoms)
 
-    if orthorhombic:
+    if cubic or orthorhombic:
         assert atoms.cell.orthorhombic
-
-    if cubic:
-        assert abs(atoms.cell.angles() - 90).all() < 1e-10
 
     return atoms
 
