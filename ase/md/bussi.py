@@ -23,8 +23,6 @@ class Bussi(MolecularDynamics):
         The desired temperature, in Kelvin.
     taut: float
         Time constant for Bussi temperature coupling in ASE time units.
-    fix_com: bool (default True)
-        If True, the center-of-mass momentum is fixed during the simulation.
     rng: numpy.random.Generator (default np.random.default_rng())
         Random number generator.
     md_kwargs: dict
@@ -58,8 +56,10 @@ class Bussi(MolecularDynamics):
         if np.isclose(
             self.atoms.get_kinetic_energy(), 0.0, rtol=0, atol=1e-12
         ):
-            raise ValueError("Initial kinetic energy is zero."
-                             " Please set initial velocities.")
+            raise ValueError(
+                "Initial kinetic energy is zero."
+                " Please set initial velocities."
+            )
 
         self.transferred_energy = 0.0
 
@@ -116,14 +116,17 @@ class Bussi(MolecularDynamics):
 
         self.atoms.set_positions(
             self.atoms.positions
-            + self.dt * self.atoms.get_momenta() / self.atoms.get_masses()[:, np.newaxis]
+            + self.dt
+            * self.atoms.get_momenta()
+            / self.atoms.get_masses()[:, np.newaxis]
         )
 
         forces = self.atoms.get_forces(md=True)
+
         self.atoms.set_momenta(
             self.atoms.get_momenta() + 0.5 * self.dt * forces
         )
-    
+
         self.scale_velocities()
 
         return forces
