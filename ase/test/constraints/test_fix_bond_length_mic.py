@@ -21,6 +21,8 @@ def test_fix_bond_length_mic(wrap):
     a.calc = LennardJones()
     a.set_constraint(FixBondLength(0, 2))
 
+    assert a.get_number_of_degrees_of_freedom() == len(a) * 3 - 1
+
     d1 = a.get_distance(0, 2, mic=True)
 
     with FIRE(a, logfile=None) as opt:

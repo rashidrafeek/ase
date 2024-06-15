@@ -25,6 +25,8 @@ def test_center_of_mass_position(atoms: Atoms):
     cold = atoms.get_center_of_mass()
     atoms.set_constraint(FixCom())
 
+    assert atoms.get_number_of_degrees_of_freedom() == 6
+
     with BFGS(atoms) as opt:
         opt.run(steps=5)
 
