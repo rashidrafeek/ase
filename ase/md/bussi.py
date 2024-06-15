@@ -6,7 +6,6 @@ import numpy as np
 
 from ase import units
 from ase.md.md import MolecularDynamics
-from ase.md.velocitydistribution import MaxwellBoltzmannDistribution
 from ase.parallel import world
 
 
@@ -49,21 +48,23 @@ class Bussi(MolecularDynamics):
         )
 
         self.taut = taut
-        self.temperature = temperature_K * units.kB
+        self.temp = temperature_K * units.kB
         self.fix_com = fix_com
         self.communicator = world
         self.rng = rng
 
-        self.ndof = len(self.atoms) * 3 - 3
+        self.ndof = self.atoms.get_number_of_degrees_of_freedom()
 
-        self.target_kinetic_energy = 0.5 * self.temperature * self.ndof
+        if fix_com:
+            self.ndof -= 3
+
+        self.target_kinetic_energy = 0.5 * self.temp * self.ndof
 
         if np.isclose(
             self.atoms.get_kinetic_energy(), 0.0, rtol=0, atol=1e-12
         ):
-            MaxwellBoltzmannDistribution(
-                self.atoms, self.temperature, rng=self.rng
-            )
+            raise ValueError("Initial kinetic energy is zero."
+                             "Please set initial velocities.")
 
         self.transferred_energy = 0.0
 
@@ -80,9 +81,9 @@ class Bussi(MolecularDynamics):
     def calculate_alpha(self, kinetic_energy):
         """Calculate the scaling factor alpha using equation (A7)
         from the Bussi paper."""
-        first_term = math.exp(-self.dt / self.taut)
-        second_term = (
-            (1 - first_term)
+        exp_term = math.exp(-self.dt / self.taut)
+        energy_scaling_term = (
+            (1 - exp_term)
             * self.target_kinetic_energy
             / kinetic_energy
             / self.ndof
@@ -92,9 +93,9 @@ class Bussi(MolecularDynamics):
         r2 = self.sum_noises(self.ndof - 1)
 
         return np.sqrt(
-            first_term
-            + second_term * (r2 + r1**2)
-            + 2 * r1 * np.sqrt(first_term * second_term)
+            exp_term
+            + energy_scaling_term * (r2 + r1**2)
+            + 2 * r1 * np.sqrt(exp_term * energy_scaling_term)
         )
 
     def sum_noises(self, nn):
