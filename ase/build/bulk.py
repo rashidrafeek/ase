@@ -153,13 +153,7 @@ def bulk(
         if c is None and covera is not None:
             c = covera * a
 
-    if orthorhombic and crystalstructure not in ['tetragonal', 'orthorhombic']:
-        atoms = _orthorhombic_bulk(name, crystalstructure, a, covera, u)
-    elif cubic:
-        atoms = _cubic_bulk(name, crystalstructure, a)
-    elif crystalstructure not in ['bct', 'rhombohedral', 'orthorhombic']:
-        atoms = _primitive_bulk(name, crystalstructure, a, covera, u)
-    elif crystalstructure == 'bct':
+    if crystalstructure == 'bct':
         from ase.lattice import BCT
         if basis is None:
             basis = ref.get('basis')
@@ -172,8 +166,12 @@ def bulk(
         atoms = _build_rhl(name, a, alpha, basis)
     elif crystalstructure == 'orthorhombic':
         atoms = Atoms(name, cell=[a, b, c], pbc=True)
+    elif orthorhombic:
+        atoms = _orthorhombic_bulk(name, crystalstructure, a, covera, u)
+    elif cubic:
+        atoms = _cubic_bulk(name, crystalstructure, a)
     else:
-        raise ValueError(f'Unknown crystal structure: {crystalstructure!r}')
+        atoms = _primitive_bulk(name, crystalstructure, a, covera, u)
 
     if magmom_per_atom is not None:
         magmoms = [magmom_per_atom] * len(atoms)
