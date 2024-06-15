@@ -137,9 +137,6 @@ def bulk(
             b = bovera * a
 
     if crystalstructure in ['hcp', 'wurtzite']:
-        if cubic:
-            raise incompatible_cell(want='cubic', have=crystalstructure)
-
         if c is not None:
             covera = c / a
         elif covera is None:
