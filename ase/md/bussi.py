@@ -57,8 +57,8 @@ class Bussi(MolecularDynamics):
             self.atoms.get_kinetic_energy(), 0.0, rtol=0, atol=1e-12
         ):
             raise ValueError(
-                "Initial kinetic energy is zero."
-                " Please set initial velocities."
+                "Initial kinetic energy is zero. "
+                "Please set the initial velocities before running Bussi NVT."
             )
 
         self.transferred_energy = 0.0
@@ -84,13 +84,13 @@ class Bussi(MolecularDynamics):
             / self.ndof
         )
 
-        r1 = self.rng.standard_normal()
-        r2 = self.sum_noises(self.ndof - 1)
+        normal_noise = self.rng.standard_normal()
+        sum_of_noises = self.sum_noises(self.ndof - 1)
 
         return np.sqrt(
             exp_term
-            + energy_scaling_term * (r2 + r1**2)
-            + 2 * r1 * np.sqrt(exp_term * energy_scaling_term)
+            + energy_scaling_term * (sum_of_noises + normal_noise**2)
+            + 2 * normal_noise * np.sqrt(exp_term * energy_scaling_term)
         )
 
     def sum_noises(self, nn):
