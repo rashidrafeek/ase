@@ -44,8 +44,8 @@ class Bussi(MolecularDynamics):
             **md_kwargs,
         )
 
-        self.taut = taut
         self.temp = temperature_K * units.kB
+        self.taut = taut
         self.communicator = world
         self.rng = rng
 
