@@ -1082,7 +1082,7 @@ class GaussianConfiguration:
                         label='Gaussian', directory='.', **self.parameters)
         return calc
 
-    @ staticmethod
+    @staticmethod
     def parse_gaussian_input(fd):
         '''Reads a gaussian input file into an atoms object and
         parameters dictionary.
