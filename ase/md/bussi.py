@@ -61,6 +61,9 @@ class Bussi(MolecularDynamics):
                 "Please set the initial velocities before running Bussi NVT."
             )
 
+        self._exp_term = math.exp(-self.dt / self.taut)
+        self._masses = self.atoms.get_masses()[:, np.newaxis]
+
         self.transferred_energy = 0.0
 
     def scale_velocities(self):
@@ -71,61 +74,48 @@ class Bussi(MolecularDynamics):
         momenta = self.atoms.get_momenta()
         self.atoms.set_momenta(alpha * momenta)
 
-        self.transferred_energy += (alpha**2 - 1) * kinetic_energy
+        self.transferred_energy += (alpha**2 - 1.0) * kinetic_energy
 
     def calculate_alpha(self, kinetic_energy):
         """Calculate the scaling factor alpha using equation (A7)
         from the Bussi paper."""
-        exp_term = math.exp(-self.dt / self.taut)
+
         energy_scaling_term = (
-            (1 - exp_term)
+            (1 - self._exp_term)
             * self.target_kinetic_energy
             / kinetic_energy
             / self.ndof
         )
 
         normal_noise = self.rng.standard_normal()
-        sum_of_noises = self.sum_noises(self.ndof - 1)
+        sum_of_noises = 2.0 * self.rng.standard_gamma(0.5 * (self.ndof - 1))
 
-        return np.sqrt(
-            exp_term
+        return math.sqrt(
+            self._exp_term
             + energy_scaling_term * (sum_of_noises + normal_noise**2)
-            + 2 * normal_noise * np.sqrt(exp_term * energy_scaling_term)
+            + 2
+            * normal_noise
+            * math.sqrt(self._exp_term * energy_scaling_term)
         )
-
-    def sum_noises(self, nn):
-        """Sum of nn noises."""
-        if nn == 0:
-            return 0.0
-        elif nn == 1:
-            return self.rng.standard_normal() ** 2
-        elif nn % 2 == 0:
-            return 2.0 * self.rng.standard_gamma(nn / 2)
-        else:
-            rr = self.rng.standard_normal()
-            return 2.0 * self.rng.standard_gamma((nn - 1) / 2) + rr**2
 
     def step(self, forces=None):
         """Move one timestep forward using Bussi NVT molecular dynamics."""
         if forces is None:
             forces = self.atoms.get_forces(md=True)
 
+        self.atoms.set_momenta(
+            self.atoms.get_momenta() + 0.5 * self.dt * forces
+        )
         momenta = self.atoms.get_momenta()
-        momenta += 0.5 * self.dt * forces
-        self.atoms.set_momenta(momenta)
 
         self.atoms.set_positions(
             self.atoms.positions
-            + self.dt
-            * self.atoms.get_momenta()
-            / self.atoms.get_masses()[:, np.newaxis]
+            + self.dt * momenta / self._masses
         )
 
         forces = self.atoms.get_forces(md=True)
 
-        self.atoms.set_momenta(
-            self.atoms.get_momenta() + 0.5 * self.dt * forces
-        )
+        self.atoms.set_momenta(momenta + 0.5 * self.dt * forces)
 
         self.scale_velocities()
 
