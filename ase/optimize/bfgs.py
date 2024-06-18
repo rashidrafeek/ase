@@ -22,6 +22,7 @@ class BFGS(Optimizer):
         maxstep: Optional[float] = None,
         master: Optional[bool] = None,
         alpha: Optional[float] = None,
+        comm = None
     ):
         """BFGS optimizer.
 
@@ -70,7 +71,8 @@ class BFGS(Optimizer):
             self.alpha = self.defaults['alpha']
         Optimizer.__init__(self, atoms=atoms, restart=restart,
                            logfile=logfile, trajectory=trajectory,
-                           master=master, append_trajectory=append_trajectory)
+                           master=master, append_trajectory=append_trajectory,
+                           comm=comm)
 
     def initialize(self):
         # initial hessian
