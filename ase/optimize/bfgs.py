@@ -5,6 +5,7 @@ import numpy as np
 from numpy.linalg import eigh
 
 from ase import Atoms
+from ase.parallel import world
 from ase.optimize.optimize import Optimizer, UnitCellFilter
 
 
@@ -22,7 +23,7 @@ class BFGS(Optimizer):
         maxstep: Optional[float] = None,
         master: Optional[bool] = None,
         alpha: Optional[float] = None,
-        comm = None
+        comm=world
     ):
         """BFGS optimizer.
 
@@ -49,7 +50,11 @@ class BFGS(Optimizer):
 
         master: boolean
             Defaults to None, which causes only rank 0 to save files.  If
-            set to true,  this rank will save files.
+            set to true, this rank will save files.
+
+        comm: Communicator object
+            Defaults to world. Communicator to handle parallel file reading
+            and writing, set by ase.parallel.world.
 
         alpha: float
             Initial guess for the Hessian (curvature of energy surface). A

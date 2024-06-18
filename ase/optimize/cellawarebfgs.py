@@ -4,6 +4,7 @@ from typing import IO, Optional, Union
 import numpy as np
 
 from ase import Atoms
+from ase.parallel import world
 from ase.geometry import cell_to_cellpar
 from ase.optimize import BFGS
 from ase.optimize.optimize import Dynamics
@@ -68,7 +69,7 @@ class CellAwareBFGS(BFGS):
         poisson_ratio: Optional[float] = 0.3,
         alpha: Optional[float] = None,
         long_output: Optional[bool] = False,
-        comm = None,
+        comm=world,
     ):
         self.bulk_modulus = bulk_modulus
         self.poisson_ratio = poisson_ratio
