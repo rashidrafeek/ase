@@ -54,7 +54,7 @@ class PreconLBFGS(Optimizer):
             Use '-' for stdout.
 
         trajectory: string
-            Pickle file used to store trajectory of atomic movement.
+            Trajectory file used to store optimisation path.
 
         maxstep: float
             How far is a single atom allowed to move. This is useful for DFT
