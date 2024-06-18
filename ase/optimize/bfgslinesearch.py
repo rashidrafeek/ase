@@ -49,12 +49,12 @@ class BFGSLineSearch(Optimizer):
             The Atoms object to relax.
 
         restart: string
-            Pickle file used to store hessian matrix. If set, file with
+            JSON file used to store hessian matrix. If set, file with
             such a name will be searched and hessian matrix stored will
             be used, if the file exists.
 
         trajectory: string
-            Pickle file used to store trajectory of atomic movement.
+            Trajectory file used to store optimisation path.
 
         maxstep: float
             Used to set the maximum distance an atom can move per
