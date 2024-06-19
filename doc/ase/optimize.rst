@@ -124,10 +124,10 @@ Aside from the geometry, the Hessian of the previous run can and
 should be retained for the second run.  Use the ``restart`` keyword to
 specify a file in which to save the Hessian::
 
-  dyn = BFGS(atoms=system, trajectory='qn.traj', restart='qn.pckl')
+  dyn = BFGS(atoms=system, trajectory='qn.traj', restart='qn.json')
 
 This will create an optimizer which saves the Hessian to
-:file:`qn.pckl` (using the Python :mod:`pickle` module) on each
+:file:`qn.json` (using the Python :mod:`json` module) on each
 step.  If the file already exists, the Hessian will also be
 *initialized* from that file.
 
@@ -151,7 +151,7 @@ The file :file:`history.traj` will then contain all necessary
 information.
 
 When switching between different types of optimizers, e.g. between
-``BFGS`` and ``LBFGS``, the pickle-files specified by the
+``BFGS`` and ``LBFGS``, the JSON-files specified by the
 ``restart`` keyword are not compatible, but the Hessian can still be
 retained by replaying the trajectory as above.
 

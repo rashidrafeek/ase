@@ -232,7 +232,7 @@ lint:
     - mypy --version
     - mypy --color-output -p ase
     - python -We:invalid -m compileall -f -q ase/
-    - flake8 .
+    - ruff check
 
 coverage-combine:
   image: registry.gitlab.com/ase/ase:ase-paperwork

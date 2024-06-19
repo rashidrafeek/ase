@@ -36,7 +36,7 @@ class LBFGS(Optimizer):
             The Atoms object to relax.
 
         restart: string
-            Pickle file used to store vectors for updating the inverse of
+            JSON file used to store vectors for updating the inverse of
             Hessian matrix. If set, file with such a name will be searched
             and information stored will be used, if the file exists.
 
@@ -45,7 +45,7 @@ class LBFGS(Optimizer):
             Use '-' for stdout.
 
         trajectory: string
-            Pickle file used to store trajectory of atomic movement.
+            Trajectory file used to store optimisation path.
 
         maxstep: float
             How far is a single atom allowed to move. This is useful for DFT
