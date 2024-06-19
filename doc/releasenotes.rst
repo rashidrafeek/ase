@@ -9,7 +9,7 @@ Git master branch
 
 :git:`master <>`.
 
-* No changes yet
+* Added :class:`ase.md.bussi.Bussi` (:mr:`3350`)
 
 
 Version 3.23.0
