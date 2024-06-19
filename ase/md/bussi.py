@@ -15,18 +15,19 @@ class Bussi(MolecularDynamics):
 
     Parameters
     ----------
-    atoms: Atoms object
+    atoms : Atoms object
         The atoms object.
-    timestep: float
+    timestep : float
         The time step in ASE time units.
-    temperature_K: float
+    temperature_K : float
         The desired temperature, in Kelvin.
-    taut: float
+    taut : float
         Time constant for Bussi temperature coupling in ASE time units.
-    rng: numpy.random.Generator (default np.random.default_rng())
+    rng : numpy.random.Generator (default np.random.default_rng())
         Random number generator.
-    md_kwargs: dict
-        Additional arguments passed to MolecularDynamics base class.
+    **md_kwargs : dict, optional
+        Additional arguments passed to :class:~ase.md.md.MolecularDynamics
+        base class.
     """
 
     def __init__(
@@ -87,7 +88,10 @@ class Bussi(MolecularDynamics):
             / self.ndof
         )
 
+        # R1 in Eq. (A7)
         normal_noise = self.rng.standard_normal()
+        # \sum_{i=2}^{Nf} R_i^2 in Eq. (A7)
+        # 2 * standard_gamma(n / 2) is equal to chisquare(n)
         sum_of_noises = 2.0 * self.rng.standard_gamma(0.5 * (self.ndof - 1))
 
         return math.sqrt(
