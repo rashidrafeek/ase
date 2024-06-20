@@ -544,7 +544,7 @@ class AutoNEB:
             try:
                 energies.append(a.get_potential_energy())
             except RuntimeError:
-                energies.append(np.NaN)
+                energies.append(np.nan)
         return energies
 
     def get_energies_one_image(self, image):
@@ -553,7 +553,7 @@ class AutoNEB:
         try:
             energy = image.get_potential_energy()
         except RuntimeError:
-            energy = np.NaN
+            energy = np.nan
         return energy
 
     def get_highest_energy_index(self):
