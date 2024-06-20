@@ -6,6 +6,10 @@ import numpy as np
 import pytest
 from numpy.testing import (assert_array_almost_equal,
                            assert_array_equal)
+try:
+    from numpy.exceptions import ComplexWarning  # NumPy 2.0.0
+except ImportError:
+    from numpy import ComplexWarning
 
 import ase.io
 from ase import Atoms, units
@@ -438,14 +442,14 @@ def test_constrained_atoms(n2_data):
 
 
 def test_dos(n2_vibdata):
-    with pytest.warns(np.ComplexWarning):
+    with pytest.warns(ComplexWarning):
         dos = n2_vibdata.get_dos()
     assert_array_almost_equal(dos.get_energies(),
                               n2_vibdata.get_energies())
 
 
 def test_pdos(n2_vibdata):
-    with pytest.warns(np.ComplexWarning):
+    with pytest.warns(ComplexWarning):
         pdos = n2_vibdata.get_pdos()
     assert_array_almost_equal(pdos[0].get_energies(),
                               n2_vibdata.get_energies())
