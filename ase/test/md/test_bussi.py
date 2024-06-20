@@ -12,21 +12,21 @@ def test_bussi():
     atoms.calc = EMT()
 
     with pytest.raises(ValueError):
-        Bussi(atoms, 0.1 * units.fs, 300, 100 * units.fs)
+        with Bussi(atoms, 0.1 * units.fs, 300, 100 * units.fs) as dyn:
+            dyn.run(1)
 
     MaxwellBoltzmannDistribution(
         atoms, temperature_K=300, rng=np.random.default_rng(seed=42)
     )
 
-    dyn = Bussi(
+    with Bussi(
         atoms,
         0.1 * units.fs,
         300,
         100 * units.fs,
         rng=np.random.default_rng(seed=42),
-    )
-
-    dyn.run(10)
+    ) as dyn:
+        dyn.run(10)
 
     assert dyn.taut == 100 * units.fs
     assert dyn.temp == 300 * units.kB
@@ -45,20 +45,19 @@ def test_bussi_transfered_energy_conservation():
         atoms, temperature_K=300, rng=np.random.default_rng(seed=42)
     )
 
-    dyn = Bussi(
+    conserved_quantity = []
+
+    with Bussi(
         atoms,
         1.0e-5 * units.fs,
         300,
         100 * units.fs,
         rng=np.random.default_rng(seed=42),
-    )
-
-    conserved_quantity = []
-
-    for _ in dyn.irun(100):
-        conserved_quantity.append(
-            dyn.atoms.get_total_energy() - dyn.transferred_energy
-        )
+    ) as dyn:
+        for _ in dyn.irun(100):
+            conserved_quantity.append(
+                dyn.atoms.get_total_energy() - dyn.transferred_energy
+            )
 
     assert np.unique(np.round(conserved_quantity, 10)).size == 1
 
@@ -88,18 +87,17 @@ def test_bussi_paranoia_check():
         force_temp=True,
     )
 
-    dyn = Bussi(
+    temperatures = []
+
+    with Bussi(
         atoms,
         1.0e-100 * units.fs,
         300,
         1.0e-100 * units.fs,
         rng=np.random.default_rng(seed=10),
-    )
-
-    temperatures = []
-
-    for _ in dyn.irun(1000):
-        temperatures.append(dyn.atoms.get_temperature())
+    ) as dyn:
+        for _ in dyn.irun(1000):
+            temperatures.append(dyn.atoms.get_temperature())
 
     assert np.mean(temperatures) == pytest.approx(300, abs=5.0)
 
@@ -118,17 +116,16 @@ def test_bussi_paranoia_check2():
         force_temp=True,
     )
 
-    dyn = Bussi(
+    temperatures = []
+
+    with Bussi(
         atoms,
         1.0e-100 * units.fs,
         300,
         1.0e-100 * units.fs,
         rng=np.random.default_rng(seed=91),
-    )
-
-    temperatures = []
-
-    for _ in dyn.irun(1000):
-        temperatures.append(dyn.atoms.get_temperature())
+    ) as dyn:
+        for _ in dyn.irun(1000):
+            temperatures.append(dyn.atoms.get_temperature())
 
     assert np.mean(temperatures) == pytest.approx(300, abs=5.0)

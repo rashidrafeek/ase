@@ -3,7 +3,6 @@
 import math
 
 import numpy as np
-
 from ase import units
 from ase.md.md import MolecularDynamics
 from ase.parallel import world
@@ -107,20 +106,19 @@ class Bussi(MolecularDynamics):
         if forces is None:
             forces = self.atoms.get_forces(md=True)
 
+        self.scale_velocities()
+
         self.atoms.set_momenta(
             self.atoms.get_momenta() + 0.5 * self.dt * forces
         )
         momenta = self.atoms.get_momenta()
 
         self.atoms.set_positions(
-            self.atoms.positions
-            + self.dt * momenta / self._masses
+            self.atoms.positions + self.dt * momenta / self._masses
         )
 
         forces = self.atoms.get_forces(md=True)
 
         self.atoms.set_momenta(momenta + 0.5 * self.dt * forces)
-
-        self.scale_velocities()
 
         return forces
