@@ -1162,19 +1162,19 @@ class FixInternals(FixConstraint):
         # Projection
         hh = []
         for i, constraint in enumerate(self.constraints):
-            hh.append(aa[:, i] * np.row_stack(aa[:, i]))
+            hh.append(aa[:, i] * np.vstack(aa[:, i]))
 
-        txx = aa[:, self.n] * np.row_stack(aa[:, self.n])
-        tyy = aa[:, self.n + 1] * np.row_stack(aa[:, self.n + 1])
-        tzz = aa[:, self.n + 2] * np.row_stack(aa[:, self.n + 2])
-        rxx = aa[:, self.n + 3] * np.row_stack(aa[:, self.n + 3])
-        ryy = aa[:, self.n + 4] * np.row_stack(aa[:, self.n + 4])
-        rzz = aa[:, self.n + 5] * np.row_stack(aa[:, self.n + 5])
+        txx = aa[:, self.n] * np.vstack(aa[:, self.n])
+        tyy = aa[:, self.n + 1] * np.vstack(aa[:, self.n + 1])
+        tzz = aa[:, self.n + 2] * np.vstack(aa[:, self.n + 2])
+        rxx = aa[:, self.n + 3] * np.vstack(aa[:, self.n + 3])
+        ryy = aa[:, self.n + 4] * np.vstack(aa[:, self.n + 4])
+        rzz = aa[:, self.n + 5] * np.vstack(aa[:, self.n + 5])
         T = txx + tyy + tzz + rxx + ryy + rzz
         for vec in hh:
             T += vec
-        ff = np.dot(T, np.row_stack(ff))
-        forces[:, :] -= np.dot(T, np.row_stack(ff)).reshape(-1, 3)
+        ff = np.dot(T, np.vstack(ff))
+        forces[:, :] -= np.dot(T, np.vstack(ff)).reshape(-1, 3)
 
     def __repr__(self):
         constraints = [repr(constr) for constr in self.constraints]
