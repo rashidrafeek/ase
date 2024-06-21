@@ -35,7 +35,7 @@ class Bussi(MolecularDynamics):
         timestep,
         temperature_K,
         taut,
-        rng=np.random.default_rng(),
+        rng=np.random,
         **md_kwargs,
     ):
         super().__init__(

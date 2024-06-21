@@ -24,7 +24,6 @@ def test_bussi():
         0.1 * units.fs,
         300,
         100 * units.fs,
-        rng=np.random.default_rng(seed=42),
     ) as dyn:
         dyn.run(10)
 
