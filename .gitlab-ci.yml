@@ -181,7 +181,7 @@ bleeding-edge:
     PIP_CACHE_DIR: "$CI_PROJECT_DIR/pip-cache"
   script:
     - pip install --editable .[test]
-    - ase test -j0 --pytest --color=yes
+    - ase test -j0 --pytest --color=yes --ignore gui/
   cache:
     paths:
       - $PIP_CACHE_DIR
