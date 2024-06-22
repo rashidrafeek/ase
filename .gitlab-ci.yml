@@ -175,6 +175,20 @@ calculators:
       junit: ase/test/report.xml
     expire_in: 1 week
 
+bleeding-edge:
+  image: python:3.12-slim
+  variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/pip-cache"
+  script:
+    - pip install --editable .
+    - >
+      ase test -j0 --pytest --color=yes
+  cache:
+    paths:
+      - $PIP_CACHE_DIR
+    key: $CI_PROJECT_ID
+
+
 doc:
   image: registry.gitlab.com/ase/ase:ase-main
   script:
