@@ -19,8 +19,6 @@ lat_map = {
 @pytest.mark.parametrize('symbol', chemical_symbols)
 def test_build_bulk(symbol):
     """Test reference states"""
-    lat_counts: dict = {}
-
     atomic_number = chemical_symbols.index(symbol)
     ref = reference_states[atomic_number]
 
@@ -33,7 +31,6 @@ def test_build_bulk(symbol):
 
     if symbol in {'B', 'Se', 'Te'}:
         return
-    lat_counts.setdefault(structure, []).append(symbol)
 
     atoms = bulk(symbol)
     lattice = atoms.cell.get_bravais_lattice()
@@ -58,9 +55,6 @@ def test_build_bulk(symbol):
         return
 
     _check_cubic(symbol)
-
-    for key, val in lat_counts.items():
-        print(key, len(val), ''.join(val))
 
 
 def _check_orthorhombic(symbol: str):
