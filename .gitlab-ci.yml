@@ -180,9 +180,8 @@ bleeding-edge:
   variables:
     PIP_CACHE_DIR: "$CI_PROJECT_DIR/pip-cache"
   script:
-    - pip install --editable .
-    - >
-      ase test -j0 --pytest --color=yes
+    - pip install --editable .[test]
+    - ase test -j0 --pytest --color=yes
   cache:
     paths:
       - $PIP_CACHE_DIR
