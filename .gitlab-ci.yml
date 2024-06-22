@@ -176,7 +176,7 @@ calculators:
     expire_in: 1 week
 
 bleeding-edge:
-  image: python:3.13-rc-alpine
+  image: python:3.12.4-alpine
   variables:
     PIP_CACHE_DIR: "$CI_PROJECT_DIR/pip-cache"
   script:
