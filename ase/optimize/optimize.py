@@ -77,37 +77,41 @@ class Dynamics(IOContext):
         append_trajectory: bool = False,
         master: Optional[bool] = None,
         comm=world,
+        *,
+        loginterval: int = 1,
     ):
         """Dynamics object.
 
-        Parameters:
-
-        atoms: Atoms object
+        Parameters
+        ----------
+        atoms : Atoms object
             The Atoms object to operate on.
 
-        logfile: file object or str
+        logfile : file object or str
             If *logfile* is a string, a file with that name will be opened.
             Use '-' for stdout.
 
-        trajectory: Trajectory object or str
+        trajectory : Trajectory object or str
             Attach trajectory object.  If *trajectory* is a string a
             Trajectory will be constructed.  Use *None* for no
             trajectory.
 
-        append_trajectory: boolean
+        append_trajectory : bool
             Defaults to False, which causes the trajectory file to be
             overwriten each time the dynamics is restarted from scratch.
             If True, the new structures are appended to the trajectory
             file instead.
 
-        master: boolean
+        master : bool
             Defaults to None, which causes only rank 0 to save files. If set to
             true, this rank will save files.
 
-        comm: Communicator object
+        comm : Communicator object
             Communicator to handle parallel file reading and writing.
-        """
 
+        loginterval : int, default: 1
+            Only write a log line for every *loginterval* time steps.
+        """
         self.atoms = atoms
         self.optimizable = atoms.__ase_optimizable__()
         self.logfile = self.openfile(file=logfile, comm=comm, mode='a')
@@ -123,7 +127,11 @@ class Dynamics(IOContext):
                 trajectory = self.closelater(Trajectory(
                     trajectory, mode=mode, master=master, comm=comm
                 ))
-            self.attach(trajectory, atoms=self.optimizable)
+            self.attach(
+                trajectory,
+                interval=loginterval,
+                atoms=self.optimizable,
+            )
 
         self.trajectory = trajectory
 
