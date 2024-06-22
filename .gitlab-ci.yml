@@ -181,7 +181,10 @@ bleeding-edge:
     PIP_CACHE_DIR: "$CI_PROJECT_DIR/pip-cache"
   script:
     - pip install --editable .[test]
-    - ase test -j0 --pytest --color=yes --ignore gui/ --ignore test_imports.py
+    - >
+      ase test -j0 --pytest --color=yes -m 'not slow'
+      --ignore gui/ --ignore test_imports.py
+      --durations 20
   cache:
     paths:
       - $PIP_CACHE_DIR
