@@ -179,8 +179,10 @@ bleeding-edge:
   image: python:3.12.4-alpine
   variables:
     PIP_CACHE_DIR: "$CI_PROJECT_DIR/pip-cache"
-  script:
+  before_script:
     - pip install --editable .[test]
+    - pip freeze
+  script:
     - >
       ase test -j0 --pytest --color=yes -m 'not slow'
       --ignore gui/ --ignore test_imports.py
