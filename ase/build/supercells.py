@@ -19,6 +19,9 @@ def get_deviation_from_optimal_cell_shape(cell, target_shape="sc", norm=None):
     *target_shape*) represent simple cubic ('sc') or face-centered
     cubic ('fcc') cell shapes.
 
+    Replaced with code from the `doped` defect simulation package
+    (https://doped.readthedocs.io) to be rotationally invariant.
+
     Parameters:
 
     cell: 2D array of floats
@@ -31,15 +34,21 @@ def get_deviation_from_optimal_cell_shape(cell, target_shape="sc", norm=None):
         recomputing the normalization factor when computing the
         deviation for a series of P matrices.
 
+    Returns:
+        float: Cell metric (0 is perfect score)
     """
+    cell_lengths = np.linalg.norm(cell, axis=0)
 
-    if target_shape in ["sc", "simple-cubic"]:
-        target_metric = np.eye(3)
-    elif target_shape in ["fcc", "face-centered cubic"]:
-        target_metric = 0.5 * np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]])
-    if not norm:
-        norm = (np.linalg.det(cell) / np.linalg.det(target_metric))**(-1.0 / 3)
-    return np.linalg.norm(norm * cell - target_metric)
+    if target_shape in ["sc", "simple-cubic"] and norm is None:
+        eff_cubic_length = float(abs(np.linalg.det(cell)) ** (1 / 3))  # 'a_0' in docs
+        norm = 1/eff_cubic_length
+
+    elif target_shape in ["fcc", "face-centered cubic"] and norm is None:
+        # FCC is characterised by 60 degree angles & lattice vectors = 2**(1/6) times the eff cubic length
+        eff_fcc_length = eff_cubic_length * 2 ** (1 / 6)
+        norm = 1/eff_fcc_length
+
+    return np.sqrt(np.sum(((cell_lengths * norm) - 1) ** 2))  # rms difference to eff cubic/FCC length
 
 
 def find_optimal_cell_shape(

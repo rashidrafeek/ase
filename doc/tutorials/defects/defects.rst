@@ -174,17 +174,17 @@ repeating this exercise with::
 
 yields a less obvious result, namely
 
-.. math:: \mathbf{P}_2 = \left(\begin{array}{rrr} -5 & 5 & 5 \\ 5 & -4 & 5 \\ 5 & 5 & -4 \end{array}\right) \quad
+.. math:: \mathbf{P}_2 = \left(\begin{array}{rrr} -6 & 5 & 5 \\ 5 & -6 & 5 \\ 5 & 5 & -5 \end{array}\right) \quad
           \mathbf{h}_2 = a_0 \left(\begin{array}{ccc}  5 & 0 & 0 \\ 0.5 & 5 & 0.5 \\ 0.5 & 0.5 & 5 \end{array}\right),
 
 which indeed corresponds to a reasonably cubic cell shape. One can
 also obtain the optimality measure `\bar{\Delta}` by executing::
 
-   dev1 = get_deviation_from_optimal_cell_shape(np.dot(P1, conf.cell)
-   dev2 = get_deviation_from_optimal_cell_shape(np.dot(P2, conf.cell)
+   dev1 = get_deviation_from_optimal_cell_shape(np.dot(P1, conf.cell))
+   dev2 = get_deviation_from_optimal_cell_shape(np.dot(P2, conf.cell))
 
 which yields `\bar{\Delta}(\mathbf{P}_1)=0` and
-`\bar{\Delta}(\mathbf{P}_2)=0.201`.
+`\bar{\Delta}(\mathbf{P}_2)=0.0178`.
 
 Since this procedure requires only knowledge of the cell metric (and
 not the atomic positions) for standard metrics, e.g., fcc, bcc, and
