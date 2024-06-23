@@ -20,7 +20,8 @@ def get_deviation_from_optimal_cell_shape(cell, target_shape="sc", norm=None):
     cubic ('fcc') cell shapes.
 
     Replaced with code from the `doped` defect simulation package
-    (https://doped.readthedocs.io) to be rotationally invariant.
+    (https://doped.readthedocs.io) to be rotationally invariant,
+    boosting performance.
 
     Parameters:
 
@@ -59,26 +60,31 @@ def find_optimal_cell_shape(
     upper_limit=2,
     verbose=False,
 ):
-    """Returns the transformation matrix that produces a supercell
+    """
+    Returns the transformation matrix that produces a supercell
     corresponding to *target_size* unit cells with metric *cell* that
     most closely approximates the shape defined by *target_shape*.
 
-    Parameters:
+    Updated with code from the `doped` defect simulation package
+    (https://doped.readthedocs.io) to be rotationally invariant and
+    allow transformation matrices with negative determinants, boosting
+    performance.
 
-    cell: 2D array of floats
-        Metric given as a (3x3 matrix) of the input structure.
-    target_size: integer
-        Size of desired super cell in number of unit cells.
-    target_shape: str
-        Desired supercell shape. Can be 'sc' for simple cubic or
-        'fcc' for face-centered cubic.
-    lower_limit: int
-        Lower limit of search range.
-    upper_limit: int
-        Upper limit of search range.
-    verbose: bool
-        Set to True to obtain additional information regarding
-        construction of transformation matrix.
+    Parameters:
+        cell: 2D array of floats
+            Metric given as a (3x3 matrix) of the input structure.
+        target_size: integer
+            Size of desired super cell in number of unit cells.
+        target_shape: str
+            Desired supercell shape. Can be 'sc' for simple cubic or
+            'fcc' for face-centered cubic.
+        lower_limit: int
+            Lower limit of search range.
+        upper_limit: int
+            Upper limit of search range.
+        verbose: bool
+            Set to True to obtain additional information regarding
+            construction of transformation matrix.
 
     """
 
@@ -93,8 +99,7 @@ def find_optimal_cell_shape(
         print(target_metric)
 
     # Normalize cell metric to reduce computation time during looping
-    norm = (target_size * np.linalg.det(cell) /
-            np.linalg.det(target_metric))**(-1.0 / 3)
+    norm = (target_size * abs(np.linalg.det(cell)) / np.linalg.det(target_metric)) ** (-1.0 / 3)
     norm_cell = norm * cell
     if verbose:
         print("normalization factor (Q): %g" % norm)
@@ -128,6 +133,9 @@ def find_optimal_cell_shape(
     if optimal_P is None:
         print("Failed to find a transformation matrix.")
         return None
+
+    if np.all(optimal_P <= 0) or np.linalg.det(optimal_P) <= 0:
+        optimal_P *= -1  # flip signs if all negative or negative determinant (equivalent supercell)
 
     # Finalize.
     if verbose:
