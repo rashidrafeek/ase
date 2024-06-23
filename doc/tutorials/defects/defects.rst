@@ -35,9 +35,11 @@ procedure can be schematically depicted as follows:
 The calculation thus corresponds to a periodic arrangement of
 defects. Accordingly, care must be taken to keep the interactions
 between defects as small as possible, which generally calls for large
-supercells. It is furthermore indicated to maximize the defect-defect
-separation in *all* directions, which is in principle achieved if the
-supercell used has a suitable shape. Consider for illustration the
+supercells. Thus the typical goal for generating the simulation supercell
+for defect calculations is to maximize the defect-defect separation in
+*all* directions, for a reasonable number of atoms (and thus computational
+cost). In principle, we can do a good job of this by using a supercell
+with a suitable shape. Consider for illustration the
 following three 2D lattices with identical unit cell area but
 different lattice symmetry:
 
@@ -52,18 +54,19 @@ In the case of the square lattice, each defect has `Z_1=4`
 nearest neighbors at a distance of `r_1=a_0`, where
 `a_0=\sqrt{A}` with `A` being the unit cell area. By
 comparison in a rectangular lattice with an aspect ratio of 2:1, the
-defects are much closer to each other with `r_1 = 0.5 a_0` and
-`Z_1=2`. The largest defect-defect distance (at constant unit
+defects are much closer to each other with `r_1 = a_0/\sqrt{2}` and
+`Z_1=2`, where again `a_0` = `\sqrt{A}` (the 'effective cubic length').
+The largest defect-defect distance (at constant unit
 cell area) is obtained for the hexagonal lattice, which also
 correponds to the most closely packed 2D arrangement. Here, one
 obtains `r_1=\sqrt{2}/\sqrt[4]{3}=1.075 a_0` and
-`Z_1=6`. For defect calculation supercells corresponding to
+`Z_1=6`. For defect calculations, supercells corresponding to
 hexagonal or square lattices have thus clear advantages. This argument
 can be extended to 3D: Square lattices in 2D correspond to cubic
 lattices (supercells) in 3D with `r_1=a_0` and
 `Z_1=6`. The 3D analogue of the hexagonal 2D lattice are
-hexagonal and cubic close packed structures, both of which yield
-`r_1 = \sqrt{3}/2 a_0` and `Z_1=12`.
+hexagonal and cubic close packed structures (e.g FCC, HCP), both of which
+yield `r_1 = a_0/^6\sqrt{2} = 1.1225 a_0` and `Z_1=12`.
 
 It is straightforward to construct cubic or face-centered cubic (fcc,
 cubic closed packed) supercells for cubic materials (including e.g,
