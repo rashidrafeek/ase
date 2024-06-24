@@ -14,7 +14,7 @@ class Bussi(MolecularDynamics):
 
     Parameters
     ----------
-    atoms : Atoms object
+    atoms : Atoms
         The atoms object.
     timestep : float
         The time step in ASE time units.
@@ -22,7 +22,7 @@ class Bussi(MolecularDynamics):
         The desired temperature, in Kelvin.
     taut : float
         Time constant for Bussi temperature coupling in ASE time units.
-    rng : numpy.random.Generator (default np.random.default_rng())
+    rng : numpy.random, optional
         Random number generator.
     **md_kwargs : dict, optional
         Additional arguments passed to :class:~ase.md.md.MolecularDynamics
