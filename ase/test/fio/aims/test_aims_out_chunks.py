@@ -336,7 +336,7 @@ def test_default_calc_energy_raises_error(empty_calc_chunk):
     with pytest.raises(
         AimsParseError, match="No energy is associated with the structure."
     ):
-        getattr(empty_calc_chunk, "energy")
+        getattr(empty_calc_chunk, "total_energy")
 
 
 @pytest.mark.parametrize(
@@ -346,7 +346,6 @@ def test_default_calc_energy_raises_error(empty_calc_chunk):
         "stresses",
         "stress",
         "free_energy",
-        "total_energy",
         "n_iter",
         "magmom",
         "E_f",
