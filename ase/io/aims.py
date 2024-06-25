@@ -541,6 +541,8 @@ def write_control(fd, atoms, parameters, verbose_header=False):
                     "%f %f %f"))
         elif key in ("species_dir", "tier"):
             continue
+        elif key == "aims_command":
+            continue
         elif key == "plus_u":
             continue
         elif key == "smearing":
@@ -1237,7 +1239,7 @@ class AimsOutCalcChunk(AimsOutChunk):
         return line_start != LINE_NOT_FOUND
 
     @lazyproperty
-    def energy(self):
+    def total_energy(self):
         """Parse the energy from the aims.out file"""
         atoms = self._parse_atoms()
 
@@ -1420,7 +1422,7 @@ outputs to atoms.info"""
 
         atoms.calc = SinglePointDFTCalculator(
             atoms,
-            energy=self.energy,
+            energy=self.free_energy,
             free_energy=self.free_energy,
             forces=self.forces,
             stress=self.stress,
@@ -1436,8 +1438,9 @@ outputs to atoms.info"""
     def results(self):
         """Convert an AimsOutChunk to a Results Dictionary"""
         results = {
-            "energy": self.energy,
+            "energy": self.free_energy,
             "free_energy": self.free_energy,
+            "total_energy": self.total_energy,
             "forces": self.forces,
             "stress": self.stress,
             "stresses": self.stresses,
