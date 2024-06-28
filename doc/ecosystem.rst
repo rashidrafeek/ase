@@ -20,6 +20,13 @@ Listed in alphabetical order, for want of a better approach.
    and nanoparticles. ACAT also provides tools for structure generation 
    and global optimization of catalysts with and without adsorbates.
 
+ * `AGOX <https://gitlab.com/agox/agox/>_`:
+    The Atomistic Global Optimization X package contains a collection of 
+    tools for global optimization of atomic systems. The package allows 
+    running a variety of standard global optimization algorithms, such as random structure
+    search, basin-hopping in addition to machine-learning enhanced algorithms like 
+    GOFEE. Any ASE calculator can be used as the objective function for the optimization.
+
  * `atomicrex <https://atomicrex.org/>`_:
    atomicrex is a versatile tool for the construction of interatomic
    potential models. It includes a Python interface for integration
