@@ -34,7 +34,7 @@ meV = 0.001 * eV
 
 
 def parse_siesta_version(output: bytes) -> str:
-    match = re.search(rb'Siesta Version\s*:\s*(\S+)', output)
+    match = re.search(rb'Version\s*:\s*(\S+)', output)
 
     if match is None:
         raise RuntimeError('Could not get Siesta version info from output '
