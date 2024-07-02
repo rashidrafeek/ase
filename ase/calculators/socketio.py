@@ -6,7 +6,7 @@ from subprocess import PIPE, Popen
 import numpy as np
 
 import ase.units as units
-from ase.calculators.calculator import (ArgvProfile, Calculator,
+from ase.calculators.calculator import (StandardProfile, Calculator,
                                         OldShellProfile,
                                         PropertyNotImplementedError,
                                         all_changes)
@@ -231,12 +231,17 @@ class FileIOSocketClientLauncher:
         profile = getattr(self.calc, 'profile', None)
         if isinstance(self.calc, GenericFileIOCalculator):
             # New GenericFileIOCalculator:
+            template = getattr(self.calc, 'template')
 
             self.calc.write_inputfiles(atoms, properties)
             if unixsocket is not None:
-                argv = profile.socketio_argv_unix(socket=unixsocket)
+                argv = template.socketio_argv(
+                    profile, unixsocket=unixsocket, port=None
+                )
             else:
-                argv = profile.socketio_argv_inet(port=port)
+                argv = template.socketio_argv(
+                    profile, unixsocket=None, port=port
+                )
             return Popen(argv, cwd=cwd, env=os.environ)
         else:
             # Old FileIOCalculator:
@@ -249,7 +254,7 @@ class FileIOSocketClientLauncher:
             elif isinstance(profile, OldShellProfile):
                 cmd = profile.command.replace("PREFIX", self.calc.prefix)
                 return Popen(cmd, shell=True, cwd=cwd)
-            elif isinstance(profile, ArgvProfile):
+            elif isinstance(profile, StandardProfile):
                 return profile.execute_nonblocking(self.calc)
 
 

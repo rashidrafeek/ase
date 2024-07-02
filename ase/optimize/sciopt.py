@@ -39,7 +39,7 @@ class SciPyOptimizer(Optimizer):
             The Atoms object to relax.
 
         trajectory: string
-            Pickle file used to store trajectory of atomic movement.
+            Trajectory file used to store optimisation path.
 
         logfile: file object or str
             If *logfile* is a string, a file with that name will be opened.
@@ -208,7 +208,7 @@ class SciPyGradientlessOptimizer(Optimizer):
             The Atoms object to relax.
 
         trajectory: string
-            Pickle file used to store trajectory of atomic movement.
+            Trajectory file used to store optimisation path.
 
         logfile: file object or str
             If *logfile* is a string, a file with that name will be opened.
