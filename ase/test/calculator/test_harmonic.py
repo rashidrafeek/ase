@@ -1,6 +1,10 @@
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal
+try:
+    from numpy import trapezoid  # NumPy 2.0.0
+except ImportError:
+    from numpy import trapz as trapezoid
 
 from ase import Atoms
 from ase.calculators.calculator import CalculationFailed, CalculatorSetupError
@@ -266,7 +270,7 @@ def test_thermodynamic_integration():
                 e0, e1 = calc_linearCombi.get_energy_contributions(atoms)
                 ediffs[lamb].append(float(e1) - float(e0))
             ediffs[lamb] = np.mean(ediffs[lamb])
-    dA = np.trapz([ediffs[lamb] for lamb in lambs], x=lambs)  # anharm. corr.
+    dA = trapezoid([ediffs[lamb] for lamb in lambs], x=lambs)  # anharm. corr.
     assert -0.005 < dA < 0.005  # the MD run is to short for convergence
     if dA == 0.0:
         raise ValueError('there is most likely something wrong, but it could '

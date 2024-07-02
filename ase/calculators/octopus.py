@@ -19,17 +19,14 @@ class OctopusIOError(IOError):
 
 
 class OctopusProfile(BaseProfile):
-    def __init__(self, binary, **kwargs):
-        super().__init__(**kwargs)
-        self.binary = binary
-
     def get_calculator_command(self, inputfile):
-        return [self.binary]
+        return []
 
     def version(self):
         import re
         from subprocess import check_output
-        txt = check_output([self.binary, '--version'], encoding='ascii')
+        txt = check_output([*self._split_command, '--version'],
+                           encoding='ascii')
         match = re.match(r'octopus\s*(.+)', txt)
         # With MPI it prints the line for each rank, but we just match
         # the first line.
@@ -86,12 +83,7 @@ class Octopus(GenericFileIOCalculator):
 
     The label is always assumed to be a directory."""
 
-    def __init__(self,
-                 profile=None,
-                 directory='.',
-                 parallel_info=None,
-                 parallel=True,
-                 **kwargs):
+    def __init__(self, profile=None, directory='.', **kwargs):
         """Create Octopus calculator.
 
         Label is always taken as a subdirectory.
@@ -100,9 +92,7 @@ class Octopus(GenericFileIOCalculator):
         super().__init__(profile=profile,
                          template=OctopusTemplate(),
                          directory=directory,
-                         parameters=kwargs,
-                         parallel_info=parallel_info,
-                         parallel=parallel)
+                         parameters=kwargs)
 
     @classmethod
     def recipe(cls, **kwargs):

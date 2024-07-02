@@ -1,12 +1,12 @@
 import numpy as np
 import pytest
-
 from ase.atoms import Atoms
 from ase.build import bulk
 from ase.calculators.calculator import all_changes
 from ase.calculators.lj import LennardJones
 from ase.constraints import FixSymmetry
 from ase.filters import FrechetCellFilter, UnitCellFilter
+from ase.md.verlet import VelocityVerlet
 from ase.optimize.precon.lbfgs import PreconLBFGS
 from ase.spacegroup.symmetrize import check_symmetry, is_subgroup
 
@@ -87,6 +87,18 @@ def test_as_dict():
             'verbose': False,
         },
     }
+
+
+def test_fail_md():
+    atoms = bulk("Cu")
+    atoms.set_constraint(FixSymmetry(atoms))
+
+    atoms.calc = LennardJones()
+    # This will not fail if the user has no logfile specified
+    # a little bit weird...
+    with pytest.raises(NotImplementedError):
+        dyn = VelocityVerlet(atoms, timestep=1.0, logfile="-")
+        dyn.run(5)
 
 
 @pytest.fixture(params=[UnitCellFilter, FrechetCellFilter])

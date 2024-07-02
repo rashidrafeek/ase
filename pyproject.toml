@@ -5,14 +5,13 @@ build-backend = 'setuptools.build_meta'
 [project]
 name = 'ase'
 description='Atomic Simulation Environment'
-version = '3.23.0b1'  # Change also in ase/__init__.py
+version = '3.23.1b1'
 readme = 'README.rst'
 license = { text = 'LGPLv2.1+' }
 maintainers = [{ name = 'ASE Community', email = 'ase-users@listserv.fysik.dtu.dk' }]
 classifiers = [
     'Development Status :: 6 - Mature',
-    'License :: OSI Approved :: ',
-    'GNU Lesser General Public License v2 or later (LGPLv2+)',
+    'License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)',
     'Intended Audience :: Science/Research',
     'Operating System :: OS Independent',
     'Programming Language :: Python :: 3',
@@ -75,3 +74,27 @@ exclude_also = [
     'if TYPE_CHECKING:',
     'if __name__ == .__main__.:'
 ]
+
+[tool.ruff]
+line-length = 80
+exclude = ["./build/", "./dist", "./doc/build"]
+src = ["ase"]
+
+[tool.ruff.format]
+quote-style = "single"
+skip-magic-trailing-comma = false
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+ignore = ["E741"]
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 80
+max-doc-length = 80
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.isort]
+known-first-party = ["ase"]
+

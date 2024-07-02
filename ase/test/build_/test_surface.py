@@ -49,6 +49,11 @@ def test_surface():
     expected_length = 4.05 * 3**0.5  # for FCC with a=4.05
     assert math.isclose(surface_fcc.cell[2][2], expected_length)
 
+    # This test checks the tags
+    print(surface_fcc.get_tags())
+    tags = np.array([3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1])
+    np.testing.assert_array_equal(surface_fcc.get_tags(), tags)
+
 
 @pytest.mark.parametrize("vacuum", [None, 10.0])
 def test_others(vacuum):

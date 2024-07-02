@@ -285,14 +285,22 @@ class OpenMX(FileIOCalculator):
         pbs_Name = get_file_name('', self.label)
         files = [
             # prefix+'.out',#prefix+'.dat',#prefix+'.BAND*',
-            fileName + '.cif', fileName + '.dden.cube', fileName + \
-            '.ene', fileName + '.md', fileName + '.md2',
-            fileName + '.tden.cube', fileName + '.sden.cube', fileName + \
-            '.v0.cube', fileName + '.v1.cube',
-            fileName + '.vhart.cube', fileName + '.den0.cube', fileName + \
-            '.bulk.xyz', fileName + '.den1.cube',
-            fileName + '.xyz', pbs_Name + '.o' + \
-            str(queue_num), pbs_Name + '.e' + str(queue_num)
+            fileName + '.cif',
+            fileName + '.dden.cube',
+            fileName + '.ene',
+            fileName + '.md',
+            fileName + '.md2',
+            fileName + '.tden.cube',
+            fileName + '.sden.cube',
+            fileName + '.v0.cube',
+            fileName + '.v1.cube',
+            fileName + '.vhart.cube',
+            fileName + '.den0.cube',
+            fileName + '.bulk.xyz',
+            fileName + '.den1.cube',
+            fileName + '.xyz',
+            pbs_Name + '.o' + str(queue_num),
+            pbs_Name + '.e' + str(queue_num)
         ]
         for f in files:
             try:

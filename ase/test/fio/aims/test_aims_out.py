@@ -139,6 +139,8 @@ def test_parse_singlepoint(testdir):
 
     results = read_aims_results(parent / "testdata/aims/singlepoint.out")
     assert np.allclose(results["forces"], f0)
+    assert np.abs(results["total_energy"] + 2.06302072675943e03) < 1e-15
+    assert np.abs(results["free_energy"] + 2.06302072675943e03) < 1e-15
     assert np.abs(results["energy"] + 2.06302072675943e03) < 1e-15
 
 
