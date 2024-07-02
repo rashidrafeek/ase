@@ -20,7 +20,7 @@ Listed in alphabetical order, for want of a better approach.
    and nanoparticles. ACAT also provides tools for structure generation 
    and global optimization of catalysts with and without adsorbates.
 
- * `AGOX <https://gitlab.com/agox/agox/>_`:
+ * `AGOX <https://gitlab.com/agox/agox/>`_:
     The Atomistic Global Optimization X package contains a collection of 
     tools for global optimization of atomic systems. The package allows 
     running a variety of standard global optimization algorithms, such as random structure
