@@ -105,7 +105,7 @@ Listed in alphabetical order, for want of a better approach.
    A flexible platform for high-throughput, database-driven computational 
    materials science and quantum chemistry workflows built around ASE.
 
- * `SchNet Pack <https://github.com/Quantum-Accelerators/quacc>`_:
+ * `SchNet Pack <https://github.com/atomistic-machine-learning/schnetpack>`_:
    Deep Neural Networks for Atomistic Systems
 
  * `Sella <https://github.com/zadorlab/sella>`_:
