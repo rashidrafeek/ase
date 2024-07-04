@@ -39,7 +39,7 @@ EXP_FORMAT = '5.2e'
 def check_ichain(ichain, ediffg, iopt):
     ichain_dct = {}
     if ichain > 0:
-        ichain_dct['ibrion'] = 1
+        ichain_dct['ibrion'] = 3
         ichain_dct['potim'] = 0.0
         if iopt is None:
             warnings.warn(
