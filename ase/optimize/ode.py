@@ -167,7 +167,7 @@ def ode12r(f, X0, h=None, verbose=1, fmax=1e-6, maxtol=1e3, steps=100,
             debug(f"ODE12r:      reject: new h = {h}")
             debug(f"ODE12r:               |Fnew| = {Rp_new}")
             debug(f"ODE12r:               |Fold| = {Rp}")
-            debug(f"ODE12r:        |Fnew|/|Fold| = {Rp_new/Rp}")
+            debug(f"ODE12r:        |Fnew|/|Fold| = {Rp_new / Rp}")
 
         # abort if step size is too small
         if abs(h) <= hmin:

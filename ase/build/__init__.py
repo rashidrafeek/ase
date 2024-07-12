@@ -37,5 +37,4 @@ __all__ = ['minimize_rotation_and_translation',
            'separate', 'split_bond',
            'get_deviation_from_optimal_cell_shape',
            'find_optimal_cell_shape',
-           'find_optimal_cell_shape_pure_python',
            'make_supercell']
