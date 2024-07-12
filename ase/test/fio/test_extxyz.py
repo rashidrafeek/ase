@@ -349,7 +349,7 @@ def test_constraints(constraint):
         assert np.all(constraint2[0].mask)
         assert np.all(constraint2[1].mask == constraint.mask)
         assert np.all(constraint2[2].mask)
-    elif cls == list:
+    elif cls is list:
         assert len(constraint2) == len(atoms)
         assert np.all(constraint2[0].mask == constraint[0].mask)
         assert np.all(constraint2[1].mask)
