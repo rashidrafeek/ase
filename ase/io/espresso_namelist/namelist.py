@@ -60,18 +60,18 @@ class Namelist(UserDict):
         pwi = []
         for key, value in self.items():
             if isinstance(value, (Namelist, dict)):
-                pwi.append(f"{' '* indent}&{key.upper()}\n")
+                pwi.append(f"{' ' * indent}&{key.upper()}\n")
                 pwi.extend(Namelist.to_string(value, indent=indent + 3))
-                pwi.append(f"{' '* indent}/\n")
+                pwi.append(f"{' ' * indent}/\n")
             else:
                 if value is True:
-                    pwi.append(f"{' '* indent}{key:16} = .true.\n")
+                    pwi.append(f"{' ' * indent}{key:16} = .true.\n")
                 elif value is False:
-                    pwi.append(f"{' '* indent}{key:16} = .false.\n")
+                    pwi.append(f"{' ' * indent}{key:16} = .false.\n")
                 elif isinstance(value, Path):
-                    pwi.append(f"{' '* indent}{key:16} = '{value}'\n")
+                    pwi.append(f"{' ' * indent}{key:16} = '{value}'\n")
                 else:
-                    pwi.append(f"{' '* indent}{key:16} = {value!r}\n")
+                    pwi.append(f"{' ' * indent}{key:16} = {value!r}\n")
         if list_form:
             return pwi
         else:
