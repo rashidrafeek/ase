@@ -484,7 +484,7 @@ def format_aims_control_parameter(key, value, format="%s"):
     str
         The properly formatted line for the aims control.in
     """
-    return f"{key :35s}" + (format % value) + "\n"
+    return f"{key:35s}" + (format % value) + "\n"
 
 
 # Write aims control.in files
