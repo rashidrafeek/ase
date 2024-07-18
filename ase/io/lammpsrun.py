@@ -316,6 +316,8 @@ def read_lammps_dump_text(fileobj, index=-1, **kwargs):
             colnames = line.split()[2:]
             datarows = [lines.popleft() for _ in range(n_atoms)]
             data = np.loadtxt(datarows, dtype=str)
+            if data.ndim == 1:
+                data = np.array([data])
             out_atoms = lammps_data_to_ase_atoms(
                 data=data,
                 colnames=colnames,
