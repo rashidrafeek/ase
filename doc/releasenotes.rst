@@ -9,7 +9,8 @@ Git master branch
 
 :git:`master <>`.
 
-* No changes yet
+* Improved :func:`~ase.build.find_optimal_cell_shape` to be rotationally
+  invariant (:mr:`3404`)
 
 
 Version 3.23.0

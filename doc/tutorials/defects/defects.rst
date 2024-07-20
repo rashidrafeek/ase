@@ -65,8 +65,8 @@ hexagonal or square lattices have thus clear advantages. This argument
 can be extended to 3D: Square lattices in 2D correspond to cubic
 lattices (supercells) in 3D with `r_1=a_0` and
 `Z_1=6`. The 3D analogue of the hexagonal 2D lattice are
-hexagonal and cubic close packed structures (e.g FCC, HCP), both of which
-yield `r_1 = a_0/^6\sqrt{2} = 1.1225 a_0` and `Z_1=12`.
+hexagonal and cubic close packed structures (i.e. FCC, HCP), both of which
+yield `r_1 = \sqrt[6]{2} a_0 \approx 1.1225 a_0` and `Z_1=12`.
 
 It is straightforward to construct cubic or face-centered cubic (fcc,
 cubic closed packed) supercells for cubic materials (including e.g,
@@ -194,41 +194,26 @@ simple cubic one can generate series of shapes that are usable for
 supercell build using a primitive FCC cell are directly applicable to
 diamond and zincblende lattices.
 
-For convenience the `\mathbf{P}_\text{opt}` matrices for the
-aforementioned lattices have already been generated for
-`N_{uc}\leq2000` and are provided here as dictionaries in `json
-<https://en.wikipedia.org/wiki/JSON>`_ format.
-
- * Transformation of face-centered cubic metric to simple cubic-like shapes: :download:`Popt-fcc2sc.json`
- * Transformation of face-centered cubic metric to face-centered cubic-like shapes: :download:`Popt-fcc2fcc.json`
- * Transformation of body-centered cubic metric to simple cubic-like shapes: :download:`Popt-bcc2sc.json`
- * Transformation of body-centered cubic metric to face-centered cubic-like shapes: :download:`Popt-bcc2fcc.json`
- * Transformation of simple cubic metric to simple cubic-like shapes: :download:`Popt-sc2sc.json`
- * Transformation of simple cubic metric to face-centered cubic-like shapes: :download:`Popt-sc2fcc.json`
-
-The thus obtained `\bar{\Delta}` values are shown as a function
-of the number of unit cells `N_{uc}` in the panel below, which
-demonstrates that this approach provides access to a large number of
-supercells with e.g., simple cubic or face-centered cubic shapes that
-span the range between the "exact" solutions, for which
-`\bar{\Delta}=0`. The algorithm is, however, most useful for
+For illustration, the `\bar{\Delta}` values for supercells of SC, FCC
+and BCC lattices with SC/FCC target shapes are shown as a function of
+the number of unit cells `N_{uc}\leq2000` in the panel below (taken
+from :mr:`3404`). The algorithm is, however, most useful for
 non-cubic cell shapes, for which finding several reasonably sized cell
-shapes is more challenging as illustrated for a hexagonal material
+shapes is more challenging, as illustrated for a hexagonal material
 (LaBr\ :sub:`3`) in [Erhart]_.
 
-.. image:: score-size-sc2sc.svg
-   :width: 30%
-.. image:: score-size-fcc2sc.svg
-   :width: 30%
-.. image:: score-size-bcc2sc.svg
-   :width: 30%
-.. image:: score-size-sc2fcc.svg
-   :width: 30%
-.. image:: score-size-fcc2fcc.svg
-   :width: 30%
-.. image:: score-size-bcc2fcc.svg
-   :width: 30%
+.. image:: https://gitlab.com/-/project/470007/uploads/5c52f1b09cfd8f82c3b8453f45762d4f/image.png
 
+
+.. note::
+    For unit cells with more complex space groups, this approach can be cumbersome due
+    to the implementation which loops over many possible transformation matrices. The
+    `find_optimal_cell_shape <https://doped.readthedocs.io/en/latest/doped.utils.html#doped.utils.supercells.find_optimal_cell_shape>`_
+    function in `doped <https://doped.readthedocs.io>`_ implements the same algorithm with
+    some efficiency improvements (~100x compute time speedup), and offers an efficient
+    `algorithm <https://doped.readthedocs.io/en/latest/doped.utils.html#doped.utils.supercells.find_ideal_supercell>`_
+    for *directly* optimising the periodic defect-defect distance (~10-50% improvements);
+    see [Kavanagh]_ or the ``doped`` `tutorials <https://doped.readthedocs.io/en/latest/generation_tutorial.html>`_.
    
 Generation of supercell
 -----------------------
@@ -252,3 +237,8 @@ follows::
    First-principles study of codoping in lanthanum bromide,
    Phys. Rev. B, Vol **91**, 165206 (2012),
    :doi:`10.1103/PhysRevB.91.165206`; Appendix C
+
+.. [Kavanagh] S. R. Kavanagh et al.
+   doped: Python toolkit for robust and repeatable charged defect supercell calculations
+   J. Open Source Softw, 9(**96**), 6433 (2024),
+   :doi:`10.21105/joss.06433`
