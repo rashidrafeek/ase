@@ -313,10 +313,9 @@ class Optimizer(Dynamics):
         logfile: Optional[Union[IO, str]] = None,
         trajectory: Optional[str] = None,
         append_trajectory: bool = False,
-        force_consistent=_deprecated,
         **kwargs,
     ):
-        """Structure optimizer object.
+        """
 
         Parameters
         ----------
@@ -338,17 +337,10 @@ class Optimizer(Dynamics):
         append_trajectory: bool
             Appended to the trajectory file instead of overwriting it.
 
-        force_consistent: bool or None
-            Use force-consistent energy calls (as opposed to the energy
-            extrapolated to 0 K). If force_consistent=None, uses
-            force-consistent energies if available in the calculator, but
-            falls back to force_consistent=False if not.
-
         kwargs : dict, optional
             Extra arguments passed to :class:`~ase.optimize.optimize.Dynamics`.
-        """
-        self.check_deprecated(force_consistent)
 
+        """
         super().__init__(
             atoms=atoms,
             logfile=logfile,
@@ -366,17 +358,6 @@ class Optimizer(Dynamics):
         else:
             self.read()
             self.comm.barrier()
-
-    @classmethod
-    def check_deprecated(cls, force_consistent):
-        if force_consistent is cls._deprecated:
-            return False
-
-        warnings.warn(
-            'force_consistent keyword is deprecated and will '
-            'be ignored.  This will raise an error in future versions '
-            'of ASE.',
-            FutureWarning)
 
     def read(self):
         raise NotImplementedError
