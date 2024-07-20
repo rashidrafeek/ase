@@ -315,9 +315,7 @@ def read_lammps_dump_text(fileobj, index=-1, **kwargs):
         if "ITEM: ATOMS" in line:
             colnames = line.split()[2:]
             datarows = [lines.popleft() for _ in range(n_atoms)]
-            data = np.loadtxt(datarows, dtype=str)
-            if data.ndim == 1:
-                data = np.array([data])
+            data = np.loadtxt(datarows, dtype=str, ndmin=2)
             out_atoms = lammps_data_to_ase_atoms(
                 data=data,
                 colnames=colnames,
