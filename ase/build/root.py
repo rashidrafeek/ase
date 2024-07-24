@@ -1,6 +1,8 @@
-from math import log10, atan2, cos, sin
-from ase.build import hcp0001, fcc111, bcc111
+from math import atan2, cos, log10, sin
+
 import numpy as np
+
+from ase.build import bcc111, fcc111, hcp0001
 
 
 def hcp0001_root(symbol, root, size, a=None, c=None,
