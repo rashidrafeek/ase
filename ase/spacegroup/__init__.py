@@ -1,7 +1,7 @@
 from ase.spacegroup.crystal_data import (
-                                         get_bravais_class,
-                                         get_point_group,
-                                         polar_space_group,
+    get_bravais_class,
+    get_point_group,
+    polar_space_group,
 )
 from ase.spacegroup.spacegroup import Spacegroup, get_spacegroup
 from ase.spacegroup.xtal import crystal
