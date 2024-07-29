@@ -484,7 +484,7 @@ def format_aims_control_parameter(key, value, format="%s"):
     str
         The properly formatted line for the aims control.in
     """
-    return f"{key :35s}" + (format % value) + "\n"
+    return f"{key:35s}" + (format % value) + "\n"
 
 
 # Write aims control.in files
@@ -540,6 +540,8 @@ def write_control(fd, atoms, parameters, verbose_header=False):
                     tuple(dk),
                     "%f %f %f"))
         elif key in ("species_dir", "tier"):
+            continue
+        elif key == "aims_command":
             continue
         elif key == "plus_u":
             continue
@@ -1237,7 +1239,7 @@ class AimsOutCalcChunk(AimsOutChunk):
         return line_start != LINE_NOT_FOUND
 
     @lazyproperty
-    def energy(self):
+    def total_energy(self):
         """Parse the energy from the aims.out file"""
         atoms = self._parse_atoms()
 
@@ -1401,7 +1403,7 @@ class AimsOutCalcChunk(AimsOutChunk):
                 self.lines[occ_start + 1:occ_start + self.n_bands + 1]
             ):
                 if "***" in line:
-                    warn_msg = f"The {ll+1}th eigenvalue for the "
+                    warn_msg = f"The {ll + 1}th eigenvalue for the "
                     "{kpt_ind+1}th k-point and {spin}th channels could "
                     "not be read (likely too large to be printed "
                     "in the output file)"
@@ -1420,7 +1422,7 @@ outputs to atoms.info"""
 
         atoms.calc = SinglePointDFTCalculator(
             atoms,
-            energy=self.energy,
+            energy=self.free_energy,
             free_energy=self.free_energy,
             forces=self.forces,
             stress=self.stress,
@@ -1436,8 +1438,9 @@ outputs to atoms.info"""
     def results(self):
         """Convert an AimsOutChunk to a Results Dictionary"""
         results = {
-            "energy": self.energy,
+            "energy": self.free_energy,
             "free_energy": self.free_energy,
+            "total_energy": self.total_energy,
             "forces": self.forces,
             "stress": self.stress,
             "stresses": self.stresses,

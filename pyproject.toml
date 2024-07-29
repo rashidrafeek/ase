@@ -85,8 +85,17 @@ quote-style = "single"
 skip-magic-trailing-comma = false
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F"]
-ignore = ["E741"]
+preview = true  # necessary to activate many pycodestyle rules
+select = [
+    "F",  # Pyflakes
+    "E",  # pycodestyle
+    "W",  # pycodestyle
+]
+ignore = [
+    "F841",  # unused-variable
+    "E741",  # ambiguous-variable-name
+    "W505",  # doc-line-too-long
+]
 
 [tool.ruff.lint.pycodestyle]
 max-line-length = 80

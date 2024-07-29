@@ -518,7 +518,7 @@ def write_lammps_data(
         for i, r in enumerate(pos):
             s = species.index(symbols[i]) + 1
             line = (
-                f'{i+1:>6} {s:>3}'
+                f'{i + 1:>6} {s:>3}'
                 f' {r[0]:23.17g} {r[1]:23.17g} {r[2]:23.17g}'
             )
             if write_image_flags:
@@ -534,7 +534,7 @@ def write_lammps_data(
         for i, (q, r) in enumerate(zip(charges, pos)):
             s = species.index(symbols[i]) + 1
             line = (
-                f'{i+1:>6} {s:>3} {q:>5}'
+                f'{i + 1:>6} {s:>3} {q:>5}'
                 f' {r[0]:23.17g} {r[1]:23.17g} {r[2]:23.17g}'
             )
             if write_image_flags:
@@ -581,7 +581,7 @@ def write_lammps_data(
         for i, (m, q, r) in enumerate(zip(molecules, charges, pos)):
             s = species.index(symbols[i]) + 1
             line = (
-                f'{i+1:>6} {m:>3} {s:>3} {q:>5}'
+                f'{i + 1:>6} {m:>3} {s:>3} {q:>5}'
                 f' {r[0]:23.17g} {r[1]:23.17g} {r[2]:23.17g}'
             )
             if write_image_flags:
@@ -595,7 +595,7 @@ def write_lammps_data(
                 bond_type = bonds_in[i][0]
                 at1 = bonds_in[i][1]
                 at2 = bonds_in[i][2]
-                fd.write(f'{i+1:>3} {bond_type:>3} {at1:>3} {at2:>3}\n')
+                fd.write(f'{i + 1:>3} {bond_type:>3} {at1:>3} {at2:>3}\n')
     else:
         raise ValueError(atom_style)
 
@@ -605,7 +605,7 @@ def write_lammps_data(
         # Convert velocity from ASE units to LAMMPS units
         vel = convert(vel, 'velocity', 'ASE', units)
         for i, v in enumerate(vel):
-            fd.write(f'{i+1:>6} {v[0]:23.17g} {v[1]:23.17g} {v[2]:23.17g}\n')
+            fd.write(f'{i + 1:>6} {v[0]:23.17g} {v[1]:23.17g} {v[2]:23.17g}\n')
 
     fd.flush()
 

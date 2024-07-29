@@ -77,37 +77,41 @@ class Dynamics(IOContext):
         append_trajectory: bool = False,
         master: Optional[bool] = None,
         comm=world,
+        *,
+        loginterval: int = 1,
     ):
         """Dynamics object.
 
-        Parameters:
-
-        atoms: Atoms object
+        Parameters
+        ----------
+        atoms : Atoms object
             The Atoms object to operate on.
 
-        logfile: file object or str
+        logfile : file object or str
             If *logfile* is a string, a file with that name will be opened.
             Use '-' for stdout.
 
-        trajectory: Trajectory object or str
+        trajectory : Trajectory object or str
             Attach trajectory object.  If *trajectory* is a string a
             Trajectory will be constructed.  Use *None* for no
             trajectory.
 
-        append_trajectory: boolean
+        append_trajectory : bool
             Defaults to False, which causes the trajectory file to be
             overwriten each time the dynamics is restarted from scratch.
             If True, the new structures are appended to the trajectory
             file instead.
 
-        master: boolean
+        master : bool
             Defaults to None, which causes only rank 0 to save files. If set to
             true, this rank will save files.
 
-        comm: Communicator object
+        comm : Communicator object
             Communicator to handle parallel file reading and writing.
-        """
 
+        loginterval : int, default: 1
+            Only write a log line for every *loginterval* time steps.
+        """
         self.atoms = atoms
         self.optimizable = atoms.__ase_optimizable__()
         self.logfile = self.openfile(file=logfile, comm=comm, mode='a')
@@ -123,7 +127,11 @@ class Dynamics(IOContext):
                 trajectory = self.closelater(Trajectory(
                     trajectory, mode=mode, master=master, comm=comm
                 ))
-            self.attach(trajectory, atoms=self.optimizable)
+            self.attach(
+                trajectory,
+                interval=loginterval,
+                atoms=self.optimizable,
+            )
 
         self.trajectory = trajectory
 
@@ -304,16 +312,14 @@ class Optimizer(Dynamics):
         restart: Optional[str] = None,
         logfile: Optional[Union[IO, str]] = None,
         trajectory: Optional[str] = None,
-        master: Optional[bool] = None,
-        comm=world,
         append_trajectory: bool = False,
-        force_consistent=_deprecated,
+        **kwargs,
     ):
-        """Structure optimizer object.
+        """
 
-        Parameters:
-
-        atoms: Atoms object
+        Parameters
+        ----------
+        atoms: :class:`~ase.Atoms`
             The Atoms object to relax.
 
         restart: str
@@ -328,31 +334,20 @@ class Optimizer(Dynamics):
             Trajectory will be constructed. Use *None* for no
             trajectory.
 
-        master: boolean
-            Defaults to None, which causes only rank 0 to save files. If
-            set to true, this rank will save files.
-
-        comm: Communicator object
-            Communicator to handle parallel file reading and writing.
-
-        append_trajectory: boolean
+        append_trajectory: bool
             Appended to the trajectory file instead of overwriting it.
 
-        force_consistent: boolean or None
-            Use force-consistent energy calls (as opposed to the energy
-            extrapolated to 0 K). If force_consistent=None, uses
-            force-consistent energies if available in the calculator, but
-            falls back to force_consistent=False if not.
-        """
-        self.check_deprecated(force_consistent)
+        kwargs : dict, optional
+            Extra arguments passed to :class:`~ase.optimize.optimize.Dynamics`.
 
+        """
         super().__init__(
             atoms=atoms,
             logfile=logfile,
             trajectory=trajectory,
             append_trajectory=append_trajectory,
-            master=master,
-            comm=comm)
+            **kwargs,
+        )
 
         self.restart = restart
 
@@ -363,17 +358,6 @@ class Optimizer(Dynamics):
         else:
             self.read()
             self.comm.barrier()
-
-    @classmethod
-    def check_deprecated(cls, force_consistent):
-        if force_consistent is cls._deprecated:
-            return False
-
-        warnings.warn(
-            'force_consistent keyword is deprecated and will '
-            'be ignored.  This will raise an error in future versions '
-            'of ASE.',
-            FutureWarning)
 
     def read(self):
         raise NotImplementedError

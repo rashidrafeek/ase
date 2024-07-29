@@ -11,6 +11,7 @@ Git master branch
 
 * Improved :func:`~ase.build.find_optimal_cell_shape` to be rotationally
   invariant (:mr:`3404`)
+* Added :class:`ase.md.bussi.Bussi` (:mr:`3350`)
 
 
 Version 3.23.0
