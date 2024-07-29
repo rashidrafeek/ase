@@ -41,7 +41,7 @@ def get_deviation_from_optimal_cell_shape(cell, target_shape="sc", norm=None):
     """
     cell_lengths = np.linalg.norm(cell, axis=1)
     eff_cubic_length = float(abs(np.linalg.det(cell)) ** (1 / 3))  # 'a_0'
-    
+
     if target_shape == 'sc' and norm is None:
         norm = 1 / eff_cubic_length
 
@@ -98,7 +98,7 @@ def find_optimal_cell_shape(
     """
 
     # Set up target metric
-    if target_shape== 'sc':
+    if target_shape == 'sc':
         target_metric = np.eye(3)
     elif target_shape == 'fcc':
         target_metric = 0.5 * np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]],

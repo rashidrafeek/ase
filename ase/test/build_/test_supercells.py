@@ -111,7 +111,9 @@ def test_get_deviation_from_optimal_cell_shape():
     ):
         permuted_cell = [cell[i] * factor for i in perm]
         assert np.isclose(
-            get_deviation_from_optimal_cell_shape(permuted_cell, target_shape="sc"), 0.0
+            get_deviation_from_optimal_cell_shape(
+                permuted_cell, target_shape="sc"
+            ), 0.0
         )
 
     # likewise for FCC:
@@ -120,17 +122,21 @@ def test_get_deviation_from_optimal_cell_shape():
                                           range(1, 9)):
         permuted_cell = [cell[i] * factor for i in perm]
         assert np.isclose(
-            get_deviation_from_optimal_cell_shape(permuted_cell, target_shape="fcc"),
+            get_deviation_from_optimal_cell_shape(
+                permuted_cell, target_shape="fcc"
+            ),
             0.0,
         )
 
     # spot check some cases:
     cell = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 2]])
-    assert np.isclose(get_deviation_from_optimal_cell_shape(cell, "sc"), 0.6558650332)
+    assert np.isclose(get_deviation_from_optimal_cell_shape(cell, "sc"),
+                      0.6558650332)
 
     # fcc
     cell = np.array([[0, 1, 1], [1, 0, 1], [2, 2, 0]])
-    assert np.isclose(get_deviation_from_optimal_cell_shape(cell, "fcc"), 0.6558650332)
+    assert np.isclose(get_deviation_from_optimal_cell_shape(cell, "fcc"),
+                      0.6558650332)
 
     # negative determinant
     cell = np.array([[-1, 0, 0], [0, -1, 0], [0, 0, -1]])
