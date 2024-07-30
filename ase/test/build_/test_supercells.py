@@ -5,9 +5,9 @@ import pytest
 
 from ase.build import bulk
 from ase.build.supercells import (
-    make_supercell,
-    get_deviation_from_optimal_cell_shape,
     find_optimal_cell_shape,
+    get_deviation_from_optimal_cell_shape,
+    make_supercell,
 )
 
 
