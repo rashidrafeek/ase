@@ -614,10 +614,9 @@ xz and yz are the tilt of the lattice vectors, all to be edited.
 
         # set charges in LAMMPS if any
         charges = atoms.get_initial_charges()
-        if np.any(charges!=0):
-            for i,q in enumerate(charges):
-                cmd = "set atom {} charge {}".format(i+1, q)
-                self.lmp.command(cmd)
+        if np.any(charges != 0):
+            for i, q in enumerate(charges):
+                self.lmp.command(f'set atom {i + 1} charge {q}')
     
         self.previous_atoms_numbers = atoms.numbers.copy()
 
