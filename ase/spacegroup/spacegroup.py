@@ -56,55 +56,86 @@ class Spacegroup:
            [ 0.5,  0. ,  0.5],
            [ 0.5,  0.5,  0. ]])
     """
-    no = property(
-        lambda self: self._no,
-        doc='Space group number in International Tables of Crystallography.')
-    symbol = property(
-        lambda self: self._symbol,
-        doc='Hermann-Mauguin (or international) symbol for the space group.')
-    setting = property(lambda self: self._setting,
-                       doc='Space group setting. Either one or two.')
-    lattice = property(lambda self: self._symbol[0],
-                       doc="""Lattice type:
+    @property
+    def no(self):
+        """Space group number in International Tables of Crystallography."""
+        return self._no
 
-    P     primitive
-    I     body centering, h+k+l=2n
-    F     face centering, h,k,l all odd or even
-    A,B,C single face centering, k+l=2n, h+l=2n, h+k=2n
-    R     rhombohedral centering, -h+k+l=3n (obverse); h-k+l=3n (reverse)
-            """)
-    centrosymmetric = property(lambda self: self._centrosymmetric,
-                               doc='Whether a center of symmetry exists.')
-    scaled_primitive_cell = property(
-        lambda self: self._scaled_primitive_cell,
-        doc='Primitive cell in scaled coordinates as a matrix with the '
-        'primitive vectors along the rows.')
-    reciprocal_cell = property(
-        lambda self: self._reciprocal_cell,
-        doc='Tree Miller indices that span all kinematically non-forbidden '
-        'reflections as a matrix with the Miller indices along the rows.')
-    nsubtrans = property(lambda self: len(self._subtrans),
-                         doc='Number of cell-subtranslation vectors.')
+    @property
+    def symbol(self):
+        """Hermann-Mauguin (or international) symbol for the space group."""
+        return self._symbol
 
-    def _get_nsymop(self):
-        """Returns total number of symmetry operations."""
-        if self.centrosymmetric:
-            return 2 * len(self._rotations) * len(self._subtrans)
-        else:
-            return len(self._rotations) * len(self._subtrans)
+    @property
+    def setting(self):
+        """Space group setting. Either one or two."""
+        return self._setting
 
-    nsymop = property(_get_nsymop, doc='Total number of symmetry operations.')
-    subtrans = property(
-        lambda self: self._subtrans,
-        doc='Translations vectors belonging to cell-sub-translations.')
-    rotations = property(
-        lambda self: self._rotations,
-        doc='Symmetry rotation matrices. The invertions are not included '
-        'for centrosymmetrical crystals.')
-    translations = property(
-        lambda self: self._translations,
-        doc='Symmetry translations. The invertions are not included '
-        'for centrosymmetrical crystals.')
+    @property
+    def lattice(self):
+        """Lattice type.
+
+        P     primitive
+        I     body centering, h+k+l=2n
+        F     face centering, h,k,l all odd or even
+        A,B,C single face centering, k+l=2n, h+l=2n, h+k=2n
+        R     rhombohedral centering, -h+k+l=3n (obverse); h-k+l=3n (reverse)
+        """
+        return self._symbol[0]
+
+    @property
+    def centrosymmetric(self):
+        """Whether a center of symmetry exists."""
+        return self._centrosymmetric
+
+    @property
+    def scaled_primitive_cell(self):
+        """Primitive cell in scaled coordinates.
+
+        Matrix with the primitive vectors along the rows.
+        """
+        return self._scaled_primitive_cell
+
+    @property
+    def reciprocal_cell(self):
+        """
+
+        Tree Miller indices that span all kinematically non-forbidden
+        reflections as a matrix with the Miller indices along the rows.
+        """
+        return self._reciprocal_cell
+
+    @property
+    def nsubtrans(self):
+        """Number of cell-subtranslation vectors."""
+        return len(self._subtrans)
+
+    @property
+    def nsymop(self):
+        """Total number of symmetry operations."""
+        scale = 2 if self.centrosymmetric else 1
+        return scale * len(self._rotations) * len(self._subtrans)
+
+    @property
+    def subtrans(self):
+        """Translations vectors belonging to cell-sub-translations."""
+        return self._subtrans
+
+    @property
+    def rotations(self):
+        """Symmetry rotation matrices.
+
+        The invertions are not included for centrosymmetrical crystals.
+        """
+        return self._rotations
+
+    @property
+    def translations(self):
+        """Symmetry translations.
+
+        The invertions are not included for centrosymmetrical crystals.
+        """
+        return self._translations
 
     def __init__(self, spacegroup: _SPACEGROUP, setting=1, datafile=None):
         """Returns a new Spacegroup instance.
