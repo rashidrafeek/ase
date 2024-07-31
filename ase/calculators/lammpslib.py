@@ -613,11 +613,13 @@ xz and yz are the tilt of the lattice vectors, all to be edited.
             cmd = f"set atom {i} type {i_type}"
             self.lmp.command(cmd)
 
-        # set charges in LAMMPS if any
-        charges = atoms.get_initial_charges()
-        if np.any(charges != 0):
-            for i, q in enumerate(charges):
-                self.lmp.command(f'set atom {i + 1} charge {q}')
+        # set charges only when LAMMPS `atom_style` permits charges
+        # https://docs.lammps.org/Library_properties.html#extract-atom-flags
+        if self.lmp.extract_setting('q_flag') == 1:
+            charges = atoms.get_initial_charges()
+            if np.any(charges != 0.0):
+                for i, q in enumerate(charges):
+                    self.lmp.command(f'set atom {i + 1} charge {q}')
 
         self.previous_atoms_numbers = atoms.numbers.copy()
 
