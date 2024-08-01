@@ -436,9 +436,10 @@ class Spacegroup:
         sites = []
 
         scaled = np.array(scaled_positions, ndmin=2)
+        symop = self.get_symop()
 
         for kind, pos in enumerate(scaled):
-            for rot, trans in self.get_symop():
+            for rot, trans in symop:
                 site = np.mod(np.dot(rot, pos) + trans, 1.)
                 if not sites:
                     sites.append(site)
