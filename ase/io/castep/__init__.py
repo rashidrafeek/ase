@@ -25,7 +25,7 @@ from ase.geometry.cell import cellpar_to_cell
 from ase.io.castep.castep_reader import read_castep_castep
 from ase.parallel import paropen
 from ase.spacegroup import Spacegroup
-from ase.utils import atoms_to_spglib_cell, reader
+from ase.utils import atoms_to_spglib_cell, reader, writer
 
 units_ase = {
     'hbar': ase.units._hbar * ase.units.J,
@@ -71,7 +71,6 @@ for d in (units_CODATA1986, units_CODATA2002):
 __all__ = [
     # routines for the generic io function
     'read_castep_castep',
-    'read_cell',
     'read_castep_cell',
     'read_geom',
     'read_castep_geom',
@@ -119,20 +118,7 @@ def write_freeform(fd, outputobj):
             fd.write(f'{kw.upper()}: {opt.value}\n')
 
 
-def write_cell(filename, atoms, positions_frac=False, castep_cell=None,
-               force_write=False):
-    """
-    Wrapper function for the more generic write() functionality.
-
-    Note that this is function is intended to maintain backwards-compatibility
-    only.
-    """
-    from ase.io import write
-
-    write(filename, atoms, positions_frac=positions_frac,
-          castep_cell=castep_cell, force_write=force_write)
-
-
+@writer
 def write_castep_cell(fd, atoms, positions_frac=False, force_write=False,
                       precision=6, magnetic_moments=None,
                       castep_cell=None):
@@ -440,17 +426,7 @@ def read_freeform(fd):
     return inputobj.get_attr_dict(types=True)
 
 
-def read_cell(filename, index=None):
-    """
-    Wrapper function for the more generic read() functionality.
-
-    Note that this is function is intended to maintain backwards-compatibility
-    only.
-    """
-    from ase.io import read
-    return read(filename, index=index, format='castep-cell')
-
-
+@reader
 def read_castep_cell(fd, index=None, calculator_args={}, find_spg=False,
                      units=units_CODATA2002):
     """Read a .cell file and return an atoms object.
@@ -1263,7 +1239,7 @@ def read_seed(seed, new_seed=None, ignore_internal_keys=False):
     castepfile = os.path.join(directory, f'{seed}.castep')
     checkfile = os.path.join(directory, f'{seed}.check')
 
-    atoms = read_cell(cellfile)
+    atoms = read_castep_cell(cellfile)
     atoms.calc._directory = directory
     atoms.calc._rename_existing_dir = False
     atoms.calc._castep_pp_path = directory
