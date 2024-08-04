@@ -484,8 +484,8 @@ End CASTEP Interface Documentation
 
         self.results = {}
 
-        from ase.io.castep import write_cell
-        self._write_cell = write_cell
+        from ase.io.castep import write_castep_cell
+        self._write_cell = write_castep_cell
 
         if castep_keywords is None:
             castep_keywords = CastepKeywords(make_param_dict(),
