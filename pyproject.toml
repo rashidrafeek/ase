@@ -31,7 +31,9 @@ dependencies = [
 ]
 
 [project.urls]
-homepage = 'https://wiki.fysik.dtu.dk/ase/'
+Homepage = 'https://wiki.fysik.dtu.dk/ase/'
+Repository = 'https://gitlab.com/ase/ase.git'
+Issues = 'https://gitlab.com/ase/ase/issues/'
 
 [project.scripts]
 ase = 'ase.cli.main:main'
