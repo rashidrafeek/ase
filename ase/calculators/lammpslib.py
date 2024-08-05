@@ -377,7 +377,7 @@ xz and yz are the tilt of the lattice vectors, all to be edited.
         system_changes: list of str
             List of what has changed since last calculation.  Can be
             any combination of these five: 'positions', 'numbers', 'cell',
-            'pbc', 'charges' and 'magmoms'.
+            'pbc', 'initial_charges' and 'initial_magmoms'.
         """
         if len(system_changes) == 0:
             return
@@ -415,9 +415,10 @@ xz and yz are the tilt of the lattice vectors, all to be edited.
         if self.parameters.atom_types is None:
             raise NameError("atom_types are mandatory.")
 
-        do_rebuild = (not np.array_equal(atoms.numbers,
-                                         self.previous_atoms_numbers)
-                      or ("numbers" in system_changes))
+        do_rebuild = (
+            not np.array_equal(atoms.numbers, self.previous_atoms_numbers)
+            or any(_ in system_changes for _ in ('numbers', 'initial_charges'))
+        )
         if not do_rebuild:
             do_redo_atom_types = not np.array_equal(
                 atoms.numbers, self.previous_atoms_numbers)
@@ -613,11 +614,13 @@ xz and yz are the tilt of the lattice vectors, all to be edited.
             cmd = f"set atom {i} type {i_type}"
             self.lmp.command(cmd)
 
-        # set charges in LAMMPS if any
-        charges = atoms.get_initial_charges()
-        if np.any(charges != 0):
-            for i, q in enumerate(charges):
-                self.lmp.command(f'set atom {i + 1} charge {q}')
+        # set charges only when LAMMPS `atom_style` permits charges
+        # https://docs.lammps.org/Library_properties.html#extract-atom-flags
+        if self.lmp.extract_setting('q_flag') == 1:
+            charges = atoms.get_initial_charges()
+            if np.any(charges != 0.0):
+                for i, q in enumerate(charges):
+                    self.lmp.command(f'set atom {i + 1} charge {q}')
 
         self.previous_atoms_numbers = atoms.numbers.copy()
 
