@@ -1,4 +1,3 @@
-import os
 from importlib.metadata import PackageNotFoundError, version
 
 import pytest
