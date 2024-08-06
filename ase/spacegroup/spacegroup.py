@@ -680,11 +680,11 @@ def _read_datafile_entry(spg, no, symbol, setting, f):
                                      for i in range(3)],
                                     dtype=int)
     # subtranslations
-    spg._nsubtrans = int(f.readline().split()[0])
+    nsubtrans = int(f.readline().split()[0])
     spg._subtrans = np.array(
         [
             [float(floats.get(t, t)) for t in f.readline().split()]
-            for _ in range(spg._nsubtrans)
+            for _ in range(nsubtrans)
         ],
         dtype=float,
     )
@@ -697,7 +697,6 @@ def _read_datafile_entry(spg, no, symbol, setting, f):
         ],
         dtype=float,
     )
-    spg._nsymop = nsym
     spg._rotations = np.array(symop[:, :9].reshape((nsym, 3, 3)), dtype=int)
     spg._translations = symop[:, 9:]
 
@@ -936,7 +935,6 @@ def spacegroup_from_data(no=None,
         spg._reciprocal_cell = np.array(reciprocal_cell)
     if subtrans is not None:
         spg._subtrans = np.atleast_2d(subtrans)
-        spg._nsubtrans = spg._subtrans.shape[0]
     if sitesym is not None:
         spg._rotations, spg._translations = parse_sitesym(sitesym)
         have_sym = True
@@ -950,7 +948,6 @@ def spacegroup_from_data(no=None,
         if spg._rotations.shape[0] != spg._translations.shape[0]:
             raise SpacegroupValueError('inconsistent number of rotations and '
                                        'translations')
-        spg._nsymop = spg._rotations.shape[0]
     return spg
 
 
