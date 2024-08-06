@@ -666,20 +666,22 @@ class Pourbaix:
             A = np.vstack((p1, p2, p3))
             c = np.array([c1, c2, c3])
             ids = (id1, id2, id3)
-            try:
-                pt = np.dot(np.linalg.inv(A), c)
-                Epbx = self._get_pourbaix_energy(pt[1], pt[0])[0]
-                if pt[2] >= -tol and \
-                   np.isclose(Epbx, pt[2], rtol=0, atol=tol) and \
-                   min(phrange) - tol <= pt[0] <= max(phrange) + tol and \
-                   min(urange) - tol <= pt[1] <= max(urange) + tol:
-                    simplex = np.round(pt[:2], 3)
-                    simplices.append((simplex, ids))
 
-            # triplets containing parallel planes raise a LinAlgError
-            # and are automatically excluded.
+            try:
+                # triplets containing parallel planes raise a LinAlgError
+                # and are automatically excluded.
+                invA = np.linalg.inv(A)
             except np.linalg.LinAlgError:
                 continue
+
+            pt = np.dot(invA, c)
+            Epbx = self._get_pourbaix_energy(pt[1], pt[0])[0]
+            if pt[2] >= -tol and \
+               np.isclose(Epbx, pt[2], rtol=0, atol=tol) and \
+               min(phrange) - tol <= pt[0] <= max(phrange) + tol and \
+               min(urange) - tol <= pt[1] <= max(urange) + tol:
+                simplex = np.round(pt[:2], 3)
+                simplices.append((simplex, ids))
 
         # The final segments to plot on the diagram are found from
         # the pairs of unique simplices that have two neighboring phases
