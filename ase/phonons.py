@@ -30,7 +30,7 @@ class Displacement:
     Derived classes must overwrite the ``__call__`` member function which is
     called for each atomic displacement.
 
-   """
+    """
 
     def __init__(self, atoms, calc=None, supercell=(1, 1, 1), name=None,
                  delta=0.01, center_refcell=False, comm=None):
