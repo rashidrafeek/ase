@@ -143,8 +143,7 @@ def add_labels(ax, text):
         ax.add_artist(annotation)
 
 
-def add_text(text, offset=0.0):
-    """Add phase labels to the right of the diagram"""
+def wrap_text(text):
     import textwrap
 
     textlines = []
@@ -157,10 +156,15 @@ def add_text(text, offset=0.0):
                 subsequent_indent='      '
             )
         )
-    text = "\n".join(textlines)
+    return '\n'.join(textlines)
+
+
+def add_text(text, offset=0.0):
+    """Add phase labels to the right of the diagram"""
+
     plt.gcf().text(
         0.75 + offset, 0.5,
-        text,
+        wrap_text(text),
         fontsize=16,
         va='center',
         ha='left')
