@@ -96,13 +96,10 @@ def test_plotting():
                  'cap': [0, 1]})
     pbx.plot(**args)
 
-    fail = False
     args.update({'labeltype': 'askjglkjh'})
-    try:
+
+    with pytest.raises(ValueError):
         pbx.plot(**args)
-    except ValueError:
-        fail = True
-    assert fail
     plt.close('all')
 
 
@@ -144,7 +141,7 @@ def test_species_extras():
     chemsys = s.get_chemsys()
     assert len(chemsys) == 3
     frac = s.get_fractional_composition('H')
-    assert frac == 2 / 3
+    assert frac == pytest.approx(2 / 3)
 
 
 def test_trigger_phases_error():
@@ -153,9 +150,6 @@ def test_trigger_phases_error():
         'Zn': 0.0,
         'Mn': 0.0
     }
-    fail = False
-    try:
-        _ = Pourbaix('Zn', refs)
-    except ValueError:
-        fail = True
-    assert fail
+
+    with pytest.raises(ValueError):
+        Pourbaix('Zn', refs)
