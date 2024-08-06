@@ -610,7 +610,7 @@ class Phonons(Displacement):
             If modes are returned, the array is of shape
             (k-point, bands, atoms, 3) and the normalization is such
             that for each k-point and band, the sum
-            sum_{i=0}^{natoms} sum_{j=x,y,z} m_i |u_i,j|^2 = 1
+            sum(i=0..natoms) sum(j=x,y,z) m_i |u_i,j|^2 = 1
             (i.e. the amplitudes have been normalized to 1.0 and then
             divided by the square root of the mass of the atoms).
 
