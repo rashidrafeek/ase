@@ -104,8 +104,7 @@ def format_label(count):
             if count == 1:
                 label = label.replace(count * symbol, symbol)
         formatted.append(label)
-    label = ', '.join(f for f in formatted)
-    return label
+    return ', '.join(f for f in formatted)
 
 
 def make_coeff_nice(coeff, max_denom):
@@ -126,7 +125,6 @@ def add_numbers(ax, text):
             horizontalalignment='center'
         )
         txt.set_path_effects([pfx.withStroke(linewidth=2.0, foreground='w')])
-    return
 
 
 def add_labels(ax, text):
@@ -143,7 +141,6 @@ def add_labels(ax, text):
         )
         annotation.draggable()
         ax.add_artist(annotation)
-    return
 
 
 def add_text(text, offset=0.0):
@@ -167,7 +164,6 @@ def add_text(text, offset=0.0):
         fontsize=16,
         va='center',
         ha='left')
-    return 0
 
 
 def add_redox_lines(axes, pH, reference, color='k'):
@@ -194,7 +190,6 @@ def add_redox_lines(axes, pH, reference, color='k'):
         axes.axhline(const + corr[reference], **kwargs)
     else:
         raise ValueError('The specified reference electrode doesnt exist')
-    return 0
 
 
 class Species:
