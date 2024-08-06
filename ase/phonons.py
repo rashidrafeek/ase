@@ -607,6 +607,13 @@ class Phonons(Displacement):
             `BandStructure` object and the second element is an ndarray
             of phonon modes.
 
+            If modes are returned, the array is of shape
+            (k-point, bands, atoms, 3) and the normalization is such
+            that for each k-point and band, the sum
+            sum_{i=0}^{natoms) sum_{j=x,y,z} m_i |u_i,j|^2 = 1
+            (i.e. the amplitudes have been normalized to 1.0 and then
+            divided by the square root of the mass of the atoms).
+
         Example:
 
         >>> from ase.dft.kpoints import BandPath
@@ -659,7 +666,7 @@ class Phonons(Displacement):
         eigenvalues (squared frequency), the corresponding negative frequency
         is returned.
 
-        Frequencies and modes are in units of eV and Ang/sqrt(amu),
+        Frequencies and modes are in units of eV and 1/sqrt(amu),
         respectively.
 
         Parameters:
@@ -812,7 +819,7 @@ class Phonons(Displacement):
 
         Parameters:
 
-        q_c: ndarray
+        q_c: ndarray of shape (3,)
             q-vector of the modes.
         branches: int or list
             Branch index of modes.
@@ -830,6 +837,8 @@ class Phonons(Displacement):
         center: bool
             Center atoms in unit cell if True (default: False).
 
+        To exaggerate the amplitudes for better visualization, multiply
+        kT by the square of the desired factor.
         """
 
         if isinstance(branches, int):
@@ -856,13 +865,18 @@ class Phonons(Displacement):
         phase_N = np.exp(2.j * pi * np.dot(q_c, R_cN))
         phase_Na = phase_N.repeat(len(self.atoms))
 
+        hbar = units._hbar * units.J * units.second
         for lval in branch_l:
 
             omega = omega_l[0, lval]
             u_av = u_l[0, lval]
 
             # Mean displacement of a classical oscillator at temperature T
-            u_av *= sqrt(kT) / abs(omega)
+            # is sqrt(k T / m omega^2).
+            # Note that the amplitude has already been divided by sqrt(m) and
+            # that omega is actually hbar*omega (it is in eV, not reciprocal
+            # ASE time units).
+            u_av *= hbar * sqrt(kT) / abs(omega)
 
             mode_av = np.zeros((len(self.atoms), 3), dtype=complex)
             # Insert slice with atomic displacements for the included atoms
