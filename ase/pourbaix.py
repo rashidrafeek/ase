@@ -542,7 +542,7 @@ class Pourbaix:
         i_min = np.argmin(energies)
         return -energies[i_min], i_min
 
-    def get_pourbaix_energy(self, U, pH, verbose=True):
+    def get_pourbaix_energy(self, U, pH, verbose=False):
         """Evaluate the Pourbaix energy, print info about
         the most stable phase and the corresponding energy at
         a given potential U and pH.
@@ -568,10 +568,12 @@ class Pourbaix:
         particular species
             e.g. get_equations(contains='ZnO')
         """
+        equations = []
         for i, p in enumerate(self.phases):
             if contains is not None and contains not in p.count:
                 continue
-            print(f'{i}) {p.equation()}')
+            equations.append(f'{i}) {p.equation()}')
+        return equations
 
     def get_diagrams(self, U, pH):
         """Actual evaluation of the complete diagram
