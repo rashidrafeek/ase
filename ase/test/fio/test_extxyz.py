@@ -13,6 +13,7 @@ from ase.atoms import Atoms
 from ase.build import bulk, molecule
 from ase.calculators.calculator import compare_atoms
 from ase.calculators.emt import EMT
+from ase.calculators.mixing import LinearCombinationCalculator
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.constraints import FixAtoms, FixCartesian
 from ase.io import extxyz
@@ -22,12 +23,12 @@ from ase.io.extxyz import escape, save_calc_results
 # in commit r4541
 
 
-@pytest.fixture
+@pytest.fixture()
 def atoms():
     return bulk('Si')
 
 
-@pytest.fixture
+@pytest.fixture()
 def images(atoms):
     images = [atoms, atoms * (2, 1, 1), atoms * (3, 1, 1)]
     images[1].set_pbc([True, True, False])
@@ -348,7 +349,7 @@ def test_constraints(constraint):
         assert np.all(constraint2[0].mask)
         assert np.all(constraint2[1].mask == constraint.mask)
         assert np.all(constraint2[2].mask)
-    elif cls == list:
+    elif cls is list:
         assert len(constraint2) == len(atoms)
         assert np.all(constraint2[0].mask == constraint[0].mask)
         assert np.all(constraint2[1].mask)
@@ -488,3 +489,15 @@ def test_basic_functionality(tmp_path):
                 assert 'REF_energy=' in line
             else:
                 assert len(line.strip().split()) == 1 + 3 + 1 + 3
+
+
+def test_linear_combination_calculator():
+    """Test if results from `LinearCombinationCalculator` can be written
+
+    `LinearCombinationCalculator` has non-standard properties like
+    `energy_contributions` in `results`. Here we check if this causes errors.
+    """
+    atoms = bulk('Cu')
+    atoms.calc = LinearCombinationCalculator([EMT()], [1.0])
+    atoms.get_potential_energy()
+    atoms.write('tmp.xyz')

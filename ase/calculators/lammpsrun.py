@@ -22,10 +22,10 @@
 import os
 import shlex
 import shutil
+import subprocess
 import warnings
 from re import IGNORECASE
 from re import compile as re_compile
-import subprocess
 from tempfile import NamedTemporaryFile, mkdtemp
 from tempfile import mktemp as uns_mktemp
 from threading import Thread
@@ -34,8 +34,12 @@ from typing import Any, Dict
 import numpy as np
 
 from ase.calculators.calculator import Calculator, all_changes
-from ase.calculators.lammps import (CALCULATION_END_MARK, Prism, convert,
-                                    write_lammps_in)
+from ase.calculators.lammps import (
+    CALCULATION_END_MARK,
+    Prism,
+    convert,
+    write_lammps_in,
+)
 from ase.data import atomic_masses, chemical_symbols
 from ase.io.lammpsdata import write_lammps_data
 from ase.io.lammpsrun import read_lammps_dump

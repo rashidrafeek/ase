@@ -7,8 +7,12 @@ from scipy.spatial import cKDTree
 
 from ase.cell import Cell
 from ase.data import atomic_numbers, covalent_radii
-from ase.geometry import (complete_cell, find_mic, minkowski_reduce,
-                          wrap_positions)
+from ase.geometry import (
+    complete_cell,
+    find_mic,
+    minkowski_reduce,
+    wrap_positions,
+)
 
 
 def natural_cutoffs(atoms, mult=1, **kwargs):
@@ -958,8 +962,8 @@ class PrimitiveNeighborList:
         natoms = len(positions)
         self.nneighbors = 0
         self.npbcneighbors = 0
-        self.neighbors = [np.empty(0, int) for a in range(natoms)]
-        self.displacements = [np.empty((0, 3), int) for a in range(natoms)]
+        self.neighbors = [np.empty(0, int) for _ in range(natoms)]
+        self.displacements = [np.empty((0, 3), int) for _ in range(natoms)]
         self.nupdates += 1
         if natoms == 0:
             return
@@ -979,7 +983,7 @@ class PrimitiveNeighborList:
         offsets = cell.scaled_positions(positions - positions0)
         offsets = offsets.round().astype(int)
 
-        for n1, n2, n3 in itertools.product(range(0, N[0] + 1),
+        for n1, n2, n3 in itertools.product(range(N[0] + 1),
                                             range(-N[1], N[1] + 1),
                                             range(-N[2], N[2] + 1)):
             if n1 == 0 and (n2 < 0 or n2 == 0 and n3 < 0):

@@ -4,9 +4,12 @@ import numpy as np
 import pytest
 
 from ase.build import bulk
-from ase.calculators.vasp.create_input import (GenerateVaspInput,
-                                               _args_without_comment,
-                                               _from_vasp_bool, _to_vasp_bool)
+from ase.calculators.vasp.create_input import (
+    GenerateVaspInput,
+    _args_without_comment,
+    _from_vasp_bool,
+    _to_vasp_bool,
+)
 
 
 def dict_is_subset(d1, d2):
@@ -18,12 +21,12 @@ def dict_is_subset(d1, d2):
     return all(key in d2 and d1[key] == d2[key] for key in d1)
 
 
-@pytest.fixture
+@pytest.fixture()
 def rng():
     return np.random.RandomState(seed=42)
 
 
-@pytest.fixture
+@pytest.fixture()
 def nacl(rng):
     atoms = bulk('NaCl', crystalstructure='rocksalt', a=4.1,
                  cubic=True) * (3, 3, 3)
@@ -31,7 +34,7 @@ def nacl(rng):
     return atoms
 
 
-@pytest.fixture
+@pytest.fixture()
 def vaspinput_factory(nacl):
     """Factory for GenerateVaspInput class, which mocks the generation of
     pseudopotentials."""
@@ -118,7 +121,7 @@ def read_magmom_from_file(filename) -> np.ndarray:
     return np.array(new_magmom)
 
 
-@pytest.fixture
+@pytest.fixture()
 def assert_magmom_equal_to_incar_value():
     """Fixture to compare a pre-made magmom array to the value
     a GenerateVaspInput.write_incar object writes to a file"""
@@ -245,7 +248,7 @@ def test_ichain(vaspinput_factory):
         calc_warn.read_incar('INCAR')
         assert calc_warn.int_params['iopt'] == 1
         assert calc_warn.exp_params['ediffg'] == -0.01
-        assert calc_warn.int_params['ibrion'] == 1
+        assert calc_warn.int_params['ibrion'] == 3
         assert calc_warn.float_params['potim'] == 0.0
 
     with pytest.raises(RuntimeError):
@@ -258,10 +261,10 @@ def test_ichain(vaspinput_factory):
                              ediffg=-0.01,
                              iopt=1,
                              potim=0.0,
-                             ibrion=1)
+                             ibrion=3)
     calc.write_incar(nacl)
     calc.read_incar('INCAR')
     assert calc.int_params['iopt'] == 1
     assert calc.exp_params['ediffg'] == -0.01
-    assert calc.int_params['ibrion'] == 1
+    assert calc.int_params['ibrion'] == 3
     assert calc.float_params['potim'] == 0.0

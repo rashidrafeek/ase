@@ -9,6 +9,16 @@ Git master branch
 
 :git:`master <>`.
 
+* Improved :func:`~ase.build.find_optimal_cell_shape` to be rotationally
+  invariant (:mr:`3404`)
+* Added :class:`ase.md.bussi.Bussi` (:mr:`3350`)
+
+
+Version 3.23.0
+==============
+
+31 May 2024: :git:`3.23.0 <../3.23.0>`
+
 * Add :class:`~ase.constraints.FixSubsetCom` to fix the center of mass of the
   specified subset of atoms (:mr:`3193`).
 
@@ -272,6 +282,9 @@ Thermochemistry:
 
 I/O:
 
+* Add support for reading Mulliken, Löwdin, or Hirshfeld atomic charges in
+  :func:`ase.io.gaussian.read_gaussian_out` (:mr:`3332`)
+
 * Add support for reading POSCAR files with negative and multiple scaling
   factors in :func:`ase.io.vasp.read_vasp` (:mr:`3029`)
 
@@ -361,6 +374,8 @@ I/O:
 * Improved XCrysden file I/O (:mr:`2594`)
 
 * Fix JSON encoder for Atoms objects with ``FixAtoms`` constraints (:mr:`2592`)
+
+* Removed ``ase.io.gaussian_reader`` (:mr:`2329`)
 
 .. _avogadro2: https://www.openchemistry.org/projects/avogadro2
 
@@ -584,6 +599,13 @@ Command-line interface:
 
 Algorithms:
 
+* Removed ``ase.build.voids`` (:mr:`2078`)
+
+* Removed unused code in ``ase.transport.tools`` (:mr:`2077`)
+
+* Removed ``ase.visualize.primiplotter`` and ``ase.visualize.fieldplotter``
+  (:mr:`2060`)
+
 * Changed units for molecular dynamics modules.  They now accept the
   temperature in Kelvin as a keyword-only argument ``temperature_K``
   and Berendsen NPT accepts the pressure in eV/Å³ as a keyword-only
@@ -625,6 +647,8 @@ Algorithms:
 
 Calculators:
 
+* Removed ``ase.calculators.ase_qmmm_manyqm`` (:mr:`2092`)
+
 * The ``ignore_bad_restart_file`` argument supported by many calculators
   has been deprecated.  The user should choose this kind of behaviour
   explicitly.
@@ -653,6 +677,10 @@ Calculators:
   for most calculators (abinit, lammpsrun, )
 
 I/O:
+
+* Removed ``ase.io.iwm`` (:mr:`2064`)
+
+* Removed ``ase.io.plt`` (:mr:`2057`)
 
 * Reads Wannier90 ``.wout`` files.
   See :func:`ase.io.wannier90.read_wout` and
@@ -722,6 +750,8 @@ Version 3.20.0
 
 General changes:
 
+* Removed old ``ase.data`` modules (:mr:`1720`)
+
 * :meth:`~ase.Atoms.get_calculator` and :meth:`~ase.Atoms.set_calculator`
   are deprecated.  Use ``atoms.calc`` instead.
 
@@ -757,6 +787,12 @@ Development:
 
 Algorithms:
 
+* Removed ``ase.build.adsorb`` (:mr:`1845`)
+
+* Removed unused code in ``ase.utils.ff`` (:mr:`1844`)
+
+* Removed ``ase.utils.extrapolate`` (:mr:`1808`)
+
 * Functions for attaching structures in :mod:`attach <ase.build>` introduced.
 
 * Standardize optimizers maximum step variable name to maxstep and default
@@ -771,6 +807,7 @@ Algorithms:
   <https://stokes.byu.edu/iso/findsym.php>`_ due to lack of users and
   maintainers.  If you need this, please find it in git history,
   make it work, and write tests.
+  (:mr:`1692`)
 
 * The tangent estimates used to make the nudged elastic band (NEB) plots are
   slightly improved to use center, rather than forward differences. This does
@@ -832,6 +869,7 @@ I/O:
   which requires Python 2.7.
 
 * Removed Dacapo-NetCDF reader which has not worked since ancient times.
+  (:mr:`1892`)
 
 GUI:
 
@@ -855,6 +893,7 @@ Calculators:
 
 * Removed interface to :ref:`Dacapo <jacapo>` due to lack of users and
   maintainers.
+  (:mr:`1721`, :mr:`1604`)
 
 * Completely refactored :mod:`Gaussian <ase.calculators.gaussian>` calculator.
   The new calculator should be completely backwards compatible with the

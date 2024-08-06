@@ -21,7 +21,7 @@ def catch_netcdf4_warning():
         yield
 
 
-@pytest.fixture
+@pytest.fixture()
 def co(netCDF4):
     return Atoms([Atom('C', (0, 0, 0)),
                   Atom('O', (0, 0, 1.2))],
@@ -32,7 +32,7 @@ def co(netCDF4):
 def test_netcdftrajectory(co):
     rng = np.random.RandomState(17)
     traj = NetCDFTrajectory('1.nc', 'w', co)
-    for i in range(5):
+    for _ in range(5):
         co.positions[:, 2] += 0.1
         traj.write()
     del traj

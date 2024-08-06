@@ -7,7 +7,8 @@ This module only depends on NumPy and the space group database.
 
 import os
 import warnings
-from functools import total_ordering
+from functools import lru_cache, total_ordering
+from types import SimpleNamespace
 from typing import Union
 
 import numpy as np
@@ -56,55 +57,86 @@ class Spacegroup:
            [ 0.5,  0. ,  0.5],
            [ 0.5,  0.5,  0. ]])
     """
-    no = property(
-        lambda self: self._no,
-        doc='Space group number in International Tables of Crystallography.')
-    symbol = property(
-        lambda self: self._symbol,
-        doc='Hermann-Mauguin (or international) symbol for the space group.')
-    setting = property(lambda self: self._setting,
-                       doc='Space group setting. Either one or two.')
-    lattice = property(lambda self: self._symbol[0],
-                       doc="""Lattice type:
+    @property
+    def no(self):
+        """Space group number in International Tables of Crystallography."""
+        return self._no
 
-    P     primitive
-    I     body centering, h+k+l=2n
-    F     face centering, h,k,l all odd or even
-    A,B,C single face centering, k+l=2n, h+l=2n, h+k=2n
-    R     rhombohedral centering, -h+k+l=3n (obverse); h-k+l=3n (reverse)
-            """)
-    centrosymmetric = property(lambda self: self._centrosymmetric,
-                               doc='Whether a center of symmetry exists.')
-    scaled_primitive_cell = property(
-        lambda self: self._scaled_primitive_cell,
-        doc='Primitive cell in scaled coordinates as a matrix with the '
-        'primitive vectors along the rows.')
-    reciprocal_cell = property(
-        lambda self: self._reciprocal_cell,
-        doc='Tree Miller indices that span all kinematically non-forbidden '
-        'reflections as a matrix with the Miller indices along the rows.')
-    nsubtrans = property(lambda self: len(self._subtrans),
-                         doc='Number of cell-subtranslation vectors.')
+    @property
+    def symbol(self):
+        """Hermann-Mauguin (or international) symbol for the space group."""
+        return self._symbol
 
-    def _get_nsymop(self):
-        """Returns total number of symmetry operations."""
-        if self.centrosymmetric:
-            return 2 * len(self._rotations) * len(self._subtrans)
-        else:
-            return len(self._rotations) * len(self._subtrans)
+    @property
+    def setting(self):
+        """Space group setting. Either one or two."""
+        return self._setting
 
-    nsymop = property(_get_nsymop, doc='Total number of symmetry operations.')
-    subtrans = property(
-        lambda self: self._subtrans,
-        doc='Translations vectors belonging to cell-sub-translations.')
-    rotations = property(
-        lambda self: self._rotations,
-        doc='Symmetry rotation matrices. The invertions are not included '
-        'for centrosymmetrical crystals.')
-    translations = property(
-        lambda self: self._translations,
-        doc='Symmetry translations. The invertions are not included '
-        'for centrosymmetrical crystals.')
+    @property
+    def lattice(self):
+        """Lattice type.
+
+        P     primitive
+        I     body centering, h+k+l=2n
+        F     face centering, h,k,l all odd or even
+        A,B,C single face centering, k+l=2n, h+l=2n, h+k=2n
+        R     rhombohedral centering, -h+k+l=3n (obverse); h-k+l=3n (reverse)
+        """
+        return self._symbol[0]
+
+    @property
+    def centrosymmetric(self):
+        """Whether a center of symmetry exists."""
+        return self._centrosymmetric
+
+    @property
+    def scaled_primitive_cell(self):
+        """Primitive cell in scaled coordinates.
+
+        Matrix with the primitive vectors along the rows.
+        """
+        return self._scaled_primitive_cell
+
+    @property
+    def reciprocal_cell(self):
+        """
+
+        Tree Miller indices that span all kinematically non-forbidden
+        reflections as a matrix with the Miller indices along the rows.
+        """
+        return self._reciprocal_cell
+
+    @property
+    def nsubtrans(self):
+        """Number of cell-subtranslation vectors."""
+        return len(self._subtrans)
+
+    @property
+    def nsymop(self):
+        """Total number of symmetry operations."""
+        scale = 2 if self.centrosymmetric else 1
+        return scale * len(self._rotations) * len(self._subtrans)
+
+    @property
+    def subtrans(self):
+        """Translations vectors belonging to cell-sub-translations."""
+        return self._subtrans
+
+    @property
+    def rotations(self):
+        """Symmetry rotation matrices.
+
+        The invertions are not included for centrosymmetrical crystals.
+        """
+        return self._rotations
+
+    @property
+    def translations(self):
+        """Symmetry translations.
+
+        The invertions are not included for centrosymmetrical crystals.
+        """
+        return self._translations
 
     def __init__(self, spacegroup: _SPACEGROUP, setting=1, datafile=None):
         """Returns a new Spacegroup instance.
@@ -128,8 +160,16 @@ class Spacegroup:
             return
         if not datafile:
             datafile = get_datafile()
-        with open(datafile) as fd:
-            _read_datafile(self, spacegroup, setting, fd)
+        namespace = _read_datafile(spacegroup, setting, datafile)
+        self._no = namespace._no
+        self._symbol = namespace._symbol
+        self._setting = namespace._setting
+        self._centrosymmetric = namespace._centrosymmetric
+        self._scaled_primitive_cell = namespace._scaled_primitive_cell
+        self._reciprocal_cell = namespace._reciprocal_cell
+        self._subtrans = namespace._subtrans
+        self._rotations = namespace._rotations
+        self._translations = namespace._translations
 
     def __repr__(self):
         return 'Spacegroup(%d, setting=%d)' % (self.no, self.setting)
@@ -405,9 +445,10 @@ class Spacegroup:
         sites = []
 
         scaled = np.array(scaled_positions, ndmin=2)
+        symop = self.get_symop()
 
         for kind, pos in enumerate(scaled):
-            for rot, trans in self.get_symop():
+            for rot, trans in symop:
                 site = np.mod(np.dot(rot, pos) + trans, 1.)
                 if not sites:
                     sites.append(site)
@@ -628,31 +669,46 @@ def _read_datafile_entry(spg, no, symbol, setting, f):
     # primitive vectors
     f.readline()
     spg._scaled_primitive_cell = np.array(
-        [[float(floats.get(s, s)) for s in f.readline().split()]
-         for i in range(3)],
-        dtype=float)
+        [
+            [float(floats.get(s, s)) for s in f.readline().split()]
+            for _ in range(3)
+        ],
+        dtype=float,
+    )
     # primitive reciprocal vectors
     f.readline()
     spg._reciprocal_cell = np.array([[int(i) for i in f.readline().split()]
                                      for i in range(3)],
                                     dtype=int)
     # subtranslations
-    spg._nsubtrans = int(f.readline().split()[0])
+    nsubtrans = int(f.readline().split()[0])
     spg._subtrans = np.array(
-        [[float(floats.get(t, t)) for t in f.readline().split()]
-         for i in range(spg._nsubtrans)],
-        dtype=float)
+        [
+            [float(floats.get(t, t)) for t in f.readline().split()]
+            for _ in range(nsubtrans)
+        ],
+        dtype=float,
+    )
     # symmetry operations
     nsym = int(f.readline().split()[0])
-    symop = np.array([[float(floats.get(s, s)) for s in f.readline().split()]
-                      for i in range(nsym)],
-                     dtype=float)
-    spg._nsymop = nsym
+    symop = np.array(
+        [
+            [float(floats.get(s, s)) for s in f.readline().split()]
+            for _ in range(nsym)
+        ],
+        dtype=float,
+    )
     spg._rotations = np.array(symop[:, :9].reshape((nsym, 3, 3)), dtype=int)
     spg._translations = symop[:, 9:]
 
 
-def _read_datafile(spg, spacegroup, setting, f):
+@lru_cache
+def _read_datafile(spacegroup, setting, datafile):
+    with open(datafile, encoding='utf-8') as fd:
+        return _read_f(spacegroup, setting, fd)
+
+
+def _read_f(spacegroup, setting, f):
     if isinstance(spacegroup, int):
         pass
     elif isinstance(spacegroup, str):
@@ -676,8 +732,9 @@ def _read_datafile(spg, spacegroup, setting, f):
             (setting is None or _setting == setting))
 
         if condition:
-            _read_datafile_entry(spg, _no, _symbol, _setting, f)
-            break
+            namespace = SimpleNamespace()
+            _read_datafile_entry(namespace, _no, _symbol, _setting, f)
+            return namespace
         else:
             _skip_to_blank(f, spacegroup, setting)
 
@@ -879,7 +936,6 @@ def spacegroup_from_data(no=None,
         spg._reciprocal_cell = np.array(reciprocal_cell)
     if subtrans is not None:
         spg._subtrans = np.atleast_2d(subtrans)
-        spg._nsubtrans = spg._subtrans.shape[0]
     if sitesym is not None:
         spg._rotations, spg._translations = parse_sitesym(sitesym)
         have_sym = True
@@ -893,7 +949,6 @@ def spacegroup_from_data(no=None,
         if spg._rotations.shape[0] != spg._translations.shape[0]:
             raise SpacegroupValueError('inconsistent number of rotations and '
                                        'translations')
-        spg._nsymop = spg._rotations.shape[0]
     return spg
 
 

@@ -49,9 +49,12 @@ def read_aims(fd, apply_constraints=True):
 def parse_geometry_lines(lines, apply_constraints=True):
 
     from ase import Atoms
-    from ase.constraints import (FixAtoms, FixCartesian,
-                                 FixCartesianParametricRelations,
-                                 FixScaledParametricRelations)
+    from ase.constraints import (
+        FixAtoms,
+        FixCartesian,
+        FixCartesianParametricRelations,
+        FixScaledParametricRelations,
+    )
 
     atoms = Atoms()
 
@@ -376,8 +379,10 @@ def write_aims(
 
 def get_sym_block(atoms):
     """Get symmetry block for Parametric constraints in atoms.constraints"""
-    from ase.constraints import (FixCartesianParametricRelations,
-                                 FixScaledParametricRelations)
+    from ase.constraints import (
+        FixCartesianParametricRelations,
+        FixScaledParametricRelations,
+    )
 
     # Initialize param/expressions lists
     atomic_sym_params = []
@@ -484,7 +489,7 @@ def format_aims_control_parameter(key, value, format="%s"):
     str
         The properly formatted line for the aims control.in
     """
-    return f"{key :35s}" + (format % value) + "\n"
+    return f"{key:35s}" + (format % value) + "\n"
 
 
 # Write aims control.in files
@@ -522,8 +527,8 @@ def write_control(fd, atoms, parameters, verbose_header=False):
             fd.write(s)
     fd.write(lim + "\n")
 
-    assert not ("kpts" in parameters and "k_grid" in parameters)
-    assert not ("smearing" in parameters and "occupation_type" in parameters)
+    assert "kpts" not in parameters or "k_grid" not in parameters
+    assert "smearing" not in parameters or "occupation_type" not in parameters
 
     for key, value in parameters.items():
         if key == "kpts":
@@ -540,6 +545,8 @@ def write_control(fd, atoms, parameters, verbose_header=False):
                     tuple(dk),
                     "%f %f %f"))
         elif key in ("species_dir", "tier"):
+            continue
+        elif key == "aims_command":
             continue
         elif key == "plus_u":
             continue
@@ -1154,7 +1161,7 @@ class AimsOutCalcChunk(AimsOutChunk):
             elif "atom   " in line:
                 line_split = line.split()
                 atoms.append(Atom(line_split[4], tuple(
-                    [float(inp) for inp in line_split[1:4]])))
+                    float(inp) for inp in line_split[1:4])))
             elif "velocity   " in line:
                 velocities.append([float(inp) for inp in line.split()[1:]])
 
@@ -1179,7 +1186,7 @@ class AimsOutCalcChunk(AimsOutChunk):
         """Parse the forces from the aims.out file"""
         line_start = self.reverse_search_for(["Total atomic forces"])
         if line_start == LINE_NOT_FOUND:
-            return
+            return None
 
         line_start += 1
 
@@ -1219,7 +1226,7 @@ class AimsOutCalcChunk(AimsOutChunk):
 
         )  # Offest to relevant lines
         if line_start == LINE_NOT_FOUND:
-            return
+            return None
 
         stress = [
             [float(inp) for inp in line.split()[2:5]]
@@ -1237,7 +1244,7 @@ class AimsOutCalcChunk(AimsOutChunk):
         return line_start != LINE_NOT_FOUND
 
     @lazyproperty
-    def energy(self):
+    def total_energy(self):
         """Parse the energy from the aims.out file"""
         atoms = self._parse_atoms()
 
@@ -1255,7 +1262,7 @@ class AimsOutCalcChunk(AimsOutChunk):
         """Parse the electric dipole moment from the aims.out file."""
         line_start = self.reverse_search_for(["Total dipole moment [eAng]"])
         if line_start == LINE_NOT_FOUND:
-            return
+            return None
 
         line = self.lines[line_start]
         return np.array([float(inp) for inp in line.split()[6:9]])
@@ -1265,7 +1272,7 @@ class AimsOutCalcChunk(AimsOutChunk):
         """Parse the dielectric tensor from the aims.out file"""
         line_start = self.reverse_search_for(["PARSE DFPT_dielectric_tensor"])
         if line_start == LINE_NOT_FOUND:
-            return
+            return None
 
         # we should find the tensor in the next three lines:
         lines = self.lines[line_start + 1:line_start + 4]
@@ -1278,7 +1285,7 @@ class AimsOutCalcChunk(AimsOutChunk):
         """ Parse the polarization vector from the aims.out file"""
         line_start = self.reverse_search_for(["| Cartesian Polarization"])
         if line_start == LINE_NOT_FOUND:
-            return
+            return None
         line = self.lines[line_start]
         return np.array([float(s) for s in line.split()[-3:]])
 
@@ -1401,7 +1408,7 @@ class AimsOutCalcChunk(AimsOutChunk):
                 self.lines[occ_start + 1:occ_start + self.n_bands + 1]
             ):
                 if "***" in line:
-                    warn_msg = f"The {ll+1}th eigenvalue for the "
+                    warn_msg = f"The {ll + 1}th eigenvalue for the "
                     "{kpt_ind+1}th k-point and {spin}th channels could "
                     "not be read (likely too large to be printed "
                     "in the output file)"
@@ -1420,7 +1427,7 @@ outputs to atoms.info"""
 
         atoms.calc = SinglePointDFTCalculator(
             atoms,
-            energy=self.energy,
+            energy=self.free_energy,
             free_energy=self.free_energy,
             forces=self.forces,
             stress=self.stress,
@@ -1436,8 +1443,9 @@ outputs to atoms.info"""
     def results(self):
         """Convert an AimsOutChunk to a Results Dictionary"""
         results = {
-            "energy": self.energy,
+            "energy": self.free_energy,
             "free_energy": self.free_energy,
+            "total_energy": self.total_energy,
             "forces": self.forces,
             "stress": self.stress,
             "stresses": self.stresses,
@@ -1585,6 +1593,8 @@ def get_header_chunk(fd):
     # Stop the header once the first SCF cycle begins
     while (
         "Convergence:    q app. |  density  | eigen (eV) | Etot (eV)"
+            not in line
+            and "Convergence:    q app. |  density,  spin     | eigen (eV) |"
             not in line
             and "Begin self-consistency iteration #" not in line
     ):

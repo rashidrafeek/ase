@@ -1,7 +1,16 @@
 import collections
 from functools import reduce, singledispatch
-from typing import (Any, Dict, Iterable, List, Optional, Sequence, TypeVar,
-                    Union, overload)
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import numpy as np
 
@@ -189,7 +198,7 @@ class DOSCollection(collections.abc.Sequence):
         """Compare with another DOSCollection for testing purposes"""
         if not isinstance(other, type(self)):
             return False
-        elif not len(self) == len(other):
+        elif len(self) != len(other):
             return False
         else:
             return all(a._almost_equals(b) for a, b in zip(self, other))

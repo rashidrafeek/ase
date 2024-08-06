@@ -1,10 +1,10 @@
 import pytest
 
-from ase.dft import DOS
 from ase.build import bulk
+from ase.dft import DOS
 
 
-@pytest.mark.calculator_lite
+@pytest.mark.calculator_lite()
 @pytest.mark.calculator('siesta')
 def test_dos(factory):
     atoms = bulk('Si')

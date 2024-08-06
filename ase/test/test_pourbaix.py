@@ -38,7 +38,7 @@ def test_old_pourbaix():
     pH = np.linspace(6, 16, 11)
     d, names, _ = pb.diagram(U, pH, plot=False)
     assert d.shape == (3, 11)
-    assert d.ptp() == 6
+    assert np.ptp(d) == 6
     assert names == ['Zn', 'ZnO2(aq)', 'Zn++(aq)', 'HZnO2-(aq)',
                      'ZnOH+(aq)', 'ZnO', 'ZnO2--(aq)']
 
