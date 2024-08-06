@@ -601,16 +601,16 @@ class Phonons(Displacement):
         Returns:
 
         BandStructure or tuple of (BandStructure, ndarray)
-            If `modes` is False, returns a `BandStructure` object
-            containing the phonon band structure. If `modes` is True,
+            If ``modes`` is False, returns a ```BandStructure`` object
+            containing the phonon band structure. If ``modes`` is True,
             returns a tuple, where the first element is the
-            `BandStructure` object and the second element is an ndarray
+            ``BandStructure`` object and the second element is an ndarray
             of phonon modes.
 
             If modes are returned, the array is of shape
             (k-point, bands, atoms, 3) and the normalization is such
             that for each k-point and band, the sum
-            sum(i=0..natoms) sum(j=x,y,z) m_i |u_i,j|^2 = 1
+            `sum_{i=0}^{natoms} sum_{j=x,y,z} m_i |u_i,j|^2 = 1`
             (i.e. the amplitudes have been normalized to 1.0 and then
             divided by the square root of the mass of the atoms).
 
