@@ -7,7 +7,8 @@ This module only depends on NumPy and the space group database.
 
 import os
 import warnings
-from functools import total_ordering
+from functools import lru_cache, total_ordering
+from types import SimpleNamespace
 from typing import Union
 
 import numpy as np
@@ -159,8 +160,16 @@ class Spacegroup:
             return
         if not datafile:
             datafile = get_datafile()
-        with open(datafile) as fd:
-            _read_datafile(self, spacegroup, setting, fd)
+        namespace = _read_datafile(spacegroup, setting, datafile)
+        self._no = namespace._no
+        self._symbol = namespace._symbol
+        self._setting = namespace._setting
+        self._centrosymmetric = namespace._centrosymmetric
+        self._scaled_primitive_cell = namespace._scaled_primitive_cell
+        self._reciprocal_cell = namespace._reciprocal_cell
+        self._subtrans = namespace._subtrans
+        self._rotations = namespace._rotations
+        self._translations = namespace._translations
 
     def __repr__(self):
         return 'Spacegroup(%d, setting=%d)' % (self.no, self.setting)
@@ -672,11 +681,11 @@ def _read_datafile_entry(spg, no, symbol, setting, f):
                                      for i in range(3)],
                                     dtype=int)
     # subtranslations
-    spg._nsubtrans = int(f.readline().split()[0])
+    nsubtrans = int(f.readline().split()[0])
     spg._subtrans = np.array(
         [
             [float(floats.get(t, t)) for t in f.readline().split()]
-            for _ in range(spg._nsubtrans)
+            for _ in range(nsubtrans)
         ],
         dtype=float,
     )
@@ -689,12 +698,17 @@ def _read_datafile_entry(spg, no, symbol, setting, f):
         ],
         dtype=float,
     )
-    spg._nsymop = nsym
     spg._rotations = np.array(symop[:, :9].reshape((nsym, 3, 3)), dtype=int)
     spg._translations = symop[:, 9:]
 
 
-def _read_datafile(spg, spacegroup, setting, f):
+@lru_cache
+def _read_datafile(spacegroup, setting, datafile):
+    with open(datafile, encoding='utf-8') as fd:
+        return _read_f(spacegroup, setting, fd)
+
+
+def _read_f(spacegroup, setting, f):
     if isinstance(spacegroup, int):
         pass
     elif isinstance(spacegroup, str):
@@ -718,8 +732,9 @@ def _read_datafile(spg, spacegroup, setting, f):
             (setting is None or _setting == setting))
 
         if condition:
-            _read_datafile_entry(spg, _no, _symbol, _setting, f)
-            break
+            namespace = SimpleNamespace()
+            _read_datafile_entry(namespace, _no, _symbol, _setting, f)
+            return namespace
         else:
             _skip_to_blank(f, spacegroup, setting)
 
@@ -921,7 +936,6 @@ def spacegroup_from_data(no=None,
         spg._reciprocal_cell = np.array(reciprocal_cell)
     if subtrans is not None:
         spg._subtrans = np.atleast_2d(subtrans)
-        spg._nsubtrans = spg._subtrans.shape[0]
     if sitesym is not None:
         spg._rotations, spg._translations = parse_sitesym(sitesym)
         have_sym = True
@@ -935,7 +949,6 @@ def spacegroup_from_data(no=None,
         if spg._rotations.shape[0] != spg._translations.shape[0]:
             raise SpacegroupValueError('inconsistent number of rotations and '
                                        'translations')
-        spg._nsymop = spg._rotations.shape[0]
     return spg
 
 
