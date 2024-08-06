@@ -313,12 +313,6 @@ class Species:
     def __repr__(self):
         return f'Species({self.name})'
 
-    def __lt__(self, other):
-        return self.name < other.name
-
-    def __gt__(self, other):
-        return self.name > other.name
-
 
 class RedOx:
     def __init__(self, species, coeffs,
@@ -711,9 +705,7 @@ class Pourbaix:
 
             # Filtering out duplicates
             if all((cond1, cond2, cond3)):
-                testarray = sorted(
-                    [s1, s2], key=lambda s: (s[0], s[1])
-                )
+                testarray = sorted([s1, s2], key=lambda s: (s[0], s[1]))
                 testarray.append(sorted(common))
                 testarray = np.array(testarray).flatten()
                 duplicate_filter[tuple(testarray)] += 1
