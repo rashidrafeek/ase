@@ -14,15 +14,20 @@ from ase.pourbaix import (
 )
 
 
-refs = {
-    'Zn': 0.0,
-    'ZnO': -3.336021896,
-    'Zn++(aq)': -1.525613424,
-    'ZnOH+(aq)': -3.4125107,
-    'HZnO2-(aq)': -4.8087349,
-    'ZnO2--(aq)': -4.03387383
-}
-pbx = Pourbaix('Zn', refs)
+@pytest.fixture
+def refs():
+    return {
+        'Zn': 0.0,
+        'ZnO': -3.336021896,
+        'Zn++(aq)': -1.525613424,
+        'ZnOH+(aq)': -3.4125107,
+        'HZnO2-(aq)': -4.8087349,
+        'ZnO2--(aq)': -4.03387383
+    }
+
+@pytest.fixture
+def pbx(refs):
+    return Pourbaix('Zn', refs)
 
 
 def test_old_pourbaix():
@@ -43,7 +48,7 @@ def test_old_pourbaix():
                      'ZnOH+(aq)', 'ZnO', 'ZnO2--(aq)']
 
 
-def test_Zn_diagram():
+def test_Zn_diagram(pbx):
     """Test module against Zn Pourbaix diagram from the Atlas"""
 
     U = np.linspace(-2, 2, 5)
@@ -72,7 +77,7 @@ def test_Zn_diagram():
     assert Epbx2 == pytest.approx(-2.119, abs=0.001)
 
 
-def test_plotting():
+def test_plotting(pbx):
     """Test all the plotting functionalities and options"""
 
     args = {'include_text': True,
