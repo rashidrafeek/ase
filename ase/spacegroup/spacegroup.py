@@ -7,7 +7,8 @@ This module only depends on NumPy and the space group database.
 
 import os
 import warnings
-from functools import total_ordering
+from functools import lru_cache, total_ordering
+from types import SimpleNamespace
 from typing import Union
 
 import numpy as np
@@ -159,8 +160,16 @@ class Spacegroup:
             return
         if not datafile:
             datafile = get_datafile()
-        with open(datafile) as fd:
-            _read_datafile(self, spacegroup, setting, fd)
+        namespace = _read_datafile(spacegroup, setting, datafile)
+        self._no = namespace._no
+        self._symbol = namespace._symbol
+        self._setting = namespace._setting
+        self._centrosymmetric = namespace._centrosymmetric
+        self._scaled_primitive_cell = namespace._scaled_primitive_cell
+        self._reciprocal_cell = namespace._reciprocal_cell
+        self._subtrans = namespace._subtrans
+        self._rotations = namespace._rotations
+        self._translations = namespace._translations
 
     def __repr__(self):
         return 'Spacegroup(%d, setting=%d)' % (self.no, self.setting)
@@ -693,7 +702,13 @@ def _read_datafile_entry(spg, no, symbol, setting, f):
     spg._translations = symop[:, 9:]
 
 
-def _read_datafile(spg, spacegroup, setting, f):
+@lru_cache
+def _read_datafile(spacegroup, setting, datafile):
+    with open(datafile, encoding='utf-8') as fd:
+        return _read_f(spacegroup, setting, fd)
+
+
+def _read_f(spacegroup, setting, f):
     if isinstance(spacegroup, int):
         pass
     elif isinstance(spacegroup, str):
@@ -717,8 +732,9 @@ def _read_datafile(spg, spacegroup, setting, f):
             (setting is None or _setting == setting))
 
         if condition:
-            _read_datafile_entry(spg, _no, _symbol, _setting, f)
-            break
+            namespace = SimpleNamespace()
+            _read_datafile_entry(namespace, _no, _symbol, _setting, f)
+            return namespace
         else:
             _skip_to_blank(f, spacegroup, setting)
 
