@@ -1,11 +1,11 @@
 [build-system]
-requires = ['setuptools']
+requires = ['setuptools >= 61.0.0']
 build-backend = 'setuptools.build_meta'
 
 [project]
 name = 'ase'
 description='Atomic Simulation Environment'
-version = '3.23.1b1'
+dynamic = ['version']
 readme = 'README.rst'
 license = { text = 'LGPLv2.1+' }
 maintainers = [{ name = 'ASE Community', email = 'ase-users@listserv.fysik.dtu.dk' }]
@@ -31,7 +31,9 @@ dependencies = [
 ]
 
 [project.urls]
-homepage = 'https://wiki.fysik.dtu.dk/ase/'
+Homepage = 'https://wiki.fysik.dtu.dk/ase/'
+Repository = 'https://gitlab.com/ase/ase.git'
+Issues = 'https://gitlab.com/ase/ase/issues/'
 
 [project.scripts]
 ase = 'ase.cli.main:main'
@@ -51,6 +53,9 @@ ase = [
     'test/pytest.ini',
     'test/testdata/**',
 ]
+
+[tool.setuptools.dynamic]
+version = {attr = 'ase.__version__'}
 
 [tool.pytest.ini_options]
 testpaths = ['ase/test']
