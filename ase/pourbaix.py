@@ -2,9 +2,8 @@ import re
 from collections import Counter
 from fractions import Fraction
 from itertools import chain, combinations, product
-from typing import Union
+from typing import Tuple, Union
 
-import matplotlib.pyplot as plt
 import numpy as np
 from scipy.linalg import null_space
 
@@ -23,7 +22,7 @@ U_STD_AGCL = 0.222  # Standard redox potential of AgCl electrode
 U_STD_SCE = 0.244   # Standard redox potential of SCE electrode
 
 
-def parse_formula(formula, fmt='metal'):
+def parse_formula(formula: str, fmt: str = 'metal'):
     aq = formula.endswith('(aq)')
     charge = formula.count('+') - formula.count('-')
     formula_strip = formula.replace('(aq)', '').rstrip('+-')
@@ -390,8 +389,8 @@ class RedOx:
 
     @classmethod
     def from_species(cls, reactant, products,
-                     T=298.15, conc=1e-6,
-                     reference='SHE', tol=1e-3):
+                     T: float = 298.15, conc: float = 1e-6,
+                     reference: str = 'SHE', tol: float = 1e-3):
         """Initialize the class from a combination of
            reactant and products. The stoichiometric
            coefficients are automatically determined.
@@ -414,7 +413,8 @@ class RedOx:
 
         return None
 
-    def get_ref_correction(self, reference, alpha):
+    def get_ref_correction(self, reference: str,
+                           alpha: float) -> Tuple[float, float]:
         """Correct the constant and pH contributions to the reaction free energy
            based on the reference electrode of choice and the temperature
            (alpha=k_B*T*ln(10))
@@ -433,7 +433,7 @@ class RedOx:
 
         return gibbs_corr, pH_corr
 
-    def equation(self, max_denom=50):
+    def equation(self, max_denom: int = 50) -> str:
         """Print the chemical reaction."""
 
         reactants = []
@@ -441,7 +441,8 @@ class RedOx:
         for s, n in self.count.items():
             if abs(n) <= 1e-6:
                 continue
-            substr = f'{make_coeff_nice(n, max_denom)}{s}'
+            nice_coeff = make_coeff_nice(n, max_denom)
+            substr = f'{nice_coeff}{s}'
             if n > 0:
                 products.append(substr)
             else:
@@ -449,7 +450,7 @@ class RedOx:
 
         return "  ➜  ".join([" + ".join(reactants), " + ".join(products)])
 
-    def get_free_energy(self, U, pH):
+    def get_free_energy(self, U: float, pH: float) -> float:
         """Evaluate the reaction free energy
            at a given applied potential U and pH"""
         return self._vector[0] + self._vector[1] * U + self._vector[2] * pH
@@ -883,6 +884,8 @@ class Pourbaix:
             Spawn a window showing the diagram.
 
         """
+        import matplotlib.pyplot as plt
+
         if ax is None:
             ax = plt.gca()
 
