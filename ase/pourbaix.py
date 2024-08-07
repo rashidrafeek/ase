@@ -832,7 +832,7 @@ class Pourbaix:
              labeltype='numbers',
              cmap="RdYlGn_r",
              savefig=None,
-             show=True):
+             show=False):
         """Plot a complete Pourbaix diagram.
 
         Keyword arguments
