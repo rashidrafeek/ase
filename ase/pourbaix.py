@@ -635,10 +635,10 @@ class Pourbaix:
         from itertools import combinations
 
         # Planes identifying the diagram frame
-        planes = [(np.array([0.0, 1.0, 0.0]), min(urange), 'b'),  # Bottom
-                  (np.array([0.0, 1.0, 0.0]), max(urange), 't'),  # Top
-                  (np.array([1.0, 0.0, 0.0]), min(phrange), 'l'),  # Left
-                  (np.array([1.0, 0.0, 0.0]), max(phrange), 'r')]  # Right
+        planes = [(np.array([0.0, 1.0, 0.0]), min(urange), 'bottom'),
+                  (np.array([0.0, 1.0, 0.0]), max(urange), 'top'),
+                  (np.array([1.0, 0.0, 0.0]), min(phrange), 'left'),
+                  (np.array([1.0, 0.0, 0.0]), max(phrange), 'right')]
 
         # Planes associated with the stable domains of the diagram.
         # Given x=pH, y=U, z=E_pbx=-DeltaG, each plane has expression:
@@ -688,7 +688,7 @@ class Pourbaix:
         duplicate_filter = defaultdict(int)
 
         def are_boundaries_there(comm):
-            bounds = ['b', 't', 'l', 'r']
+            bounds = ['bottom', 'top', 'left', 'right']
             for c in comm:
                 if c in bounds:
                     return True
