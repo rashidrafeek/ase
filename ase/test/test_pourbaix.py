@@ -105,6 +105,7 @@ def test_plotting(pbx, figure):
                  'labeltype': 'numbers',
                  'normalize': False,
                  'cap': [0, 1]})
+
     diagram.plot(**args)
 
     args.update({'labeltype': 'askjglkjh'})
