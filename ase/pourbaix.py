@@ -157,10 +157,10 @@ def wrap_text(text):
     return '\n'.join(textlines)
 
 
-def add_text(text, offset=0.0):
+def add_phase_labels(fig, text, offset=0.0):
     """Add phase labels to the right of the diagram"""
 
-    plt.gcf().text(
+    fig.text(
         0.75 + offset, 0.5,
         wrap_text(text),
         fontsize=16,
@@ -725,10 +725,11 @@ class Pourbaix:
             self,
             Urange, pHrange,
             npoints, cap,
-            figsize, normalize,
+            normalize,
             include_text,
             include_water,
-            labeltype, cmap):
+            labeltype, cmap, *,
+            ax):
         """Backend for drawing Pourbaix diagrams"""
 
         pH = np.linspace(*pHrange, num=npoints)
@@ -742,10 +743,11 @@ class Pourbaix:
         else:
             cbarlabel = r'$\Delta G_{pbx}$ (eV)'
 
-        ax = plt.figure(figsize=figsize).add_subplot(111)
+        fig = ax.get_figure()
+        ax = fig.add_subplot(111)
         extent = [*pHrange, *Urange]
 
-        plt.subplots_adjust(
+        fig.subplots_adjust(
             left=0.1, right=0.97,
             top=0.97, bottom=0.14
         )
@@ -765,7 +767,7 @@ class Pourbaix:
             interpolation='gaussian'
         )
 
-        cbar = plt.gcf().colorbar(
+        cbar = fig.colorbar(
             colorplot,
             ax=ax,
             pad=0.02
@@ -797,8 +799,7 @@ class Pourbaix:
         ax.set_yticks(np.arange(Urange[0], Urange[1] + 1, 1))
         ax.xaxis.set_tick_params(width=1.5, length=5)
         ax.yaxis.set_tick_params(width=1.5, length=5)
-        plt.xticks(fontsize=22)
-        plt.yticks(fontsize=22)
+        ax.tick_params(axis='both', labelsize=22)
 
         ticks = np.linspace(vmin, vmax, num=5)
         cbar.set_ticks(ticks)
@@ -811,25 +812,26 @@ class Pourbaix:
             ax.spines[axis].set_linewidth(1.5)
 
         if include_text:
-            plt.subplots_adjust(right=0.75)
-            add_text(text, offset=0.05)
+            fig.subplots_adjust(right=0.75)
+            add_phase_labels(fig, text, offset=0.05)
             return ax, cbar
 
-        plt.tight_layout()
-        return ax, cbar
+        fig.tight_layout()
+        return cbar
 
     def plot(self,
              Urange=[-2, 2],
              pHrange=[0, 14],
              npoints=300,
              cap=1.0,
-             figsize=[12, 6],
+             # figsize=[12, 6],
              normalize=True,
              include_text=True,
              include_water=False,
              labeltype='numbers',
              cmap="RdYlGn_r",
              savefig=None,
+             ax=None,
              show=False):
         """Plot a complete Pourbaix diagram.
 
@@ -882,15 +884,22 @@ class Pourbaix:
             Spawn a window showing the diagram.
 
         """
-        ax, colorbar = self._draw_diagram_axes(
+        if ax is None:
+            ax = plt.gca()
+
+        fig = ax.get_figure()
+
+        colorbar = self._draw_diagram_axes(
             Urange, pHrange,
             npoints, cap,
-            figsize, normalize,
+            normalize,
             include_text,
             include_water,
-            labeltype, cmap)
+            labeltype, cmap,
+            ax=ax)
 
         if savefig:
-            plt.savefig(savefig)
+            fig.savefig(savefig)
+
         if show:
             plt.show()
