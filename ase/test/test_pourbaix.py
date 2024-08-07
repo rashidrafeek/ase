@@ -131,11 +131,11 @@ def test_redox():
     for reference in ['SHE', 'RHE', 'Pt', 'AgCl', 'SCE']:
         corr.append(reaction.get_ref_correction(reference, alpha=1.0))
 
-    assert (corr[0][0] == corr[0][1] == 0.0)
-    assert (corr[1][1] == -1.0)
-    assert (corr[2][0] == -0.5 * PREDEF_ENERGIES['H2O'])
-    assert (corr[3][0] == U_STD_AGCL)
-    assert (corr[4][0] == U_STD_SCE)
+    assert corr[0][0] == pytest.approx(corr[0][1]) == pytest.approx(0.0)
+    assert corr[1][1] == pytest.approx(-1.0)
+    assert corr[2][0] == pytest.approx(-0.5 * PREDEF_ENERGIES['H2O'])
+    assert corr[3][0] == pytest.approx(U_STD_AGCL)
+    assert corr[4][0] == pytest.approx(U_STD_SCE)
 
     assert reaction.equation()
 
