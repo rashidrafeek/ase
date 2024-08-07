@@ -697,17 +697,15 @@ class Pourbaix:
         for (s1, id1), (s2, id2) in combinations(simplices, 2):
 
             # common neighboring phases, diagram frame excluded
-            common = list(set(id1).intersection(id2))
+            common = {*id1} & {*id2}
 
-            # Simplices have to be distinct
-            cond1 = not np.allclose(s1, s2, rtol=0, atol=tol)
-            # Only two phases in common...
-            cond2 = (len(common) == 2)
-            # ...Diagram frame excluded
-            cond3 = not are_boundaries_there(common)
+            simplices_are_distinct = not np.allclose(s1, s2, rtol=0, atol=tol)
+            only_two_phases_in_common = (len(common) == 2)
+            diagram_frame_excluded = not are_boundaries_there(common)
 
             # Filtering out duplicates
-            if all((cond1, cond2, cond3)):
+            if all([simplices_are_distinct, only_two_phases_in_common,
+                    diagram_frame_excluded]):
                 testarray = sorted([s1, s2], key=lambda s: (s[0], s[1]))
                 testarray.append(sorted(common))
                 testarray = np.array(testarray).flatten()
