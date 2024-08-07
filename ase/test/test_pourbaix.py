@@ -36,7 +36,8 @@ def test_old_pourbaix():
     """Test ZnO system from docs."""
     refs_old = solvated('Zn')
     refs_old += [('Zn', 0.0), ('ZnO', -3.323), ('ZnO2(aq)', -2.921)]
-    pb = Pourbaix_old(refs_old, formula='ZnO')
+    with pytest.warns(FutureWarning):
+        pb = Pourbaix_old(refs_old, formula='ZnO')
 
     _, e = pb.decompose(-1.0, 7.0)
     assert e == pytest.approx(-3.625, abs=0.001)
