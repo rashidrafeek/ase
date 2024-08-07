@@ -1,17 +1,15 @@
 import re
 from collections import Counter
-from itertools import product, chain, combinations
+from fractions import Fraction
+from itertools import chain, combinations, product
 from typing import Union
 
-from fractions import Fraction
+import matplotlib.pyplot as plt
+import numpy as np
 from scipy.linalg import null_space
 
-import numpy as np
-import matplotlib.pyplot as plt
-
-from ase.units import kB
 from ase.formula import Formula
-
+from ase.units import kB
 
 CONST = kB * np.log(10)  # Nernst constant
 
@@ -632,8 +630,8 @@ class Pourbaix:
         x and y coordinates of the simplices connected by the boundary
         and the id's of the phases at each side of the boundary.
         """
-        from itertools import combinations
         from collections import defaultdict
+        from itertools import combinations
 
         # Planes identifying the diagram frame
         planes = [(np.array([0.0, 1.0, 0.0]), min(urange), 'b'),  # Bottom

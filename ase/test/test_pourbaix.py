@@ -1,16 +1,18 @@
 """Test Pourbaix diagram."""
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
-import matplotlib.pyplot as plt
 
-from ase.phasediagram import solvated
 from ase.phasediagram import Pourbaix as Pourbaix_old
+from ase.phasediagram import solvated
 from ase.pourbaix import (
-    Pourbaix,
-    Species, RedOx,
-    U_STD_SCE, U_STD_AGCL,
     PREDEF_ENERGIES,
-    get_main_products
+    U_STD_AGCL,
+    U_STD_SCE,
+    Pourbaix,
+    RedOx,
+    Species,
+    get_main_products,
 )
 
 
@@ -24,6 +26,7 @@ def refs():
         'HZnO2-(aq)': -4.8087349,
         'ZnO2--(aq)': -4.03387383
     }
+
 
 @pytest.fixture
 def pbx(refs):
