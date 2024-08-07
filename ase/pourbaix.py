@@ -1,4 +1,5 @@
 import re
+import functools
 from collections import Counter
 from fractions import Fraction
 from itertools import chain, combinations, product
@@ -193,6 +194,7 @@ def add_redox_lines(axes, pH, reference, color='k'):
         raise ValueError('The specified reference electrode doesnt exist')
 
 
+@functools.total_ordering
 class Species:
     """Class representing an individual chemical species,
        grouping relevant properties.
@@ -215,7 +217,7 @@ class Species:
         the chemical potential of the species
     """
     def __init__(self,
-                 name,
+                 name: str,
                  formula: Formula,
                  charge: int,
                  aq: bool,
@@ -232,6 +234,16 @@ class Species:
         self._main_elements = [
             e for e in self.count.keys() if e not in ['H', 'O']
         ]
+
+    def __eq__(self, other):
+        if not isinstance(other, Species):
+            return NotImplemented
+        return self.name == other.name
+
+    def __lt__(self, other):
+        if not isinstance(other, Species):
+            return NotImplemented
+        return self.name < other.name
 
     @classmethod
     def from_string(cls, string: str, energy: float,
@@ -862,7 +874,7 @@ class Pourbaix:
             Report to the right of the diagram the main products
             associated with the stability domains.
 
-        include_h20: bool
+        include_water: bool
             Include in the diagram the stability domain of water.
 
         labeltype: str/None
