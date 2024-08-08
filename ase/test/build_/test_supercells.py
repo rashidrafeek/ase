@@ -101,46 +101,63 @@ def test_make_supercell_vs_repeat(prim, rep):
     assert all(at1.symbols == at2.symbols)
 
 
-def test_get_deviation_from_optimal_cell_shape():
-    # also tested via the docs data examples
-    # test perfect scores for SC, where cell vector permutation or magnitude
-    # do not matter:
-    cell = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-    for perm, factor in itertools.product(
-        itertools.permutations(range(3)), range(1, 9)
-    ):
+@pytest.mark.parametrize(
+    'cell, target_shape', (
+        ([[1, 0, 0], [0, 1, 0], [0, 0, 1]], 'sc'),
+        ([[0, 1, 1], [1, 0, 1], [1, 1, 0]], 'fcc'),
+    )
+)
+def test_cell_metric_ideal(target_shape, cell):
+    """Test cell with the ideal shape.
+
+    Test if `get_deviation_from_optimal_cell_shape` returns perfect scores
+    (0.0) for the ideal cells.
+    Test also cell vectors with permutatation and elongation.
+    """
+    cell = np.asarray(cell)
+    indices_permuted = itertools.permutations(range(3))
+    elongations = range(1, 4)
+    for perm, factor in itertools.product(indices_permuted, elongations):
         permuted_cell = [cell[i] * factor for i in perm]
-        assert np.isclose(
-            get_deviation_from_optimal_cell_shape(
-                permuted_cell, target_shape="sc"
-            ), 0.0
+        cell_metric = get_deviation_from_optimal_cell_shape(
+            permuted_cell,
+            target_shape=target_shape,
         )
+        assert np.isclose(cell_metric, 0.0)
 
-    # likewise for FCC:
-    cell = np.array([[1, 1, 0], [0, 1, 1], [1, 0, 1]])
-    for perm, factor in itertools.product(itertools.permutations(range(3)),
-                                          range(1, 9)):
-        permuted_cell = [cell[i] * factor for i in perm]
-        assert np.isclose(
-            get_deviation_from_optimal_cell_shape(
-                permuted_cell, target_shape="fcc"
-            ),
-            0.0,
-        )
 
-    # spot check some cases:
-    cell = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 2]])
-    assert np.isclose(get_deviation_from_optimal_cell_shape(cell, "sc"),
-                      0.6558650332)
+@pytest.mark.parametrize(
+    'cell, target_shape', (
+        ([[1, 0, 0], [0, 1, 0], [0, 0, 2]], 'sc'),
+        ([[0, 1, 1], [1, 0, 1], [2, 2, 0]], 'fcc'),
+    )
+)
+def test_cell_metric_twice_larger_lattice_vector(cell, target_shape):
+    """Test cell with a twice larger lattice vector than the others.
 
-    # fcc
-    cell = np.array([[0, 1, 1], [1, 0, 1], [2, 2, 0]])
-    assert np.isclose(get_deviation_from_optimal_cell_shape(cell, "fcc"),
-                      0.6558650332)
+    Test if `get_deviation_from_optimal_cell_shape` gives a correct value for
+    the cells that have a lattice vector twice longer than the others.
+    """
+    # sqrt((1 - cbrt(2))**2 + (1 - cbrt(2))**2 + (2 - cbrt(2))**2) / cbrt(2)
+    cell_metric_ref = 0.6558650332
+    cell_metric = get_deviation_from_optimal_cell_shape(cell, target_shape)
+    assert np.isclose(cell_metric, cell_metric_ref)
 
-    # negative determinant
-    cell = np.array([[-1, 0, 0], [0, -1, 0], [0, 0, -1]])
-    assert np.isclose(get_deviation_from_optimal_cell_shape(cell, "sc"), 0.0)
+
+@pytest.mark.parametrize(
+    'cell, target_shape', (
+        ([[-1, 0, 0], [0, -1, 0], [0, 0, -1]], 'sc'),
+        ([[0, -1, -1], [-1, 0, -1], [-1, -1, 0]], 'fcc'),
+    )
+)
+def test_cell_metric_negative_determinant(cell, target_shape):
+    """Test cell with negative determinant.
+
+    Test if `get_deviation_from_optimal_cell_shape` works for the cells with
+    negative determinants.
+    """
+    cell_metric = get_deviation_from_optimal_cell_shape(cell, target_shape)
+    assert np.isclose(cell_metric, 0.0)
 
 
 def test_find_optimal_cell_shape():
