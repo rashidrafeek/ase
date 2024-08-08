@@ -2,7 +2,13 @@ import numpy as np
 import ase.units as units
 
 
-def write_amber_coordinates(atoms, fout):
+def write_amber_coordinates(atoms, filename):
+    from scipy.io import netcdf_file
+    with netcdf_file(filename, 'w', mmap=False) as fout:
+        _write_amber_coordinates(atoms, fout)
+
+
+def _write_amber_coordinates(atoms, fout):
     fout.Conventions = 'AMBERRESTART'
     fout.ConventionVersion = "1.0"
     fout.title = 'Ase-generated-amber-restart-file'
