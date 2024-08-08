@@ -161,15 +161,18 @@ def test_cell_metric_negative_determinant(cell, target_shape):
 
 
 def test_find_optimal_cell_shape():
-    # also tested via the docs data examples
+    """Test `find_optimal_cell_shape`."""
     cell = np.diag([1.0, 2.0, 4.0])
     target_size = 8
-    target_shape = "sc"
-    result = find_optimal_cell_shape(cell, target_size, target_shape)
-    assert np.isclose(
-        get_deviation_from_optimal_cell_shape(np.dot(result, cell), "sc"), 0.0
+    target_shape = 'sc'
+    supercell_matrix = find_optimal_cell_shape(cell, target_size, target_shape)
+    cell_metric = get_deviation_from_optimal_cell_shape(
+        supercell_matrix @ cell,
+        target_shape,
     )
-    assert np.allclose(np.linalg.norm(np.dot(result, cell), axis=1), 4)
+    assert np.isclose(cell_metric, 0.0)
+    cell_lengths = np.linalg.norm(np.dot(supercell_matrix, cell), axis=1)
+    assert np.allclose(cell_lengths, 4.0)
 
     # docs examples:
     conf = bulk("Au")  # fcc
