@@ -139,6 +139,11 @@ class View:
         else:
             self.draw()
 
+    def get_bonds(self, atoms):
+        # this method exists rather than just using the standalone function
+        # so that it can be overridden by external libraries
+        return get_bonds(atoms, self.get_covalent_radii(atoms))
+
     def set_atoms(self, atoms):
         natoms = len(atoms)
 
@@ -151,7 +156,7 @@ class View:
         if self.showing_bonds():
             atomscopy = atoms.copy()
             atomscopy.cell *= self.images.repeat[:, np.newaxis]
-            bonds = get_bonds(atomscopy, self.get_covalent_radii(atoms))
+            bonds = self.get_bonds(atomscopy)
         else:
             bonds = np.empty((0, 5), int)
 
