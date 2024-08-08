@@ -1,5 +1,7 @@
 """Helper functions for creating supercells."""
 
+import warnings
+
 import numpy as np
 
 from ase import Atoms
@@ -39,7 +41,17 @@ def get_deviation_from_optimal_cell_shape(cell, target_shape="sc", norm=None):
 
     Returns:
         float: Cell metric (0 is perfect score)
+
+    .. deprecated:: 3.24.0
+        `norm` is unused in ASE 3.24.0 and removed in ASE 3.25.0.
+
     """
+    if norm is not None:
+        warnings.warn(
+            '`norm` is unused in ASE 3.24.0 and removed in ASE 3.25.0',
+            FutureWarning,
+        )
+
     cell_lengths = np.linalg.norm(cell, axis=1)
     eff_cubic_length = float(abs(np.linalg.det(cell)) ** (1 / 3))  # 'a_0'
 
