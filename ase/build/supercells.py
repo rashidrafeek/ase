@@ -43,17 +43,18 @@ def get_deviation_from_optimal_cell_shape(cell, target_shape="sc", norm=None):
     cell_lengths = np.linalg.norm(cell, axis=1)
     eff_cubic_length = float(abs(np.linalg.det(cell)) ** (1 / 3))  # 'a_0'
 
-    if target_shape == 'sc' and norm is None:
-        norm = 1 / eff_cubic_length
+    if target_shape == 'sc':
+        target_length = eff_cubic_length
 
-    elif target_shape == 'fcc' and norm is None:
+    elif target_shape == 'fcc':
         # FCC is characterised by 60 degree angles & lattice vectors = 2**(1/6)
         # times the eff cubic length:
-        eff_fcc_length = eff_cubic_length * 2 ** (1 / 6)
-        norm = 1 / eff_fcc_length
+        target_length = eff_cubic_length * 2 ** (1 / 6)
+
+    inv_target_length = 1.0 / target_length
 
     # rms difference to eff cubic/FCC length:
-    return np.sqrt(np.sum(((cell_lengths * norm) - 1) ** 2))
+    return np.sqrt(np.sum((cell_lengths * inv_target_length - 1.0) ** 2))
 
 
 def find_optimal_cell_shape(
@@ -136,8 +137,7 @@ def find_optimal_cell_shape(
         P = starting_P + dP
         if int(np.around(np.linalg.det(P), 0)) != target_size:
             continue
-        score = get_deviation_from_optimal_cell_shape(
-            np.dot(P, norm_cell), target_shape=target_shape, norm=1.0)
+        score = get_deviation_from_optimal_cell_shape(P @ cell, target_shape)
         if score < best_score:
             best_score = score
             optimal_P = P
