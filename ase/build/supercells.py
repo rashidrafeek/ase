@@ -97,6 +97,7 @@ def find_optimal_cell_shape(
         2D array of integers: Transformation matrix that produces the
         optimal supercell.
     """
+    cell = np.asarray(cell)
 
     # Set up target metric
     if target_shape == 'sc':
