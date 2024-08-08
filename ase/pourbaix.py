@@ -744,7 +744,6 @@ class Pourbaix:
             cbarlabel = r'$\Delta G_{pbx}$ (eV)'
 
         fig = ax.get_figure()
-        ax = fig.add_subplot(111)
         extent = [*pHrange, *Urange]
 
         fig.subplots_adjust(
