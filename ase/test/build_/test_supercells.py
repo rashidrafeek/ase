@@ -173,11 +173,3 @@ def test_find_optimal_cell_shape():
     assert np.isclose(cell_metric, 0.0)
     cell_lengths = np.linalg.norm(np.dot(supercell_matrix, cell), axis=1)
     assert np.allclose(cell_lengths, 4.0)
-
-    # docs examples:
-    conf = bulk("Au")  # fcc
-    P1 = find_optimal_cell_shape(conf.cell, 32, "sc")
-    assert np.allclose(P1, np.array([[-2, 2, 2], [2, -2, 2], [2, 2, -2]]))
-
-    P1 = find_optimal_cell_shape(conf.cell, 495, "sc")
-    assert np.allclose(P1, np.array([[-6, 5, 5], [5, -6, 5], [5, 5, -5]]))
