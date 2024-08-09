@@ -604,7 +604,7 @@ class Phonons(Displacement):
         Returns:
 
         BandStructure or tuple of (BandStructure, ndarray)
-            If ``modes`` is False, returns a ```BandStructure`` object
+            If ``modes`` is False, returns a ``BandStructure`` object
             containing the phonon band structure. If ``modes`` is True,
             returns a tuple, where the first element is the
             ``BandStructure`` object and the second element is an ndarray
