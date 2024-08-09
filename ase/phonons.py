@@ -582,6 +582,9 @@ class Phonons(Displacement):
         `band_structure` method of the `Phonons` class. The method can
         optionally calculate and return phonon modes.
 
+        Frequencies and modes are in units of eV and 1/sqrt(amu),
+        respectively.
+
         Parameters:
 
         path : BandPath object
@@ -601,11 +604,16 @@ class Phonons(Displacement):
         Returns:
 
         BandStructure or tuple of (BandStructure, ndarray)
-            If `modes` is False, returns a `BandStructure` object
-            containing the phonon band structure. If `modes` is True,
+            If ``modes`` is False, returns a ``BandStructure`` object
+            containing the phonon band structure. If ``modes`` is True,
             returns a tuple, where the first element is the
-            `BandStructure` object and the second element is an ndarray
+            ``BandStructure`` object and the second element is an ndarray
             of phonon modes.
+
+            If modes are returned, the array is of shape
+            (k-point, bands, atoms, 3) and the norm-squared of the mode
+            is `1 / m_{eff}`, where `m_{eff}` is the effective mass of the
+            mode.
 
         Example:
 
@@ -659,7 +667,7 @@ class Phonons(Displacement):
         eigenvalues (squared frequency), the corresponding negative frequency
         is returned.
 
-        Frequencies and modes are in units of eV and Ang/sqrt(amu),
+        Frequencies and modes are in units of eV and 1/sqrt(amu),
         respectively.
 
         Parameters:
@@ -678,6 +686,11 @@ class Phonons(Displacement):
         verbose: bool
             Print warnings when imaginary frequncies are detected.
 
+        Returns:
+
+        If modes=False: Array of energies
+
+        If modes=True: Tuple of two arrays with energies and modes.
         """
 
         assert self.D_N is not None
@@ -698,7 +711,6 @@ class Phonons(Displacement):
         vol = abs(la.det(self.atoms.cell)) / units.Bohr**3
 
         for q_c in path_kc:
-
             # Add non-analytic part
             if born:
                 # q-vector in cartesian coordinates
@@ -726,7 +738,8 @@ class Phonons(Displacement):
             if modes:
                 omega2_l, u_xl = la.eigh(D_q, UPLO='U')
                 # Sort eigenmodes according to eigenvalues (see below) and
-                # multiply with mass prefactor
+                # multiply with mass prefactor.  This gives the eigenmode
+                # (which is now not normalized!) with units 1/sqrt(amu).
                 u_lx = (self.m_inv_x[:, np.newaxis] *
                         u_xl[:, omega2_l.argsort()]).T.copy()
                 u_kl.append(u_lx.reshape((-1, len(self.indices), 3)))
@@ -812,7 +825,7 @@ class Phonons(Displacement):
 
         Parameters:
 
-        q_c: ndarray
+        q_c: ndarray of shape (3,)
             q-vector of the modes.
         branches: int or list
             Branch index of modes.
@@ -830,6 +843,8 @@ class Phonons(Displacement):
         center: bool
             Center atoms in unit cell if True (default: False).
 
+        To exaggerate the amplitudes for better visualization, multiply
+        kT by the square of the desired factor.
         """
 
         if isinstance(branches, int):
@@ -856,13 +871,20 @@ class Phonons(Displacement):
         phase_N = np.exp(2.j * pi * np.dot(q_c, R_cN))
         phase_Na = phase_N.repeat(len(self.atoms))
 
+        hbar = units._hbar * units.J * units.second
         for lval in branch_l:
 
             omega = omega_l[0, lval]
             u_av = u_l[0, lval]
+            assert u_av.ndim == 2
 
-            # Mean displacement of a classical oscillator at temperature T
-            u_av *= sqrt(kT) / abs(omega)
+            # For a classical harmonic oscillator, <x^2> = k T / m omega^2
+            # and <x^2> = 1/2 u^2 where u is the amplitude and m is the
+            # effective mass of the mode.
+            # The reciprocal mass is already included in the normalization
+            # of the modes.  The variable omega is actually hbar*omega (it
+            # is in eV, not reciprocal ASE time units).
+            u_av *= hbar * sqrt(2 * kT) / abs(omega)
 
             mode_av = np.zeros((len(self.atoms), 3), dtype=complex)
             # Insert slice with atomic displacements for the included atoms
