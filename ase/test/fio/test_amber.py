@@ -1,6 +1,6 @@
+import numpy as np
 import pytest
 
-import numpy as np
 from ase.build import bulk
 from ase.calculators.calculator import compare_atoms
 from ase.io.amber import read_amber_coordinates, write_amber_coordinates
