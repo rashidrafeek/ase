@@ -612,7 +612,7 @@ class Phonons(Displacement):
 
             If modes are returned, the array is of shape
             (k-point, bands, atoms, 3) and the norm-squared of the mode
-            is `1 / m_{eff}`, where `m_{eff}` is the effective mass of the 
+            is `1 / m_{eff}`, where `m_{eff}` is the effective mass of the
             mode.
 
         Example:
@@ -738,7 +738,7 @@ class Phonons(Displacement):
             if modes:
                 omega2_l, u_xl = la.eigh(D_q, UPLO='U')
                 # Sort eigenmodes according to eigenvalues (see below) and
-                # multiply with mass prefactor.  This gives the eigenmode 
+                # multiply with mass prefactor.  This gives the eigenmode
                 # (which is now not normalized!) with units 1/sqrt(amu).
                 u_lx = (self.m_inv_x[:, np.newaxis] *
                         u_xl[:, omega2_l.argsort()]).T.copy()

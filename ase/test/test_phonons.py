@@ -1,12 +1,13 @@
+import os
+
+import numpy as np
+
+from ase import Atoms, units
 from ase.build import bulk, molecule
 from ase.calculators.emt import EMT
 from ase.calculators.lj import LennardJones
-from ase.phonons import Phonons
-from ase import Atoms
-from ase import units
 from ase.io.trajectory import Trajectory
-import numpy as np
-import os
+from ase.phonons import Phonons
 
 
 def check_set_atoms(atoms, set_atoms, expected_atoms):
@@ -81,11 +82,13 @@ def test_get_band_structure_with_modes(testdir):
     assert band_structure is not None, "Band structure should not be None"
     assert modes is not None, "Modes should not be None"
     assert modes.ndim == 4, "Modes should be a 4-dimensional numpy array"
-    assert modes.shape == (npoints, 3*natoms, natoms, 3), "Modes should have shape (k-points, nbands, natoms, 3)"
+    assert modes.shape == (npoints, 3 * natoms, natoms, 3), \
+        "Modes should have shape (k-points, nbands, natoms, 3)"
+
 
 def test_frequencies_amplitudes(testdir):
     """Test frequencies and amplitudes of the phonon modes.
-    
+
     The calculation is done for a diatomic chain of atoms
     with different masses and known spring constants, so
     frequencies and mode amplitudes can be compared with
@@ -104,9 +107,9 @@ def test_frequencies_amplitudes(testdir):
     LJ_sigma = (LJ_sigma_O + LJ_sigma_Cu) / 2
 
     # Equilibrium distance
-    d0 = 2**(1/6) * LJ_sigma
+    d0 = 2**(1 / 6) * LJ_sigma
     # Spring constant
-    C = 36 * 2**(2/3) * LJ_epsilon / LJ_sigma**2
+    C = 36 * 2**(2 / 3) * LJ_epsilon / LJ_sigma**2
     print(f'LJ epsilon: {LJ_epsilon:.5f} eV    sigma: {LJ_sigma:.5f} Å')
     print(f'Bond length d0 = {d0:.5f} Å.     C = {C:.5f} eV / Å^2')
 
@@ -115,13 +118,19 @@ def test_frequencies_amplitudes(testdir):
         [[0, 0, 0],
         [d0, 0, 0]]
     )
-    atoms = Atoms(symbols='CuO', positions=pos, cell=[2*d0, 10., 10.], pbc=(True, False, False))
+    atoms = Atoms(
+        symbols='CuO',
+        positions=pos,
+        cell=[2 * d0, 10., 10.],
+        pbc=(True, False, False)
+    )
     atoms.center()
-    calc = LennardJones(sigma=LJ_sigma, epsilon=LJ_epsilon, rc=1.5*d0)
+    calc = LennardJones(sigma=LJ_sigma, epsilon=LJ_epsilon, rc=1.5 * d0)
 
     print('Calculating phonons')
     N = 7
-    ph = Phonons(atoms, calc, supercell=(N, 1, 1), delta=0.005, name='phonon_CuO')
+    ph = Phonons(atoms, calc, supercell=(N, 1, 1),
+                 delta=0.005, name='phonon_CuO')
     ph.run()
     assert ph.check_eq_forces()[1] < 1e-9, "System is not at equilibrium"
     # Read forces and assemble the dynamical matrix
@@ -133,20 +142,20 @@ def test_frequencies_amplitudes(testdir):
     gamma_point = path.special_points['G']
     x_point = path.special_points['X']
     omegas, us = ph.band_structure(kpoints, modes=True)
-    
-    e_gamma_O = omegas[0,5]
-    e_X_O = omegas[-1,5]
-    e_X_A = omegas[-1,4]
+
+    e_gamma_O = omegas[0, 5]
+    e_X_O = omegas[-1, 5]
+    e_X_A = omegas[-1, 4]
 
     (m1, m2) = atoms.get_masses()
     hbar = units._hbar * units.J * units.second
 
-    e_gamma_O_th = hbar * np.sqrt(2 * C * (1/m1 + 1/m2))
+    e_gamma_O_th = hbar * np.sqrt(2 * C * (1 / m1 + 1 / m2))
     e_X_O_th = hbar * np.sqrt(2 * C / m2)
     e_X_A_th = hbar * np.sqrt(2 * C / m1)
 
     print()
-    print(f'ENERGIES      Numerical  Analytical')
+    print('ENERGIES      Numerical  Analytical')
     print(f'Gamma, O:     {e_gamma_O:<9.5f}  {e_gamma_O_th:<9.5f}    eV')
     print(f'Zone edge, O: {e_X_O:<9.5f}  {e_X_O_th:<9.5f}    eV')
     print(f'Zone edge, A: {e_X_A:<9.5f}  {e_X_A_th:<9.5f}    eV')
@@ -156,8 +165,8 @@ def test_frequencies_amplitudes(testdir):
     assert np.isclose(e_X_A, e_X_A_th, atol=1e-4)
 
     print()
-    mr = m1/m2
-    print(f'Mass ratios:  {mr:.5f}   {m2/m1:.5f}')
+    mr = m1 / m2
+    print(f'Mass ratios:  {mr:.5f}   {m2 / m1:.5f}')
 
     print('Amplitude ratios, Optical mode at gamma point:')
     amp_gamma_O = us[0, 5, 1, 0] / us[0, 5, 0, 0]
@@ -189,7 +198,8 @@ def test_frequencies_amplitudes(testdir):
 
     for kk, br, hbaromega in checkmodes:
         print(f'Ckecking k-point {kk} branch {br}')
-        ph.write_modes(kk, branches=(br,), repeat=(repeat,1,1), kT=T*units.kB)
+        ph.write_modes(kk, branches=(br,),
+                       repeat=(repeat, 1, 1), kT=T * units.kB)
         filename = f'{ph.name}.mode.{br}.traj'
         pos = []
         with Trajectory(filename) as traj:
@@ -205,12 +215,12 @@ def test_frequencies_amplitudes(testdir):
         vel = []
         ekin = []
         for i in range(len(pos)):
-            v = (pos[i] - pos[i-1]) / delta_t
+            v = (pos[i] - pos[i - 1]) / delta_t
             vel.append(v)
             ek = (0.5 * masses * (v * v).sum(axis=1)).sum() / repeat
             ekin.append(ek)
 
         ekin_avg = np.mean(ekin)
-        print(f"Average kinetic energy: {ekin_avg} eV   -   expected {units.kB * T / 2} eV")
-        assert np.isclose(ekin_avg, units.kB * T / 2, rtol=0.01)
-
+        ekin_exp = units.kB * T / 2
+        print(f"Avg. kinetic energy: {ekin_avg} eV - expected {ekin_exp} eV")
+        assert np.isclose(ekin_avg, ekin_exp, rtol=0.01)
