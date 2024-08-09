@@ -38,7 +38,7 @@ def _write_amber_coordinates(atoms, fout):
     coordinates = fout.createVariable('coordinates', 'd',
                                       ('atom', 'spatial'))
     coordinates.units = 'angstrom'
-    coordinates[:] = atoms.get_positions()[:]
+    coordinates[:] = atoms.get_positions()
 
     velocities = fout.createVariable('velocities', 'd',
                                      ('atom', 'spatial'))
@@ -52,18 +52,14 @@ def _write_amber_coordinates(atoms, fout):
     # get_velocities call returns velocities with units sqrt(eV/u)
     # so convert to Ang/ps
     factor = units.fs * 1000 / velocities.scale_factor
-    velocities[:] = atoms.get_velocities()[:] * factor
+    velocities[:] = atoms.get_velocities() * factor
 
-    # title
     cell_angular = fout.createVariable('cell_angular', 'c',
                                        ('cell_angular', 'label'))
-    cell_angular[0] = np.asarray(list('alpha'))
-    cell_angular[1] = np.asarray(list('beta '))
-    cell_angular[2] = np.asarray(list('gamma'))
+    cell_angular = ['alpha', 'beta', 'gamma']
 
-    # title
     cell_spatial = fout.createVariable('cell_spatial', 'c', ('cell_spatial',))
-    cell_spatial[0], cell_spatial[1], cell_spatial[2] = 'a', 'b', 'c'
+    cell_spatial[:] = ['a', 'b', 'c']
 
     cell_lengths = fout.createVariable('cell_lengths', 'd', ('cell_spatial',))
     cell_lengths.units = 'angstrom'
