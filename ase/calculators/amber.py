@@ -13,7 +13,7 @@ from scipy.io import netcdf_file
 
 import ase.units as units
 from ase.calculators.calculator import Calculator, FileIOCalculator
-from ase.io import write_amber_coordinates
+from ase.io.amber import read_amber_coordinates, write_amber_coordinates
 
 
 class Amber(FileIOCalculator):
@@ -129,7 +129,8 @@ class Amber(FileIOCalculator):
         This may be useful if you have run amber many steps and
         want to read new positions and velocities
         """
-        from ase.io.amber import read_amber_coordinates
+        # For historical reasons we edit the input atoms rather than
+        # returning new atoms.
         _atoms = read_amber_coordinates(self.outcoordfile)
         atoms.cell[:] = _atoms.cell
         atoms.pbc[:] = _atoms.pbc
