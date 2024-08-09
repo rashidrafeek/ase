@@ -40,20 +40,19 @@ def _write_amber_coordinates(atoms, fout):
     coordinates.units = 'angstrom'
     coordinates[:] = atoms.get_positions()[:]
 
-    if atoms.get_velocities() is not None:
-        velocities = fout.createVariable('velocities', 'd',
-                                         ('atom', 'spatial'))
-        velocities.units = 'angstrom/picosecond'
-        # Amber's units of time are 1/20.455 ps
-        # Any other units are ignored in restart files, so these
-        # are the only ones it is safe to print
-        # See: http://ambermd.org/Questions/units.html
-        # Apply conversion factor from ps:
-        velocities.scale_factor = 20.455
-        # get_velocities call returns velocities with units sqrt(eV/u)
-        # so convert to Ang/ps
-        factor = units.fs * 1000 / velocities.scale_factor
-        velocities[:] = atoms.get_velocities()[:] * factor
+    velocities = fout.createVariable('velocities', 'd',
+                                     ('atom', 'spatial'))
+    velocities.units = 'angstrom/picosecond'
+    # Amber's units of time are 1/20.455 ps
+    # Any other units are ignored in restart files, so these
+    # are the only ones it is safe to print
+    # See: http://ambermd.org/Questions/units.html
+    # Apply conversion factor from ps:
+    velocities.scale_factor = 20.455
+    # get_velocities call returns velocities with units sqrt(eV/u)
+    # so convert to Ang/ps
+    factor = units.fs * 1000 / velocities.scale_factor
+    velocities[:] = atoms.get_velocities()[:] * factor
 
     # title
     cell_angular = fout.createVariable('cell_angular', 'c',
