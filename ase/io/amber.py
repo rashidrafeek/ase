@@ -65,21 +65,15 @@ def _write_amber_coordinates(atoms, fout):
     cell_spatial = fout.createVariable('cell_spatial', 'c', ('cell_spatial',))
     cell_spatial[0], cell_spatial[1], cell_spatial[2] = 'a', 'b', 'c'
 
-    # data
     cell_lengths = fout.createVariable('cell_lengths', 'd', ('cell_spatial',))
     cell_lengths.units = 'angstrom'
-    cell_lengths[0] = atoms.get_cell()[0, 0]
-    cell_lengths[1] = atoms.get_cell()[1, 1]
-    cell_lengths[2] = atoms.get_cell()[2, 2]
+    cell_lengths[:] = atoms.cell.lengths()
 
-    cell_angles = fout.createVariable('cell_angles', 'd', ('cell_angular',))
     if not atoms.cell.orthorhombic:
         raise ValueError('Non-orthorhombic cell not supported with amber')
-    box_alpha, box_beta, box_gamma = 90.0, 90.0, 90.0
-    cell_angles[0] = box_alpha
-    cell_angles[1] = box_beta
-    cell_angles[2] = box_gamma
 
+    cell_angles = fout.createVariable('cell_angles', 'd', ('cell_angular',))
+    cell_angles[:3] = 90.0
     cell_angles.units = 'degree'
 
 
