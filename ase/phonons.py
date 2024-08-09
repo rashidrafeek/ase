@@ -611,11 +611,9 @@ class Phonons(Displacement):
             of phonon modes.
 
             If modes are returned, the array is of shape
-            (k-point, bands, atoms, 3) and the normalization is such
-            that for each k-point and band, the sum
-            `\\sum_{i=0}^{natoms} \\sum_{j=x,y,z} m_i |u_i,j|^2 = 1`
-            (i.e. the sum of the amplitudes squared is `1 / m_eff`, where
-            `m_eff` is the effective mass of the mode
+            (k-point, bands, atoms, 3) and the norm-squared of the mode
+            is `1 / m_{eff}`, where `m_{eff}` is the effective mass of the 
+            mode.
 
         Example:
 
