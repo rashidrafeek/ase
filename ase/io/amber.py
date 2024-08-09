@@ -8,6 +8,12 @@ def write_amber_coordinates(atoms, filename):
         _write_amber_coordinates(atoms, fout)
 
 
+def read_amber_coordinates(filename):
+    from scipy.io import netcdf_file
+    with netcdf_file(filename, 'r', mmap=False) as fin:
+        return _read_amber_coordinates(fin)
+
+
 def _write_amber_coordinates(atoms, fout):
     fout.Conventions = 'AMBERRESTART'
     fout.ConventionVersion = "1.0"
@@ -67,9 +73,69 @@ def _write_amber_coordinates(atoms, fout):
     cell_lengths[2] = atoms.get_cell()[2, 2]
 
     cell_angles = fout.createVariable('cell_angles', 'd', ('cell_angular',))
+    if not atoms.cell.orthorhombic:
+        raise ValueError('Non-orthorhombic cell not supported with amber')
     box_alpha, box_beta, box_gamma = 90.0, 90.0, 90.0
     cell_angles[0] = box_alpha
     cell_angles[1] = box_beta
     cell_angles[2] = box_gamma
 
     cell_angles.units = 'degree'
+
+
+def _read_amber_coordinates(fin):
+    from ase import Atoms
+
+    all_coordinates = fin.variables['coordinates'][:]
+    get_last_frame = False
+    if hasattr(all_coordinates, 'ndim'):
+        if all_coordinates.ndim == 3:
+            get_last_frame = True
+    elif hasattr(all_coordinates, 'shape'):
+        if len(all_coordinates.shape) == 3:
+            get_last_frame = True
+    if get_last_frame:
+        all_coordinates = all_coordinates[-1]
+
+    atoms = Atoms(positions=all_coordinates)
+
+    if 'velocities' in fin.variables:
+        all_velocities = fin.variables['velocities']
+        if hasattr(all_velocities, 'units'):
+            if all_velocities.units != b'angstrom/picosecond':
+                raise Exception(
+                    f'Unrecognised units {all_velocities.units}')
+        if hasattr(all_velocities, 'scale_factor'):
+            scale_factor = all_velocities.scale_factor
+        else:
+            scale_factor = 1.0
+        all_velocities = all_velocities[:] * scale_factor
+        all_velocities = all_velocities / (1000 * units.fs)
+        if get_last_frame:
+            all_velocities = all_velocities[-1]
+        atoms.set_velocities(all_velocities)
+    if 'cell_lengths' in fin.variables:
+        all_abc = fin.variables['cell_lengths']
+        if get_last_frame:
+            all_abc = all_abc[-1]
+        a, b, c = all_abc
+        all_angles = fin.variables['cell_angles']
+        if get_last_frame:
+            all_angles = all_angles[-1]
+        alpha, beta, gamma = all_angles
+
+        if (all(angle > 89.99 for angle in [alpha, beta, gamma]) and
+                all(angle < 90.01 for angle in [alpha, beta, gamma])):
+            atoms.set_cell(
+                np.array([[a, 0, 0],
+                          [0, b, 0],
+                          [0, 0, c]]))
+            atoms.set_pbc(True)
+        else:
+            raise NotImplementedError('only rectangular cells are'
+                                      ' implemented in ASE-AMBER')
+
+    else:
+        atoms.set_pbc(False)
+
+    return atoms

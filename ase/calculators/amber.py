@@ -117,10 +117,9 @@ class Amber(FileIOCalculator):
     def write_coordinates(self, atoms, filename):
         """ write amber coordinates in netCDF format,
             only rectangular unit cells are allowed"""
-        with netcdf_file(filename, 'w', mmap=False) as fout:
-            write_amber_coordinates(atoms, fout)
+        write_amber_coordinates(atoms, filename)
 
-    def read_coordinates(self, atoms, filename=''):
+    def read_coordinates(self, atoms):
         """Import AMBER16 netCDF restart files.
 
         Reads atom positions and
@@ -130,64 +129,12 @@ class Amber(FileIOCalculator):
         This may be useful if you have run amber many steps and
         want to read new positions and velocities
         """
-
-        if filename == '':
-            filename = self.outcoordfile
-
-        import numpy as np
-
-        import ase.units as units
-
-        with netcdf_file(filename, 'r', mmap=False) as fin:
-            all_coordinates = fin.variables['coordinates'][:]
-            get_last_frame = False
-            if hasattr(all_coordinates, 'ndim'):
-                if all_coordinates.ndim == 3:
-                    get_last_frame = True
-            elif hasattr(all_coordinates, 'shape'):
-                if len(all_coordinates.shape) == 3:
-                    get_last_frame = True
-            if get_last_frame:
-                all_coordinates = all_coordinates[-1]
-            atoms.set_positions(all_coordinates)
-            if 'velocities' in fin.variables:
-                all_velocities = fin.variables['velocities']
-                if hasattr(all_velocities, 'units'):
-                    if all_velocities.units != b'angstrom/picosecond':
-                        raise Exception(
-                            f'Unrecognised units {all_velocities.units}')
-                if hasattr(all_velocities, 'scale_factor'):
-                    scale_factor = all_velocities.scale_factor
-                else:
-                    scale_factor = 1.0
-                all_velocities = all_velocities[:] * scale_factor
-                all_velocities = all_velocities / (1000 * units.fs)
-                if get_last_frame:
-                    all_velocities = all_velocities[-1]
-                atoms.set_velocities(all_velocities)
-            if 'cell_lengths' in fin.variables:
-                all_abc = fin.variables['cell_lengths']
-                if get_last_frame:
-                    all_abc = all_abc[-1]
-                a, b, c = all_abc
-                all_angles = fin.variables['cell_angles']
-                if get_last_frame:
-                    all_angles = all_angles[-1]
-                alpha, beta, gamma = all_angles
-
-                if (all(angle > 89.99 for angle in [alpha, beta, gamma]) and
-                        all(angle < 90.01 for angle in [alpha, beta, gamma])):
-                    atoms.set_cell(
-                        np.array([[a, 0, 0],
-                                  [0, b, 0],
-                                  [0, 0, c]]))
-                    atoms.set_pbc(True)
-                else:
-                    raise NotImplementedError('only rectangular cells are'
-                                              ' implemented in ASE-AMBER')
-
-            else:
-                atoms.set_pbc(False)
+        from ase.io.amber import read_amber_coordinates
+        _atoms = read_amber_coordinates(self.outcoordfile)
+        atoms.cell[:] = _atoms.cell
+        atoms.pbc[:] = _atoms.pbc
+        atoms.positions[:] = _atoms.positions
+        atoms.set_momenta(_atoms.get_momenta())
 
     def read_energy(self, filename='mden'):
         """ read total energy from amber file """
