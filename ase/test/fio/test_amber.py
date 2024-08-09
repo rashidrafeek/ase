@@ -2,7 +2,7 @@ import pytest
 
 from ase.build import bulk
 from ase.calculators.calculator import compare_atoms
-from ase.io.amber import write_amber_coordinates, read_amber_coordinates
+from ase.io.amber import read_amber_coordinates, write_amber_coordinates
 
 
 def test_io_amber_coordinates():
