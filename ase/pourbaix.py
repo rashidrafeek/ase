@@ -90,7 +90,7 @@ def get_main_products(count):
             if coef > 0 and spec not in ['H+', 'H2O', 'e-']]
 
 
-def format_label(count):
+def format_label(count) -> str:
     """Obtain phase labels formatted in LaTeX math style."""
     formatted = []
     for prod in get_main_products(count):
@@ -106,7 +106,7 @@ def format_label(count):
     return ', '.join(f for f in formatted)
 
 
-def make_coeff_nice(coeff, max_denom):
+def make_coeff_nice(coeff, max_denom) -> str:
     """Convert a fraction into a string while limiting the denominator"""
     frac = abs(Fraction(coeff).limit_denominator(max_denom))
     if frac.numerator == frac.denominator:
@@ -114,7 +114,7 @@ def make_coeff_nice(coeff, max_denom):
     return str(frac)
 
 
-def add_numbers(ax, text):
+def add_numbers(ax, text) -> None:
     """Add number identifiers to the different domains of a Pourbaix diagram."""
     import matplotlib.patheffects as pfx
     for i, (x, y, _) in enumerate(text):
@@ -126,7 +126,7 @@ def add_numbers(ax, text):
         txt.set_path_effects([pfx.withStroke(linewidth=2.0, foreground='w')])
 
 
-def add_labels(ax, text):
+def add_labels(ax, text) -> None:
     """Add phase labels to the different domains of a Pourbaix diagram."""
     import matplotlib.patheffects as pfx
     for i, (x, y, species) in enumerate(text):
@@ -142,7 +142,7 @@ def add_labels(ax, text):
         ax.add_artist(annotation)
 
 
-def wrap_text(text):
+def wrap_text(text) -> str:
     import textwrap
 
     textlines = []
@@ -169,7 +169,7 @@ def add_phase_labels(fig, text, offset=0.0):
         ha='left')
 
 
-def add_redox_lines(axes, pH, reference, color='k'):
+def add_redox_lines(axes, pH, reference, color='k') -> None:
     """Add water redox potentials to a Pourbaix diagram"""
     const = -0.5 * PREDEF_ENERGIES['H2O']
     corr = {
