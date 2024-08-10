@@ -587,7 +587,7 @@ class Pourbaix:
             equations.append(f'{i}) {p.equation()}')
         return equations
 
-    def get_diagrams(self, U, pH):
+    def diagram(self, U=None, pH=None):
         """Actual evaluation of the complete diagram
 
         Returns
@@ -605,6 +605,9 @@ class Pourbaix:
         text:
             The coordinates and phases information for
             text placement on the diagram.
+
+        domains:
+            ...
 
         """
         pour = np.zeros((len(U), len(pH)))
@@ -633,18 +636,9 @@ class Pourbaix:
             y = np.dot(where.sum(0), pH) / where.sum()
             text.append((x, y, txt))
 
-        return pour, meta, text, domains
+        return PourbaixDiagram(self, U, pH, pour, meta, text, domains)
 
-    def diagram(self, U=None, pH=None):
-        if U is None:
-            U = np.linspace(-2, 2, 300)
-
-        if pH is None:
-            pH = np.linspace(0, 14, 300)
-
-        return PourbaixDiagram(self, U, pH, *self.get_diagrams(U, pH))
-
-    def get_phase_boundaries(self, phrange, urange, domains, tol=1e-6):
+    def get_phase_boundaries(self, phmin, phmax, umin, umax, domains, tol=1e-6):
         """Plane intersection method for finding
            the boundaries between phases seen in the final plot.
 
@@ -657,10 +651,10 @@ class Pourbaix:
         from itertools import combinations
 
         # Planes identifying the diagram frame
-        planes = [(np.array([0.0, 1.0, 0.0]), min(urange), 'bottom'),
-                  (np.array([0.0, 1.0, 0.0]), max(urange), 'top'),
-                  (np.array([1.0, 0.0, 0.0]), min(phrange), 'left'),
-                  (np.array([1.0, 0.0, 0.0]), max(phrange), 'right')]
+        planes = [(np.array([0.0, 1.0, 0.0]), umin, 'bottom'),
+                  (np.array([0.0, 1.0, 0.0]), umax, 'top'),
+                  (np.array([1.0, 0.0, 0.0]), phmin, 'left'),
+                  (np.array([1.0, 0.0, 0.0]), phmax, 'right')]
 
         # Planes associated with the stable domains of the diagram.
         # Given x=pH, y=U, z=E_pbx=-DeltaG, each plane has expression:
@@ -699,8 +693,8 @@ class Pourbaix:
             Epbx = self._get_pourbaix_energy(pt[1], pt[0])[0]
             if pt[2] >= -tol and \
                np.isclose(Epbx, pt[2], rtol=0, atol=tol) and \
-               min(phrange) - tol <= pt[0] <= max(phrange) + tol and \
-               min(urange) - tol <= pt[1] <= max(urange) + tol:
+               phmin - tol <= pt[0] <= phmax + tol and \
+               umin - tol <= pt[1] <= umax + tol:
                 simplex = np.round(pt[:2], 3)
                 simplices.append((simplex, ids))
 
@@ -780,13 +774,7 @@ class PourbaixDiagram:
             include_water,
             labeltype, cmap, *,
             ax):
-        """Backend for drawing Pourbaix diagrams"""
-
-        # pH = np.linspace(*pHrange, num=npoints)
-        # U = np.linspace(*Urange, num=npoints)
-
-        # diagram = self.pbx.diagram(self.Urange, self.pHrange, self.npoints)
-        # pour, meta, text, domains = self.get_diagrams(U, pH)
+        """Backend for drawing Pourbaix diagrams."""
 
         if normalize:
             meta = self.meta / self.pbx.material.natoms
@@ -824,7 +812,7 @@ class PourbaixDiagram:
         )
 
         bounds = self.pbx.get_phase_boundaries(
-            self.pHrange, self.Urange, self.domains
+            *self.pHrange, *self.Urange, self.domains
         )
         for coords, _ in bounds:
             ax.plot(coords[0], coords[1], '-', c='k', lw=1.0)

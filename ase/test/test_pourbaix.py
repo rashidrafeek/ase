@@ -56,19 +56,19 @@ def test_Zn_diagram(pbx):
 
     U = np.linspace(-2, 2, 5)
     pH = np.linspace(0, 14, 8)
-    phases, diagram, text, _ = pbx.get_diagrams(U, pH)
+    diagram = pbx.diagram(U, pH)
 
     # Verify that the stability domains are the expected ones
-    names = [get_main_products(txt[2])[0] for txt in text]
+    names = [get_main_products(txt[2])[0] for txt in diagram.text]
     for name in ['Zn', 'ZnO', 'Zn++(aq)', 'HZnO2-(aq)', 'ZnO2--(aq)']:
         assert name in names
     assert 'ZnOH+(aq)' not in names
 
     # Verify that Zn is stable at U=-2, pH=0
-    assert diagram[0, 0] <= 0
+    assert diagram.meta[0, 0] <= 0
 
     # Verify that Zn++ is the stable phase at U=0, pH=6
-    i0 = int(phases[2, 3])
+    i0 = int(diagram.pour[2, 3])
     phase0 = pbx.phases[i0]
     assert 'Zn++(aq)' in phase0.count
 
