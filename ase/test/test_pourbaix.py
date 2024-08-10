@@ -95,7 +95,7 @@ def test_plotting(pbx, figure):
             'cmap': "RdYlGn_r",
             'normalize': True,
             'show': False,
-            'savefig': None,
+            'filename': None,
             'ax': ax}
 
     diagram.plot(**args)

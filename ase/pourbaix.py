@@ -866,7 +866,7 @@ class PourbaixDiagram:
              include_water=False,
              labeltype='numbers',
              cmap="RdYlGn_r",
-             savefig=None,
+             filename=None,
              ax=None,
              show=False):
         """Plot a complete Pourbaix diagram.
@@ -913,7 +913,7 @@ class PourbaixDiagram:
                            is unsatisfactory. Redundant if include_text=True.
                  None:     Don't draw any labels.
 
-        savefig: str/None
+        filename: str/None
             If passed as a string, the figure will be saved with that name.
 
         show: bool
@@ -935,8 +935,8 @@ class PourbaixDiagram:
             labeltype, cmap,
             ax=ax)
 
-        if savefig:
-            fig.savefig(savefig)
+        if filename is not None:
+            fig.savefig(filename)
 
         if show:
             plt.show()
