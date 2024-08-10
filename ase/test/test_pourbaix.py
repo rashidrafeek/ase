@@ -83,7 +83,7 @@ def test_Zn_diagram(pbx):
 def test_plotting(pbx, figure):
     """Test all the plotting functionalities and options"""
 
-    diagram = pbx.diagram(Urange=[-2, 2], pHrange=[0, 14], npoints=10)
+    diagram = pbx.diagram(U=np.linspace(-2, 2, 10), pH=np.linspace(0, 14, 10))
 
     ax = figure.gca()
 

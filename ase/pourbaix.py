@@ -171,7 +171,7 @@ def add_phase_labels(fig, text, offset=0.0):
 
 def add_redox_lines(axes, pH, reference, color='k'):
     """Add water redox potentials to a Pourbaix diagram"""
-    const = - 0.5 * PREDEF_ENERGIES['H2O']
+    const = -0.5 * PREDEF_ENERGIES['H2O']
     corr = {
         'SHE': 0,
         'RHE': 0,
@@ -635,11 +635,14 @@ class Pourbaix:
 
         return pour, meta, text, domains
 
-    def diagram(self, Urange, pHrange, npoints):
-        pH = np.linspace(*pHrange, num=npoints)
-        U = np.linspace(*Urange, num=npoints)
-        return PourbaixDiagram(self, Urange, pHrange, npoints, U, pH,
-                               *self.get_diagrams(U, pH))
+    def diagram(self, U=None, pH=None):
+        if U is None:
+            U = np.linspace(-2, 2, 300)
+
+        if pH is None:
+            pH = np.linspace(0, 14, 300)
+
+        return PourbaixDiagram(self, U, pH, *self.get_diagrams(U, pH))
 
     def get_phase_boundaries(self, phrange, urange, domains, tol=1e-6):
         """Plane intersection method for finding
@@ -743,15 +746,31 @@ class Pourbaix:
 @dataclass
 class PourbaixDiagram:
     pbx: Pourbaix
-    Urange: Tuple[float, float]
-    pHrange: Tuple[float, float]
-    npoints: int
     U: np.ndarray
     pH: np.ndarray
     pour: np.ndarray
     meta: np.ndarray
     text: List[Tuple[float, float, str]]
     domains: List[int]
+
+    def __post_init__(self):
+        def _issorted(array):
+            return all(np.diff(array) > 0)
+
+        # We might as well require the input domains to be sorted:
+        if not _issorted(self.U):
+            raise ValueError('U must be sorted')
+
+        if not _issorted(self.pH):
+            raise ValueError('pH must be sorted')
+
+    @property
+    def pHrange(self):
+        return (self.pH[0], self.pH[-1])
+
+    @property
+    def Urange(self):
+        return (self.U[0], self.U[-1])
 
     def _draw_diagram_axes(
             self,
