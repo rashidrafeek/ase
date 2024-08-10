@@ -1,9 +1,10 @@
 import re
 import functools
 from collections import Counter
+from dataclasses import dataclass
 from fractions import Fraction
 from itertools import chain, combinations, product
-from typing import Tuple, Union
+from typing import Tuple, Union, List
 
 import numpy as np
 from scipy.linalg import null_space
@@ -634,6 +635,12 @@ class Pourbaix:
 
         return pour, meta, text, domains
 
+    def diagram(self, Urange, pHrange, npoints):
+        pH = np.linspace(*pHrange, num=npoints)
+        U = np.linspace(*Urange, num=npoints)
+        return PourbaixDiagram(self, Urange, pHrange, npoints, U, pH,
+                               *self.get_diagrams(U, pH))
+
     def get_phase_boundaries(self, phrange, urange, domains, tol=1e-6):
         """Plane intersection method for finding
            the boundaries between phases seen in the final plot.
@@ -732,6 +739,20 @@ class Pourbaix:
             ))
         return segments
 
+
+@dataclass
+class PourbaixDiagram:
+    pbx: Pourbaix
+    Urange: Tuple[float, float]
+    pHrange: Tuple[float, float]
+    npoints: int
+    U: np.ndarray
+    pH: np.ndarray
+    pour: np.ndarray
+    meta: np.ndarray
+    text: List[Tuple[float, float, str]]
+    domains: List[int]
+
     def _draw_diagram_axes(
             self,
             Urange, pHrange,
@@ -746,10 +767,11 @@ class Pourbaix:
         pH = np.linspace(*pHrange, num=npoints)
         U = np.linspace(*Urange, num=npoints)
 
-        pour, meta, text, domains = self.get_diagrams(U, pH)
+        diagram = self.pbx.diagram(Urange, pHrange, npoints)
+        # pour, meta, text, domains = self.get_diagrams(U, pH)
 
         if normalize:
-            meta /= self.material.natoms
+            meta = diagram.meta / self.pbx.material.natoms
             cbarlabel = r'$\Delta G_{pbx}$ (eV/atom)'
         else:
             cbarlabel = r'$\Delta G_{pbx}$ (eV)'
@@ -783,28 +805,29 @@ class Pourbaix:
             pad=0.02
         )
 
-        bounds = self.get_phase_boundaries(
-            pHrange, Urange, domains
+        bounds = self.pbx.get_phase_boundaries(
+            pHrange, Urange, diagram.domains
         )
         for coords, _ in bounds:
             ax.plot(coords[0], coords[1], '-', c='k', lw=1.0)
 
         if labeltype == 'numbers':
-            add_numbers(ax, text)
+            add_numbers(ax, diagram.text)
         elif labeltype == 'phases':
-            add_labels(ax, text)
+            add_labels(ax, diagram.text)
         elif labeltype is None:
             pass
         else:
             raise ValueError("The provided label type doesn't exist")
 
         if include_water:
-            add_redox_lines(ax, pH, self.reference, 'w')
+            add_redox_lines(ax, pH, self.pbx.reference, 'w')
 
         ax.set_xlim(*pHrange)
         ax.set_ylim(*Urange)
         ax.set_xlabel('pH', fontsize=22)
-        ax.set_ylabel(r'$\it{U}$' + f' vs. {self.reference} (V)', fontsize=22)
+        ax.set_ylabel(r'$\it{U}$' + f' vs. {self.pbx.reference} (V)',
+                      fontsize=22)
         ax.set_xticks(np.arange(pHrange[0], pHrange[1] + 1, 2))
         ax.set_yticks(np.arange(Urange[0], Urange[1] + 1, 1))
         ax.xaxis.set_tick_params(width=1.5, length=5)
@@ -823,7 +846,7 @@ class Pourbaix:
 
         if include_text:
             fig.subplots_adjust(right=0.75)
-            add_phase_labels(fig, text, offset=0.05)
+            add_phase_labels(fig, diagram.text, offset=0.05)
             return ax, cbar
 
         fig.tight_layout()
