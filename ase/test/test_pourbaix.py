@@ -80,35 +80,37 @@ def test_Zn_diagram(pbx):
     assert Epbx2 == pytest.approx(-2.119, abs=0.001)
 
 
-def test_plotting(pbx):
+def test_plotting(pbx, figure):
     """Test all the plotting functionalities and options"""
+
+    diagram = pbx.diagram(Urange=[-2, 2], pHrange=[0, 14], npoints=10)
+
+    ax = figure.gca()
 
     args = {'include_text': True,
             'include_water': True,
             'labeltype': 'phases',
-            'Urange': [-2, 2],
-            'pHrange': [0, 14],
-            'npoints': 10,
             'cap': 1.0,
-            'figsize': [12, 6],
+            # 'figsize': [12, 6],
             'cmap': "RdYlGn_r",
             'normalize': True,
             'show': False,
-            'savefig': None}
-    pbx.plot(**args)
+            'savefig': None,
+            'ax': ax}
+
+    diagram.plot(**args)
 
     args.update({'include_text': False,
                  'include_water': False,
                  'labeltype': 'numbers',
                  'normalize': False,
                  'cap': [0, 1]})
-    pbx.plot(**args)
+    diagram.plot(**args)
 
     args.update({'labeltype': 'askjglkjh'})
 
     with pytest.raises(ValueError):
-        pbx.plot(**args)
-    plt.close('all')
+        diagram.plot(**args)
 
 
 def test_redox():

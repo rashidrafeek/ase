@@ -1,10 +1,10 @@
-import re
 import functools
+import re
 from collections import Counter
 from dataclasses import dataclass
 from fractions import Fraction
 from itertools import chain, combinations, product
-from typing import Tuple, Union, List
+from typing import List, Tuple, Union
 
 import numpy as np
 from scipy.linalg import null_space
@@ -792,7 +792,7 @@ class PourbaixDiagram:
             vmax = cap
 
         colorplot = ax.imshow(
-            meta, cmap=cmap,
+            diagram.meta, cmap=cmap,
             extent=extent,
             vmin=vmin, vmax=vmax,
             origin='lower', aspect='auto',
