@@ -755,8 +755,7 @@ class PourbaixDiagram:
 
     def _draw_diagram_axes(
             self,
-            Urange, pHrange,
-            npoints, cap,
+            cap,
             normalize,
             include_text,
             include_water,
@@ -764,20 +763,20 @@ class PourbaixDiagram:
             ax):
         """Backend for drawing Pourbaix diagrams"""
 
-        pH = np.linspace(*pHrange, num=npoints)
-        U = np.linspace(*Urange, num=npoints)
+        # pH = np.linspace(*pHrange, num=npoints)
+        # U = np.linspace(*Urange, num=npoints)
 
-        diagram = self.pbx.diagram(Urange, pHrange, npoints)
+        # diagram = self.pbx.diagram(self.Urange, self.pHrange, self.npoints)
         # pour, meta, text, domains = self.get_diagrams(U, pH)
 
         if normalize:
-            meta = diagram.meta / self.pbx.material.natoms
+            meta = self.meta / self.pbx.material.natoms
             cbarlabel = r'$\Delta G_{pbx}$ (eV/atom)'
         else:
             cbarlabel = r'$\Delta G_{pbx}$ (eV)'
 
         fig = ax.get_figure()
-        extent = [*pHrange, *Urange]
+        extent = [*self.pHrange, *self.Urange]
 
         fig.subplots_adjust(
             left=0.1, right=0.97,
@@ -792,7 +791,7 @@ class PourbaixDiagram:
             vmax = cap
 
         colorplot = ax.imshow(
-            diagram.meta, cmap=cmap,
+            self.meta, cmap=cmap,
             extent=extent,
             vmin=vmin, vmax=vmax,
             origin='lower', aspect='auto',
@@ -806,30 +805,30 @@ class PourbaixDiagram:
         )
 
         bounds = self.pbx.get_phase_boundaries(
-            pHrange, Urange, diagram.domains
+            self.pHrange, self.Urange, self.domains
         )
         for coords, _ in bounds:
             ax.plot(coords[0], coords[1], '-', c='k', lw=1.0)
 
         if labeltype == 'numbers':
-            add_numbers(ax, diagram.text)
+            add_numbers(ax, self.text)
         elif labeltype == 'phases':
-            add_labels(ax, diagram.text)
+            add_labels(ax, self.text)
         elif labeltype is None:
             pass
         else:
             raise ValueError("The provided label type doesn't exist")
 
         if include_water:
-            add_redox_lines(ax, pH, self.pbx.reference, 'w')
+            add_redox_lines(ax, self.pH, self.pbx.reference, 'w')
 
-        ax.set_xlim(*pHrange)
-        ax.set_ylim(*Urange)
+        ax.set_xlim(*self.pHrange)
+        ax.set_ylim(*self.Urange)
         ax.set_xlabel('pH', fontsize=22)
         ax.set_ylabel(r'$\it{U}$' + f' vs. {self.pbx.reference} (V)',
                       fontsize=22)
-        ax.set_xticks(np.arange(pHrange[0], pHrange[1] + 1, 2))
-        ax.set_yticks(np.arange(Urange[0], Urange[1] + 1, 1))
+        ax.set_xticks(np.arange(self.pHrange[0], self.pHrange[1] + 1, 2))
+        ax.set_yticks(np.arange(self.Urange[0], self.Urange[1] + 1, 1))
         ax.xaxis.set_tick_params(width=1.5, length=5)
         ax.yaxis.set_tick_params(width=1.5, length=5)
         ax.tick_params(axis='both', labelsize=22)
@@ -846,16 +845,13 @@ class PourbaixDiagram:
 
         if include_text:
             fig.subplots_adjust(right=0.75)
-            add_phase_labels(fig, diagram.text, offset=0.05)
+            add_phase_labels(fig, self.text, offset=0.05)
             return ax, cbar
 
         fig.tight_layout()
         return cbar
 
     def plot(self,
-             Urange=[-2, 2],
-             pHrange=[0, 14],
-             npoints=300,
              cap=1.0,
              # figsize=[12, 6],
              normalize=True,
@@ -925,8 +921,7 @@ class PourbaixDiagram:
         fig = ax.get_figure()
 
         colorbar = self._draw_diagram_axes(
-            Urange, pHrange,
-            npoints, cap,
+            cap,
             normalize,
             include_text,
             include_water,
