@@ -60,6 +60,7 @@ def read_castep_castep(fd, index=-1):
     images = []
 
     results = {}
+    constraints = []
     species_pot = []
     castep_warnings = []
     for i, line in enumerate(fd):
@@ -166,6 +167,7 @@ def read_castep_castep(fd, index=-1):
             species = None
             positions_frac = None
             results = {}
+            constraints = []
 
         # extract info from the Mulliken analysis
         elif 'Atomic Populations' in line:
