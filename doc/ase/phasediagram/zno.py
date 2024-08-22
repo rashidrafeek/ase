@@ -1,4 +1,6 @@
 # creates: zno.png
+import numpy as np
+
 from ase.phasediagram import solvated
 from ase.pourbaix import Pourbaix
 
