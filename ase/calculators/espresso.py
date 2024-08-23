@@ -32,7 +32,9 @@ class EspressoProfile(BaseProfile):
 
     def __init__(self, command, pseudo_dir, **kwargs):
         super().__init__(command, **kwargs)
-        self.pseudo_dir = str(pseudo_dir)
+        self.pseudo_dir = str(pseudo_dir)  # not Path object, 
+                                           # to avoid problems when running 
+                                           # remote calculations from Windows
 
     @staticmethod
     def parse_version(stdout):
