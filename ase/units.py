@@ -109,7 +109,7 @@ CODATA = {
              '_amu': 1.660539040e-27},
 
     # CODATA 2018 taken from
-    # https://physics.nist.gov/cuu/Constants/index.html
+    # https://physics.nist.gov/cuu/pdf/all_2018.pdf
     '2018': {'_c': 299792458.,            # Exact
              '_mu0': 4.0e-7 * pi,         # Exact
              '_Grav': 6.67430e-11,        # +/- 0.000_15e-11
@@ -120,6 +120,19 @@ CODATA = {
              '_Nav': 6.02214076e23,       # Exact
              '_k': 1.380649e-23,          # Exact
              '_amu': 1.66053906660e-27},  # +/- 0.000_000_000_50e-27
+
+    # CODATA 2022 (current) taken from
+    # https://physics.nist.gov/cuu/Constants/index.html
+    '2022': {'_c': 299792458.,            # Exact
+             '_mu0': 1.25663706127e-6,    # +/- 0.000_000_000_20e−6
+             '_Grav': 6.67430e-11,        # +/- 0.000_15e-11
+             '_hplanck': 6.62607015e-34,  # Exact
+             '_e': 1.602176634e-19,       # Exact
+             '_me': 9.1093837139e-31,     # +/- 0.000_000_0028e−31
+             '_mp': 1.67262192595e-27,    # +/- 0.000_000_000_52e−27
+             '_Nav': 6.02214076e-23,       # Exact
+             '_k': 1.380649e-23,          # Exact
+             '_amu': 1.66053906892e-27},  # +/- 0.000_000_000_52e−27
 }
 
 
@@ -141,6 +154,8 @@ def create_units(codata_version):
         * '2006'
         * '2010'
         * '2014'
+        * '2018'
+        * '2022'
 
     Returns:
 
