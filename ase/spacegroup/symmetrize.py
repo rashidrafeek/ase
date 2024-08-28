@@ -1,7 +1,7 @@
 """
 Provides utility functions for FixSymmetry class
 """
-from functools import cached_property
+from collections.abc import MutableMapping
 from typing import Optional
 
 import numpy as np
@@ -11,37 +11,23 @@ from ase.utils import atoms_to_spglib_cell
 __all__ = ['refine_symmetry', 'check_symmetry']
 
 
-class SpglibModuleWrapper:
-    """Temporary compatibility adapter around spglib module.
+def spglib_get_symmetry_dataset(*args, **kwargs):
+    """Temporary compatibility adapter around spglib dataset.
 
-    This class provides the same functions as spglib but always
-    returns an object that allows attribute-based access
-    in line with recent spglib.
-
-    It also provides dictionary-based access which is deprecated
-    in new spglib.
-
-    This class can be removed when everyone has adapted to attribute-based
-    access."""
-
-    @cached_property
-    def _spglib(self):
-        import spglib
-        return spglib
-
-    def _wrap(self, dataset):
-        if isinstance(dataset, dict):
-            return SpglibDatasetWrapper(dataset)
-        return dataset
-
-    def get_symmetry_dataset(self, *args, **kwargs):
-        return self._wrap(self._spglib.get_symmetry_dataset(*args, **kwargs))
+    Return an object that allows attribute-based access
+    in line with recent spglib.  This allows ASE code to not care about
+    older spglib versions.
+    """
+    import spglib
+    dataset = spglib.get_symmetry_dataset(*args, **kwargs)
+    if dataset is None:
+        return None
+    if isinstance(dataset, dict):  # spglib < 2.5.0
+        return SpglibDatasetWrapper(dataset)
+    return dataset  # spglib >= 2.5.0
 
 
-spglib_wrapper = SpglibModuleWrapper()
-
-
-class SpglibDatasetWrapper:
+class SpglibDatasetWrapper(MutableMapping):
     # Spglib 2.5.0 returns SpglibDataset with deprecated __getitem__.
     # Spglib 2.4.0 and earlier return dict.
     #
@@ -53,8 +39,20 @@ class SpglibDatasetWrapper:
     def __getattr__(self, attr):
         return self[attr]
 
-    def __getitem__(self, attr):
-        return self._spglib_dct[attr]
+    def __getitem__(self, key):
+        return self._spglib_dct[key]
+
+    def __len__(self):
+        return len(self._spglib_dct)
+
+    def __iter__(self):
+        return iter(self._spglib_dct)
+
+    def __setitem__(self, key, value):
+        self._spglib_dct[key] = value
+
+    def __delitem__(self, item):
+        del self._spglib_dct[item]
 
 
 def print_symmetry(symprec, dataset):
@@ -184,8 +182,8 @@ def check_symmetry(atoms, symprec=1.0e-6, verbose=False):
 
     Prints a summary and returns result of `spglib.get_symmetry_dataset()`
     """
-    dataset = spglib_wrapper.get_symmetry_dataset(atoms_to_spglib_cell(atoms),
-                                                  symprec=symprec)
+    dataset = spglib_get_symmetry_dataset(atoms_to_spglib_cell(atoms),
+                                          symprec=symprec)
     if verbose:
         print_symmetry(symprec, dataset)
     return dataset
@@ -210,8 +208,8 @@ def prep_symmetry(atoms, symprec=1.0e-6, verbose=False):
 
     Returns a tuple `(rotations, translations, symm_map)`
     """
-    dataset = spglib_wrapper.get_symmetry_dataset(atoms_to_spglib_cell(atoms),
-                                                  symprec=symprec)
+    dataset = spglib_get_symmetry_dataset(atoms_to_spglib_cell(atoms),
+                                          symprec=symprec)
     if verbose:
         print_symmetry(symprec, dataset)
     rotations = dataset.rotations.copy()
