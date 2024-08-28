@@ -68,7 +68,7 @@ class GapInfo:
             if ibz_kpoints is not None:
                 coordtxt = '[{:.2f}, {:.2f}, {:.2f}]'.format(
                     *ibz_kpoints[skn[1]])
-                description = f'{description}, [{coordtxt}]'
+                description = f'{description}, {coordtxt}'
             return f'({description})'
 
         gap, skn1, skn2 = self.gap()
