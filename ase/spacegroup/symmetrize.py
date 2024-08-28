@@ -1,8 +1,8 @@
 """
 Provides utility functions for FixSymmetry class
 """
-from typing import Optional
 from functools import cached_property
+from typing import Optional
 
 import numpy as np
 
