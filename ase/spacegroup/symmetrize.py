@@ -195,8 +195,8 @@ def is_subgroup(sup_data, sub_data, tol=1e-10):
     """
     Test if spglib dataset `sub_data` is a subgroup of dataset `sup_data`
     """
-    for rot1, trns1 in zip(sub_data['rotations'], sub_data['translations']):
-        for rot2, trns2 in zip(sup_data['rotations'], sup_data['translations']):
+    for rot1, trns1 in zip(sub_data.rotations, sub_data.translations):
+        for rot2, trns2 in zip(sup_data.rotations, sup_data.translations):
             if np.all(rot1 == rot2) and np.linalg.norm(trns1 - trns2) < tol:
                 break
         else:
