@@ -210,10 +210,8 @@ def prep_symmetry(atoms, symprec=1.0e-6, verbose=False):
 
     Returns a tuple `(rotations, translations, symm_map)`
     """
-    import spglib
-
-    dataset = spglib.get_symmetry_dataset(atoms_to_spglib_cell(atoms),
-                                          symprec=symprec)
+    dataset = spglib_wrapper.get_symmetry_dataset(atoms_to_spglib_cell(atoms),
+                                                  symprec=symprec)
     if verbose:
         print_symmetry(symprec, dataset)
     rotations = dataset.rotations.copy()
