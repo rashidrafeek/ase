@@ -13,6 +13,8 @@ from typing import Union
 
 import numpy as np
 
+from ase.utils import deprecated
+
 __all__ = ['Spacegroup']
 
 
@@ -960,10 +962,27 @@ def spacegroup_from_data(no=None,
     return spg
 
 
+@deprecated(
+    '`get_spacegroup` has been deprecated due to its misleading output. '
+    'The returned `Spacegroup` object has symmetry operations for a '
+    'standard setting regardress of the given `Atoms` object. '
+    'See https://gitlab.com/ase/ase/-/issues/1534 for details. '
+    'Please use `ase.spacegroup.symmetrize.check_symmetry` or `spglib` '
+    'directly to get the symmetry operations for the given `Atoms` object.'
+)
 def get_spacegroup(atoms, symprec=1e-5):
     """Determine the spacegroup to which belongs the Atoms object.
 
     This requires spglib: https://atztogo.github.io/spglib/ .
+
+    .. warning::
+        The returned ``Spacegroup`` object has symmetry operations for a
+        standard setting regardless of the given ``Atoms`` object.
+        See https://gitlab.com/ase/ase/-/issues/1534 for details.
+
+    .. deprecated:: 3.24.0
+        Please use ``ase.spacegroup.symmetrize.check_symmetry`` or ``spglib``
+        directly to get the symmetry operations for the given ``Atoms`` object.
 
     Parameters:
 
