@@ -239,7 +239,7 @@ class Atoms:
         else:
             if scaled_positions is not None:
                 raise TypeError(
-                    'Use only one of "symbols" and "numbers".')
+                    'Use only one of "positions" and "scaled_positions".')
         self.new_array('positions', positions, float, (3,))
 
         self.set_constraint(constraint)
