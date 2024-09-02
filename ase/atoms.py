@@ -59,7 +59,11 @@ class Atoms:
     tags : list[int]
         Special purpose tags.
     momenta : list[tuple[float, float, float]]
-        Momenta for all atoms in Cartesian coordinates.
+        Momenta for all atoms in Cartesian coordinates
+        (mutually exclusive with ``velocities``).
+    velocities : list[tuple[float, float, float]]
+        Velocities for all atoms in Cartesian coordinates
+        (mutually exclusive with ``momenta``).
     masses : list[float]
         Atomic masses in atomic units.
     magmoms : list[float] | list[tuple[float, float, float]]
