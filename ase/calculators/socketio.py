@@ -251,14 +251,19 @@ class FileIOSocketClientLauncher:
             self.calc.write_input(atoms, properties=properties,
                                   system_changes=all_changes)
 
+            if isinstance(profile, StandardProfile):
+                return profile.execute_nonblocking(self.calc)
+
             if profile is None:
                 cmd = self.calc.command.replace('PREFIX', self.calc.prefix)
                 cmd = cmd.format(port=port, unixsocket=unixsocket)
             elif isinstance(profile, OldShellProfile):
                 cmd = profile.command.replace("PREFIX", self.calc.prefix)
-                return Popen(cmd, shell=True, cwd=cwd)
-            elif isinstance(profile, StandardProfile):
-                return profile.execute_nonblocking(self.calc)
+            else:
+                raise TypeError(
+                    f"Profile type {type(profile)} not supported for socketio")
+
+            return Popen(cmd, shell=True, cwd=cwd)
 
 
 class SocketServer(IOContext):
