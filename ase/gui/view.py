@@ -173,29 +173,27 @@ class View:
         self.X_cell = self.X[natoms:natoms + len(B1)]
         self.X_bonds = self.X[natoms + len(B1):]
 
-        if 1:  # if init or frame != self.frame:
-            cell = atoms.cell
-            ncellparts = len(B1)
-            nbonds = len(bonds)
+        cell = atoms.cell
+        ncellparts = len(B1)
+        nbonds = len(bonds)
 
-            if 1:  # init or (atoms.cell != self.atoms.cell).any():
-                self.X_cell[:] = np.dot(B1, cell)
-                self.B = np.empty((ncellparts + nbonds, 3))
-                self.B[:ncellparts] = np.dot(B2, cell)
+        self.X_cell[:] = np.dot(B1, cell)
+        self.B = np.empty((ncellparts + nbonds, 3))
+        self.B[:ncellparts] = np.dot(B2, cell)
 
-            if nbonds > 0:
-                P = atoms.positions
-                Af = self.images.repeat[:, np.newaxis] * cell
-                a = P[bonds[:, 0]]
-                b = P[bonds[:, 1]] + np.dot(bonds[:, 2:], Af) - a
-                d = (b**2).sum(1)**0.5
-                r = 0.65 * self.get_covalent_radii()
-                x0 = (r[bonds[:, 0]] / d).reshape((-1, 1))
-                x1 = (r[bonds[:, 1]] / d).reshape((-1, 1))
-                self.X_bonds[:] = a + b * x0
-                b *= 1.0 - x0 - x1
-                b[bonds[:, 2:].any(1)] *= 0.5
-                self.B[ncellparts:] = self.X_bonds + b
+        if nbonds > 0:
+            P = atoms.positions
+            Af = self.images.repeat[:, np.newaxis] * cell
+            a = P[bonds[:, 0]]
+            b = P[bonds[:, 1]] + np.dot(bonds[:, 2:], Af) - a
+            d = (b**2).sum(1)**0.5
+            r = 0.65 * self.get_covalent_radii()
+            x0 = (r[bonds[:, 0]] / d).reshape((-1, 1))
+            x1 = (r[bonds[:, 1]] / d).reshape((-1, 1))
+            self.X_bonds[:] = a + b * x0
+            b *= 1.0 - x0 - x1
+            b[bonds[:, 2:].any(1)] *= 0.5
+            self.B[ncellparts:] = self.X_bonds + b
 
     def showing_bonds(self):
         return self.window['toggle-show-bonds']
