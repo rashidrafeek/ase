@@ -202,22 +202,19 @@ class Atoms:
 
         self.arrays = {}
 
-        if symbols is None:
-            if numbers is None:
-                if positions is not None:
-                    natoms = len(positions)
-                elif scaled_positions is not None:
-                    natoms = len(scaled_positions)
-                else:
-                    natoms = 0
-                numbers = np.zeros(natoms, int)
-            self.new_array('numbers', numbers, int)
-        else:
-            if numbers is not None:
-                raise TypeError(
-                    'Use only one of "symbols" and "numbers".')
+        if symbols is not None and numbers is not None:
+            raise TypeError('Use only one of "symbols" and "numbers".')
+        if symbols is not None:
+            numbers = symbols2numbers(symbols)
+        elif numbers is None:
+            if positions is not None:
+                natoms = len(positions)
+            elif scaled_positions is not None:
+                natoms = len(scaled_positions)
             else:
-                self.new_array('numbers', symbols2numbers(symbols), int)
+                natoms = 0
+            numbers = np.zeros(natoms, int)
+        self.new_array('numbers', numbers, int)
 
         if self.numbers.ndim != 1:
             raise ValueError('"numbers" must be 1-dimensional.')
