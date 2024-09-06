@@ -808,6 +808,7 @@ class Phonons(Displacement):
             dos = RawDOSData(omegas.ravel(), weights.ravel())
         return dos
 
+    @deprecated('Please use Phonons.get_dos() instead of Phonons.dos().')
     def dos(self, kpts=(10, 10, 10), npts=1000, delta=1e-3):
         """Calculate phonon dos as a function of energy.
 
@@ -822,6 +823,10 @@ class Phonons(Displacement):
 
         Returns:
             Tuple of (frequencies, dos).  The frequencies are in units of eV.
+
+        .. deprecated:: 3.23.1
+            Please use the ``.get_dos()`` method instead, it returns a proper
+            RawDOSData object.
         """
 
         # Monkhorst-Pack grid
