@@ -776,13 +776,13 @@ class Phonons(Displacement):
 
     def get_dos(self, kpts=(10, 10, 10), indices=None):
         """Return a phonon density of states.
-        
+
         Parameters:
 
         kpts: tuple
             Shape of Monkhorst-Pack grid for sampling the Brillouin zone.
         indices: list
-            If indices is not None, the amplitude-weighted atomic-partial 
+            If indices is not None, the amplitude-weighted atomic-partial
             DOS for the specified atoms will be calculated.
 
         Returns:
@@ -804,7 +804,7 @@ class Phonons(Displacement):
             ampl_sq = (np.abs(amplitudes)**2).sum(axis=3)
             assert ampl_sq.ndim == 3
             assert ampl_sq.shape == omegas.shape + (len(self.indices),)
-            weights = ampl_sq[:,:,indices].sum(axis=2) / ampl_sq.sum(axis=2)
+            weights = ampl_sq[:, :, indices].sum(axis=2) / ampl_sq.sum(axis=2)
             dos = RawDOSData(omegas.ravel(), weights.ravel())
         return dos
 
