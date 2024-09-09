@@ -224,3 +224,51 @@ def test_frequencies_amplitudes(testdir):
         ekin_exp = units.kB * T / 2
         print(f"Avg. kinetic energy: {ekin_avg} eV - expected {ekin_exp} eV")
         assert np.isclose(ekin_avg, ekin_exp, rtol=0.01)
+
+
+def test_partial_dos(testdir):
+    """Test partial phonon DOS.
+
+    Tests that the partial phonon densities of states sum
+    up to the total density of states.
+    """
+
+    # Reasonable Lennard-Jones parameters taken from the
+    # OpenKIM project, DOI: 10.25950/962b4967
+    Epsilon_Zn, Sigma_Zn = 0.1915460, 2.1737900
+    Epsilon_S, Sigma_S = 4.3692700, 1.8708900
+
+    LJ_epsilon = np.sqrt(Epsilon_Zn * Epsilon_S)
+    LJ_sigma = (Sigma_Zn + Sigma_S) / 2
+
+    # Equilibrium distance
+    d0 = 2**(1 / 6) * LJ_sigma
+    latconst = d0 * np.sqrt(2)
+    cutoff = d0 * (1 + np.sqrt(2)) / 2  # Between first and second neighbor
+
+    # Set up a zincblende structure with a reasonable lattice constant
+    atoms = bulk('ZnS', 'zincblende', a=latconst)
+    calc = LennardJones(sigma=LJ_sigma, epsilon=LJ_epsilon, rc=cutoff)
+
+    # Calculating phonons
+    N = 3
+    ph = Phonons(atoms, calc, supercell=(N, N, N),
+                    delta=0.005, name='phonon_ZnS')
+    ph.run()
+    assert ph.check_eq_forces()[1] < 1e-9, "System is not at equilibrium"
+    # Read forces and assemble the dynamical matrix
+    ph.read(acoustic=True)
+    ph.clean()
+
+    # Analyzing phonons
+    kpts = (10, 10, 10)
+    w = 3e-2
+    dos = ph.get_dos(kpts=kpts).sample_grid(npts=500, width=w)
+    dosZn = ph.get_dos(kpts=kpts, indices=(0,)).sample_grid(npts=500, width=w)
+    dosS = ph.get_dos(kpts=kpts, indices=(1,)).sample_grid(npts=500, width=w)
+
+    dosZn_array = dosZn.get_weights()
+    dosS_array = dosS.get_weights()
+    dosTotal_array = dos.get_weights()
+
+    assert np.allclose(dosTotal_array, dosS_array + dosZn_array)
