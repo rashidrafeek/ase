@@ -774,7 +774,7 @@ class Phonons(Displacement):
 
         return omega_kl
 
-    def get_dos(self, kpts=(10, 10, 10), indices=None):
+    def get_dos(self, kpts=(10, 10, 10), indices=None, verbose=True):
         """Return a phonon density of states.
 
         Parameters:
@@ -784,6 +784,8 @@ class Phonons(Displacement):
         indices: list
             If indices is not None, the amplitude-weighted atomic-partial
             DOS for the specified atoms will be calculated.
+        verbose: bool
+            Print warnings when imaginary frequncies are detected.
 
         Returns:
             A RawDOSData object containing the density of states.
@@ -794,11 +796,11 @@ class Phonons(Displacement):
         kpts_kc = monkhorst_pack(kpts)
         if indices is None:
             # Return the total DOS
-            omega_w = self.band_structure(kpts_kc).ravel()
+            omega_w = self.band_structure(kpts_kc, verbose=verbose).ravel()
             dos = RawDOSData(omega_w, np.ones_like(omega_w))
         else:
             # Return a partial DOS
-            omegas, amplitudes = self.band_structure(kpts_kc, modes=True)
+            omegas, amplitudes = self.band_structure(kpts_kc, modes=True, verbose=verbose)
             # omegas.shape = (k-points, bands)
             # amplitudes.shape = (k-points, bands, atoms, 3)
             ampl_sq = (np.abs(amplitudes)**2).sum(axis=3)
