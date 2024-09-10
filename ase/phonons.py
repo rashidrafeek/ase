@@ -800,7 +800,9 @@ class Phonons(Displacement):
             dos = RawDOSData(omega_w, np.ones_like(omega_w))
         else:
             # Return a partial DOS
-            omegas, amplitudes = self.band_structure(kpts_kc, modes=True, verbose=verbose)
+            omegas, amplitudes = self.band_structure(kpts_kc,
+                                                     modes=True,
+                                                     verbose=verbose)
             # omegas.shape = (k-points, bands)
             # amplitudes.shape = (k-points, bands, atoms, 3)
             ampl_sq = (np.abs(amplitudes)**2).sum(axis=3)
