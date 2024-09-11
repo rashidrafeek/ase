@@ -1063,10 +1063,6 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
         converged = None
         # First check electronic convergence
         for line in lines:
-            if 0:  # vasp always prints that!
-                if line.rfind('aborting loop') > -1:  # scf failed
-                    raise RuntimeError(line.strip())
-                    break
             # VASP 6 actually labels loop exit reason
             if 'aborting loop' in line:
                 converged = 'because EDIFF is reached' in line
