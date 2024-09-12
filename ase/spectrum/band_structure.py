@@ -176,23 +176,23 @@ class BandStructurePlot:
             If given, write image to a file.
         show: bool
             Show the image (not needed in notebooks).
-        ylabel:
+        ylabel: str
             The label along the y-axis.  Defaults to 'energies [eV]'
-        colors:
+        colors: sequence of str
             A sequence of one or two color specifications, depending on
             whether there is spin.
             Default: green if no spin, yellow and blue if spin is present.
-        point_colors:
+        point_colors: ndarray
             An array of numbers of the shape (nspins, n_kpts, nbands) which
             are then mapped onto colors by the colormap (see ``cmap``).
             ``colors`` and ``point_colors`` are mutually exclusive
-        label:
+        label: str or list of str
             Label for the curves on the legend.  A string if one spin is
             present, a list of two strings if two spins are present.
             Default: If no spin is given, no legend is made; if spin is
             present default labels 'spin up' and 'spin down' are used, but
             can be suppressed by setting ``label=False``.
-        loc:
+        loc: str
             Location of the legend.
 
         If ``point_colors`` is given, the following arguments can be specified.
@@ -201,15 +201,20 @@ class BandStructurePlot:
             Only used if colors is an array of numbers.  A matplotlib
             colormap object, or a string naming a standard colormap.
             Default: The matplotlib default, typically 'viridis'.
-        cmin, cmax:
+        cmin, cmax: float
             Minimal and maximal values used for colormap translation.
             Default: -1.0 and 1.0
-        colorbar (bool):
+        colorbar: bool
             Whether to make a colorbar.
-        clabel (str):
+        clabel: str
             Label for the colorbar (default 's_z', set to None to suppress.
-        cax:
-            Axis used for plotting colorbar.  Default: split of a new one.
+        cax: Axes
+            Axes object used for plotting colorbar.  Default: split off a
+            new one.
+        sortcolors (bool or callable):
+            Sort points so highest color values are in front.  If a callable is
+            given, then it is called on the color values to determine the sort
+            order.
 
         Any additional keyword arguments are passed directly to matplotlib's
         plot() or scatter() methods, depending on whether point_colors is
@@ -270,7 +275,10 @@ class BandStructurePlot:
             xcoords = np.zeros(shape)
             xcoords += self.xcoords[np.newaxis, :, np.newaxis]
             if sortcolors:
-                perm = point_colors.argsort(axis=None)
+                if callable(sortcolors):
+                    perm = sortcolors(point_colors).argsort(axis=None)
+                else:
+                    perm = point_colors.argsort(axis=None)
                 e_skn = e_skn.ravel()[perm].reshape(shape)
                 point_colors = point_colors.ravel()[perm].reshape(shape)
                 xcoords = xcoords.ravel()[perm].reshape(shape)
