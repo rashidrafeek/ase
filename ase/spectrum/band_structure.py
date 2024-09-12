@@ -160,17 +160,16 @@ class BandStructurePlot:
         self.ax = None
         self.xcoords = None
 
-    def plot(self, ax=None, spin=None, emin=-10, emax=5, filename=None,
-             show=False, ylabel=None, colors=None, label=None, loc=None,
+    def plot(self, ax=None, emin=-10, emax=5, filename=None,
+             show=False, ylabel=None, colors=None, point_colors=None,
+             label=None, loc=None,
              cmap=None, cmin=-1.0, cmax=1.0, sortcolors=False,
-             colorbar=True, clabel='$s_z$', **plotkwargs):
+             colorbar=True, clabel='$s_z$',
+             **plotkwargs):
         """Plot band-structure.
 
         ax: Axes
             MatPlotLib Axes object.  Will be created if not supplied.
-        spin: int or None
-            Spin channel.  Default behaviour is to plot both spin up and down
-            for spin-polarized calculations.
         emin, emax: float
             Minimum and maximum energy above reference.
         filename: str
@@ -181,25 +180,22 @@ class BandStructurePlot:
             The label along the y-axis.  Defaults to 'energies [eV]'
         colors:
             A sequence of one or two color specifications, depending on
-            whether there is spin.  Alternatively, an array of numbers
-            of the shape (nspins, n_kpts, nbands) which are then mapped
-            onto colors by the colormap (see ``cmap``).
+            whether there is spin.
             Default: green if no spin, yellow and blue if spin is present.
-
-        If ``colors`` is one or two color specifications, the following
-        arguments can be specified.
-
+        point_colors:
+            An array of numbers of the shape (nspins, n_kpts, nbands) which
+            are then mapped onto colors by the colormap (see ``cmap``).
+            ``colors`` and ``point_colors`` are mutually exclusive
         label:
             Label for the curves on the legend.  A string if one spin is
             present, a list of two strings if two spins are present.
             Default: If no spin is given, no legend is made; if spin is
-            present labels 'spin up' and 'spin down' are used, but can be
-            suppressed by setting ``label=False``.
+            present default labels 'spin up' and 'spin down' are used, but
+            can be suppressed by setting ``label=False``.
         loc:
             Location of the legend.
 
-        If ``colors`` is an array of one value per point, the following
-        arguments can be specified.
+        If ``point_colors`` is given, the following arguments can be specified.
 
         cmap:
             Only used if colors is an array of numbers.  A matplotlib
@@ -212,33 +208,30 @@ class BandStructurePlot:
             Whether to make a colorbar.
         clabel (str):
             Label for the colorbar (default 's_z', set to None to suppress)
+
+        Any additional keyword arguments are passed directly to matplotlib's
+        plot() or scatter() methods, depending on whether point_colors is
+        given.
         """
         import matplotlib.pyplot as plt
+
+        if colors is not None and point_colors is not None:
+            raise ValueError("Don't give both 'color' and 'point_color'")
 
         if self.ax is None:
             ax = self.prepare_plot(ax, emin, emax, ylabel)
 
-        if spin is None:
-            e_skn = self.bs.energies
-        else:
-            e_skn = self.bs.energies[spin, np.newaxis]
-        print('E_SKN:', e_skn.shape)
-
-        if colors is None:
-            if len(e_skn) == 1:
-                colors = 'g'
-            else:
-                colors = 'yb'
-
+        e_skn = self.bs.energies
         nspins = len(e_skn)
 
-        # Detect simple color mode or fancy mode (one color per point)
-        fancy_color = getattr(colors, 'shape', False) == e_skn.shape
-
-        if not fancy_color:
+        if point_colors is None:
             # Normal band structure plot
-            if (len(colors) != nspins
-                or getattr(colors, 'shape', (nspins,)) != (nspins,)):
+            if colors is None:
+                if len(e_skn) == 1:
+                    colors = 'g'
+                else:
+                    colors = 'yb'
+            elif (len(colors) != nspins):
                 raise ValueError(
                     "colors should be a sequence of {nspin} colors"
                 )
@@ -270,20 +263,21 @@ class BandStructurePlot:
                 for e_k in e_kn.T[1:]:
                     ax.plot(self.xcoords, e_k, **kwargs)
             show_legend = label is not None or nspins == 2
-        else:  # fancy_colors
+
+        else:
+            # A color per datapoint.
             kwargs = dict(vmin=cmin, vmax=cmax, cmap=cmap, s=1)
             kwargs.update(plotkwargs)
             shape = e_skn.shape
             xcoords = np.zeros(shape)
             xcoords += self.xcoords[np.newaxis, :, np.newaxis]
-            print('XCOORDS:', xcoords.shape)
             if sortcolors:
-                perm = colors.argsort(axis=None)
+                perm = point_colors.argsort(axis=None)
                 e_skn = e_skn.ravel()[perm].reshape(shape)
-                colors = colors.ravel()[perm].reshape(shape)
+                point_colors = point_colors.ravel()[perm].reshape(shape)
                 xcoords = xcoords.ravel()[perm].reshape(shape)
 
-            things = ax.scatter(xcoords, e_skn, c=colors, **kwargs)
+            things = ax.scatter(xcoords, e_skn, c=point_colors, **kwargs)
             if colorbar:
                 cbar = plt.colorbar(things)
                 if clabel:

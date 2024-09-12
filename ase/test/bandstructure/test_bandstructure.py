@@ -25,7 +25,7 @@ def test_bandstructure(testdir, plt):
     bs.plot(emax=10, filename='bs.png')
     cols = np.linspace(-1.0, 1.0, bs.energies.size)
     cols.shape = bs.energies.shape
-    bs.plot(emax=10, colors=cols, filename='bs2.png')
+    bs.plot(emax=10, point_colors=cols, filename='bs2.png')
 
 
 @pytest.fixture()
