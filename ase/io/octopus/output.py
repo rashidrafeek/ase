@@ -186,11 +186,11 @@ def read_static_info(fd):
         elif line.startswith('Energy ['):
             unit = get_energy_unit(line)
             results.update(read_static_info_energy(fd, unit))
-        elif line.startswith('Stress tensor'):
-            assert line.split()[-1] == '[H/b^3]'
-            stress = read_static_info_stress(fd)
-            stress *= Hartree / Bohr**3
-            results.update(stress=stress)
+        elif line.startswith('Total stress tensor ['):
+            if '[H/b^3]' in line:
+                stress = read_static_info_stress(fd)
+                stress *= Hartree / Bohr**3
+                results.update(stress=stress)
         elif line.startswith('Total Magnetic Moment'):
             try:
                 line = next(fd)
