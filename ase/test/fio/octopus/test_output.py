@@ -1,8 +1,45 @@
 """Tests for Octopus outputs."""
 import numpy as np
 
-from ase.io.octopus.output import read_static_info
+from ase.io.octopus.output import read_eigenvalues_file, read_static_info
 from ase.units import Bohr, Debye, Hartree
+
+
+def test_eigenvalues(datadir):
+    """Test if the eigenvalues are parsed correctly from `eigenvalues`."""
+    file = (
+        datadir
+        / 'octopus/periodic_systems_03-sodium_chain.02-unocc_eigenvalues'
+    )
+    with file.open(encoding='utf-8') as fd:
+        kptsarr, eigsarr, occsarr = read_eigenvalues_file(fd)
+    kptsarr_ref = [
+        [0.0, 0.0, 0.0],
+        [0.1, 0.0, 0.0],
+        [0.2, 0.0, 0.0],
+        [0.3, 0.0, 0.0],
+        [0.4, 0.0, 0.0],
+        [0.5, 0.0, 0.0],
+    ]
+    eigsarr_ref = [
+        [[-3.647610, -1.236399]],
+        [[-3.551626, -1.144852]],
+        [[-3.264556, -0.870333]],
+        [[-2.789110, -0.413463]],
+        [[-2.130396, -0.280652]],
+        [[-1.367358, -1.210151]],
+    ]
+    occsarr_ref = [
+        [[2.0, 0.0]],
+        [[2.0, 0.0]],
+        [[2.0, 0.0]],
+        [[0.0, 0.0]],
+        [[0.0, 0.0]],
+        [[0.0, 0.0]],
+    ]
+    np.testing.assert_allclose(kptsarr, kptsarr_ref)
+    np.testing.assert_allclose(eigsarr, eigsarr_ref)
+    np.testing.assert_allclose(occsarr, occsarr_ref)
 
 
 def test_fermi_level(datadir):
