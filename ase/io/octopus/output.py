@@ -192,7 +192,7 @@ def read_static_info(fd):
             stress *= Hartree / Bohr**3
             results.update(stress=stress)
         elif line.startswith('Total Magnetic Moment'):
-            if 0:
+            try:
                 line = next(fd)
                 values = line.split()
                 results['magmom'] = float(values[-1])
@@ -211,6 +211,8 @@ def read_static_info(fd):
                     mag_moment.append(float(values[-1]))
 
                 results['magmoms'] = np.array(mag_moment)
+            except Exception:
+                pass
         elif line.startswith('Dipole'):
             assert line.split()[-1] == '[Debye]'
             dipole = [float(next(fd).split()[-1]) for i in range(3)]
