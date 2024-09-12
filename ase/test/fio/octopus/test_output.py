@@ -1,8 +1,19 @@
 """Tests for Octopus outputs."""
+from typing import Any, Dict
+
 import numpy as np
+import pytest
 
 from ase.io.octopus.output import read_eigenvalues_file, read_static_info
 from ase.units import Bohr, Debye, Hartree
+
+
+@pytest.fixture(name='info_iron')
+def fixture_info_iron(datadir) -> Dict[str, Any]:
+    """`info` of 'periodic_systems/25-Fe_polarized.01-gs'"""
+    file = datadir / 'octopus/periodic_systems_25-Fe_polarized.01-gs_info'
+    with file.open(encoding='utf-8') as fd:
+        return read_static_info(fd)
 
 
 def test_eigenvalues(datadir):
@@ -42,13 +53,10 @@ def test_eigenvalues(datadir):
     np.testing.assert_allclose(occsarr, occsarr_ref)
 
 
-def test_fermi_level(datadir):
+def test_fermi_level(info_iron: Dict[str, Any]):
     """Test if the Fermi level is parsed correctly."""
-    file = datadir / 'octopus/periodic_systems_25-Fe_polarized.01-gs_info'
-    with file.open(encoding='utf-8') as fd:
-        results = read_static_info(fd)
     efermi_ref = 0.153766 * Hartree
-    np.testing.assert_allclose(results['fermi_level'], efermi_ref)
+    np.testing.assert_allclose(info_iron['fermi_level'], efermi_ref)
 
 
 def test_dipole_moment(datadir):
@@ -60,15 +68,12 @@ def test_dipole_moment(datadir):
     np.testing.assert_allclose(results['dipole'], dipole_ref)
 
 
-def test_magnetic_moment(datadir):
+def test_magnetic_moment(info_iron: Dict[str, Any]):
     """Test if the magnetic moment is parsed correctly."""
-    file = datadir / 'octopus/periodic_systems_25-Fe_polarized.01-gs_info'
-    with file.open(encoding='utf-8') as fd:
-        results = read_static_info(fd)
     magmom_ref = 7.409638
     magmoms_ref = [3.385730, 3.385730]
-    np.testing.assert_allclose(results['magmom'], magmom_ref)
-    np.testing.assert_allclose(results['magmoms'], magmoms_ref)
+    np.testing.assert_allclose(info_iron['magmom'], magmom_ref)
+    np.testing.assert_allclose(info_iron['magmoms'], magmoms_ref)
 
 
 def test_stress(datadir):
@@ -85,11 +90,8 @@ def test_stress(datadir):
     np.testing.assert_allclose(results['stress'], stress_ref)
 
 
-def test_kpoints(datadir):
+def test_kpoints(info_iron: Dict[str, Any]):
     """Test if the kpoints are parsed correctly."""
-    file = datadir / 'octopus/periodic_systems_25-Fe_polarized.01-gs_info'
-    with file.open(encoding='utf-8') as fd:
-        results = read_static_info(fd)
     nkpts_ref = 4
     kpoint_weights_ref = [0.25, 0.25, 0.25, 0.25]
     ibz_kpoints_ref = [
@@ -98,6 +100,6 @@ def test_kpoints(datadir):
         [0.0000, 0.5000, 0.0000],
         [0.5000, 0.5000, 0.0000],
     ]
-    assert results['nkpts'] == nkpts_ref
-    np.testing.assert_allclose(results['kpoint_weights'], kpoint_weights_ref)
-    np.testing.assert_allclose(results['ibz_kpoints'], ibz_kpoints_ref)
+    assert info_iron['nkpts'] == nkpts_ref
+    np.testing.assert_allclose(info_iron['kpoint_weights'], kpoint_weights_ref)
+    np.testing.assert_allclose(info_iron['ibz_kpoints'], ibz_kpoints_ref)
