@@ -2,7 +2,16 @@
 import numpy as np
 
 from ase.io.octopus.output import read_static_info
-from ase.units import Debye
+from ase.units import Debye, Hartree
+
+
+def test_fermi_level(datadir):
+    """Test if the Fermi level is parsed correctly."""
+    file = datadir / 'octopus/periodic_systems_25-Fe_polarized.01-gs_info'
+    with file.open(encoding='utf-8') as fd:
+        results = read_static_info(fd)
+    efermi_ref = 0.153766 * Hartree
+    np.testing.assert_allclose(results['fermi_level'], efermi_ref)
 
 
 def test_dipole_moment(datadir):

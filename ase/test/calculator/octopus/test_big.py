@@ -41,24 +41,6 @@ def test_si(factory):
     print('eF', eF)
 
 
-if 0:  # This calculation does not run will in Octopus
-    # We will do the "toothless" spin-polarised Si instead.
-    calc = calculate('Fe',
-                     bulk('Fe', orthorhombic=True),
-                     KPointsGrid=[[4, 4, 4]],
-                     KPointsUseSymmetries=True,
-                     ExtraStates=4,
-                     Spacing='0.15 * Angstrom',
-                     SmearingFunction='fermi_dirac',
-                     Smearing='0.1 * eV',
-                     PseudoPotentialSet='sg15',
-                     ExperimentalFeatures=True,
-                     SpinComponents='spin_polarized')
-    eF = calc.get_fermi_level()
-    assert abs(eF - 5.33) < 1e-1
-    # XXXX octopus does not get magnetic state?
-    print('eF', eF)
-
 if 0:
     # Experimental feature: mixed periodicity.  Let us not do this for now...
     graphene = graphene_nanoribbon(2, 2, sheet=True)

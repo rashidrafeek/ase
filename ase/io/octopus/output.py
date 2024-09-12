@@ -230,26 +230,9 @@ def read_static_info(fd):
                 tokens = line.split()[-3:]
                 forces.append([float(f) for f in tokens])
             results['forces'] = np.array(forces) * forceunit
-        elif line.startswith('Fermi'):
-            tokens = line.split()
-            unit = {'eV': eV, 'H': Hartree}[tokens[-1]]
-            eFermi = float(tokens[-2]) * unit
-            results['efermi'] = eFermi
 
     if 'ibz_k_points' not in results:
         results['ibz_k_points'] = np.zeros((1, 3))
         results['k_point_weights'] = np.ones(1)
-    if 0:  # 'efermi' not in results:
-        # Find HOMO level.  Note: This could be a very bad
-        # implementation with fractional occupations if the Fermi
-        # level was not found otherwise.
-        all_energies = results['eigenvalues'].ravel()
-        all_occupations = results['occupations'].ravel()
-        args = np.argsort(all_energies)
-        for arg in args[::-1]:
-            if all_occupations[arg] > 0.1:
-                break
-        eFermi = all_energies[arg]
-        results['efermi'] = eFermi
 
     return results
