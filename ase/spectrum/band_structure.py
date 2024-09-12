@@ -241,11 +241,9 @@ class BandStructurePlot:
                 label = ['spin up', 'spin down']
 
             if label:
-                if nspins == 1 and not isinstance(label, str):
-                    raise ValueError(
-                        'label should be a string when only one spin is present'
-                        )
-                elif nspins > 1 and len(label) != nspins:
+                if nspins == 1 and isinstance(label, str):
+                    label = [label]
+                elif len(label) != nspins:
                     raise ValueError(
                         f'label should be a list of {nspins} strings'
                     )
@@ -254,10 +252,8 @@ class BandStructurePlot:
                 kwargs = dict(color=colors[spin])
                 kwargs.update(plotkwargs)
                 lbl = None   # Retain lbl=None if label=False
-                if nspins > 1 and label:
+                if label:
                     lbl = label[spin]
-                elif label:
-                    lbl = label
                 ax.plot(self.xcoords, e_kn[:, 0], label=lbl, **kwargs)
 
                 for e_k in e_kn.T[1:]:
