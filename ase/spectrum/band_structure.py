@@ -164,7 +164,7 @@ class BandStructurePlot:
              show=False, ylabel=None, colors=None, point_colors=None,
              label=None, loc=None,
              cmap=None, cmin=-1.0, cmax=1.0, sortcolors=False,
-             colorbar=True, clabel='$s_z$',
+             colorbar=True, clabel='$s_z$', cax=None,
              **plotkwargs):
         """Plot band-structure.
 
@@ -207,7 +207,9 @@ class BandStructurePlot:
         colorbar (bool):
             Whether to make a colorbar.
         clabel (str):
-            Label for the colorbar (default 's_z', set to None to suppress)
+            Label for the colorbar (default 's_z', set to None to suppress.
+        cax:
+            Axis used for plotting colorbar.  Default: split of a new one.
 
         Any additional keyword arguments are passed directly to matplotlib's
         plot() or scatter() methods, depending on whether point_colors is
@@ -275,7 +277,7 @@ class BandStructurePlot:
 
             things = ax.scatter(xcoords, e_skn, c=point_colors, **kwargs)
             if colorbar:
-                cbar = plt.colorbar(things)
+                cbar = plt.colorbar(things, cax=cax)
                 if clabel:
                     cbar.set_label(clabel)
             show_legend = False
