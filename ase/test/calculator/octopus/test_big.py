@@ -1,6 +1,6 @@
 import pytest
 
-from ase.build import bulk, graphene_nanoribbon
+from ase.build import bulk
 from ase.collections import g2
 
 
@@ -39,18 +39,3 @@ def test_si(factory):
                      Spacing='0.45 * Angstrom')
     eF = calc.get_fermi_level()
     print('eF', eF)
-
-
-if 0:
-    # Experimental feature: mixed periodicity.  Let us not do this for now...
-    graphene = graphene_nanoribbon(2, 2, sheet=True)
-    graphene.positions = graphene.positions[:, [0, 2, 1]]
-    graphene.pbc = [1, 1, 0]  # from 1, 0, 1
-    calc = calculate('graphene',
-                     graphene,
-                     KPointsGrid=[[2, 1, 2]],
-                     KPointsUseSymmetries=True,
-                     ExperimentalFeatures=True,
-                     ExtraStates=4,
-                     SmearingFunction='fermi_dirac',
-                     Smearing='0.1 * eV')
