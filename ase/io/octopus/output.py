@@ -112,9 +112,9 @@ def read_static_info_kpoints(fd):
         kpts.append(kxyz)
         weights.append(weight)
 
-    ibz_k_points = np.array(kpts, float)
-    k_point_weights = np.array(weights, float)
-    return dict(ibz_k_points=ibz_k_points, k_point_weights=k_point_weights)
+    ibz_kpoints = np.array(kpts, float)
+    kpoint_weights = np.array(weights, float)
+    return dict(ibz_kpoints=ibz_kpoints, kpoint_weights=kpoint_weights)
 
 
 def read_static_info_eigenvalues(fd, energy_unit):
@@ -231,8 +231,8 @@ def read_static_info(fd):
                 forces.append([float(f) for f in tokens])
             results['forces'] = np.array(forces) * forceunit
 
-    if 'ibz_k_points' not in results:
-        results['ibz_k_points'] = np.zeros((1, 3))
-        results['k_point_weights'] = np.ones(1)
+    if 'ibz_kpoints' not in results:
+        results['ibz_kpoints'] = np.zeros((1, 3))
+        results['kpoint_weights'] = np.ones(1)
 
     return results

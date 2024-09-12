@@ -46,3 +46,21 @@ def test_stress(datadir):
     )
     stress_ref = np.array(stress_ref) * Hartree / Bohr**3
     np.testing.assert_allclose(results['stress'], stress_ref)
+
+
+def test_kpoints(datadir):
+    """Test if the kpoints are parsed correctly."""
+    file = datadir / 'octopus/periodic_systems_25-Fe_polarized.01-gs_info'
+    with file.open(encoding='utf-8') as fd:
+        results = read_static_info(fd)
+    nkpts_ref = 4
+    kpoint_weights_ref = [0.25, 0.25, 0.25, 0.25]
+    ibz_kpoints_ref = [
+        [0.0000, 0.0000, 0.0000],
+        [0.5000, 0.0000, 0.0000],
+        [0.0000, 0.5000, 0.0000],
+        [0.5000, 0.5000, 0.0000],
+    ]
+    assert results['nkpts'] == nkpts_ref
+    np.testing.assert_allclose(results['kpoint_weights'], kpoint_weights_ref)
+    np.testing.assert_allclose(results['ibz_kpoints'], ibz_kpoints_ref)

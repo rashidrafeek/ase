@@ -64,8 +64,8 @@ class OctopusTemplate(CalculatorTemplate):
                 kpt_weights = np.ones(len(kpts))  # XXX ?  Or 1 / len(kpts) ?
                 # XXX New Octopus probably has symmetry reduction !!
             results.update(eigenvalues=eigs, occupations=occs,
-                           ibz_k_points=kpts,
-                           k_point_weights=kpt_weights)
+                           ibz_kpoints=kpts,
+                           kpoint_weights=kpt_weights)
         return results
 
     def execute(self, directory, profile):
