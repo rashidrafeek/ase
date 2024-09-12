@@ -159,24 +159,35 @@ class BandStructurePlot:
         self.bs = bs
         self.ax = None
         self.xcoords = None
-        self.show_legend = False
 
     def plot(self, ax=None, spin=None, emin=-10, emax=5, filename=None,
              show=False, ylabel=None, colors=None, label=None,
              spin_labels=['spin up', 'spin down'], loc=None, **plotkwargs):
         """Plot band-structure.
 
+        ax: Axes
+            MatPlotLib Axes object.  Will be created if not supplied.
         spin: int or None
             Spin channel.  Default behaviour is to plot both spin up and down
             for spin-polarized calculations.
-        emin,emax: float
-            Maximum energy above reference.
+        emin, emax: float
+            Minimum and maximum energy above reference.
         filename: str
-            Write image to a file.
-        ax: Axes
-            MatPlotLib Axes object.  Will be created if not supplied.
+            If given, write image to a file.
         show: bool
-            Show the image.
+            Show the image (not needed in notebooks).
+        ylabel:
+            The label along the y-axis.  Defaults to 'energies [eV]'
+        colors:
+            A sequence of one or two color specifications, depending on
+            whether there is spin.  Default: green if no spin, yellow
+            and blue if spin is present.
+        label:
+            Label for the curves on the legend.  A string if one spin is
+            present, a list of two strings if two spins are present.
+            Default: If no spin is given, no legend is made; if spin is 
+            present labels 'spin up' and 'spin down' are used, but can be
+            suppressed by setting ``label=False``.  
         """
 
         if self.ax is None:
@@ -196,24 +207,36 @@ class BandStructurePlot:
 
         nspins = len(e_skn)
 
+        # Default values for label
+        if label is None and nspins == 2:
+            label = ['spin up', 'spin down']
+
+        if label:
+            if nspins == 1 and not isinstance(label, str):
+                raise ValueError(
+                    'label should be a string when only one spin is present'
+                    )
+            elif nspins > 1 and len(label) != nspins:
+                raise ValueError(
+                    f'label should be a list of {nspins} strings'
+                )
+
         for spin, e_kn in enumerate(e_skn):
             color = colors[spin]
             kwargs = dict(color=color)
             kwargs.update(plotkwargs)
-            if nspins == 2:
-                if label:
-                    lbl = label + ' ' + spin_labels[spin]
-                else:
-                    lbl = spin_labels[spin]
-            else:
-                lbl = label
+            lbl = None   # Retain lbl=None if label=False
+            if nspins > 1 and label:
+                lbl = label[spin]
+            elif label:
+                lbl = label 
             ax.plot(self.xcoords, e_kn[:, 0], label=lbl, **kwargs)
 
             for e_k in e_kn.T[1:]:
                 ax.plot(self.xcoords, e_k, **kwargs)
 
-        self.show_legend = label is not None or nspins == 2
-        self.finish_plot(filename, show, loc)
+        show_legend = label is not None or nspins == 2
+        self.finish_plot(filename, show, loc, show_legend)
 
         return ax
 
@@ -244,9 +267,6 @@ class BandStructurePlot:
             colors = colors.ravel()[perm].reshape(shape)
             xcoords = xcoords.ravel()[perm].reshape(shape)
 
-        #for e_k, c_k, x_k in zip(energies, colors, xcoords):
-        #    things = ax.scatter(x_k, e_k, c=c_k, s=s,
-        #                        vmin=cmin, vmax=cmax)
         things = ax.scatter(xcoords, energies, c=colors, s=s,
                             vmin=cmin, vmax=cmax)
         cbar = plt.colorbar(things)
@@ -294,10 +314,10 @@ class BandStructurePlot:
         self.ax = ax
         return ax
 
-    def finish_plot(self, filename, show, loc):
+    def finish_plot(self, filename, show, loc, show_legend=False):
         import matplotlib.pyplot as plt
 
-        if self.show_legend:
+        if show_legend:
             leg = plt.legend(loc=loc)
             leg.get_frame().set_alpha(1)
 
