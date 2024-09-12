@@ -226,8 +226,4 @@ def read_static_info(fd):
                 forces.append([float(f) for f in tokens])
             results['forces'] = np.array(forces) * forceunit
 
-    if 'ibz_kpoints' not in results:
-        results['ibz_kpoints'] = np.zeros((1, 3))
-        results['kpoint_weights'] = np.ones(1)
-
     return results
