@@ -1276,7 +1276,7 @@ Algorithms:
 
 * New Gaussian Process (GP) regression optimizer
   (:class:`~ase.optimize.GPMin`).  Check out this `performance test
-  <https://wiki.fysik.dtu.dk/gpaw/devel/ase_optimize/ase_optimize.html>`_.
+  <https://gpaw.readthedocs.io/devel/ase_optimize/ase_optimize.html>`_.
 
 * New filter for lattice optimization,
   :class:`~ase.constraints.ExpCellFilter`, based on an exponential
@@ -1982,7 +1982,7 @@ Version 3.5.0
 
 
 .. _ASAP: https://wiki.fysik.dtu.dk/asap
-.. _GPAW: https://wiki.fysik.dtu.dk/gpaw/documentation/xc/vdwcorrection.html
+.. _GPAW: https://gpaw.readthedocs.io/documentation/xc/vdwcorrection.html
 
 
 Version 3.4.1
