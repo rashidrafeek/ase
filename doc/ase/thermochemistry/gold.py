@@ -24,7 +24,7 @@ try:
     ph.read(acoustic=True)
 finally:
     ph.clean()
-dos = ph.get_dos(kpts=(40, 40, 40)).sample_grid(npts=3000, width=5e-4, xmin=0.0, padding=10)
+dos = ph.get_dos(kpts=(40, 40, 40)).sample_grid(npts=3000, width=5e-4, xmin=0.0)
 phonon_energies = dos.get_energies()
 phonon_DOS = dos.get_weights()
 
