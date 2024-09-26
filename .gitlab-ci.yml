@@ -277,11 +277,11 @@ windows_test:
     - Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
     - choco install python --version=3.9 -y -f
     - refreshenv
-  script:
     - python --version
     - python -m pip install --upgrade pip
     - python -m pip install pytest pytest-mock
     - python -m pip install .
+  script:
     - >
       ase test
       --calculators eam,ff,lj,morse,tip3p,tip4p
