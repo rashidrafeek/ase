@@ -144,9 +144,13 @@ def find_optimal_cell_shape(
 
     best_score = 1e6
     optimal_P = None
-    for dP in product(range(lower_limit, upper_limit + 1), repeat=9):
-        dP = np.array(dP, dtype=int).reshape(3, 3)
-        P = starting_P + dP
+
+    thing = np.array([*product(range(lower_limit, upper_limit + 1), repeat=9)])
+    all_dP = thing.reshape(-1, 3, 3)
+    all_P = all_dP + starting_P
+
+    for i in range(len(all_dP)):
+        P = all_P[i]
         if abs(np.linalg.det(P) - target_size) > 1e-12:
             continue
 
