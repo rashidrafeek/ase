@@ -147,8 +147,9 @@ def find_optimal_cell_shape(
     for dP in product(range(lower_limit, upper_limit + 1), repeat=9):
         dP = np.array(dP, dtype=int).reshape(3, 3)
         P = starting_P + dP
-        if int(np.around(np.linalg.det(P), 0)) != target_size:
+        if abs(np.linalg.det(P) - target_size) > 1e-12:
             continue
+
         score = get_deviation_from_optimal_cell_shape(P @ cell, target_shape)
         if score < best_score:
             best_score = score
