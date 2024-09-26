@@ -24,7 +24,7 @@ classifiers = [
 ]
 requires-python = '>=3.9'
 dependencies = [
-    'numpy>=1.18.5',  # June 2020
+    'numpy>=1.19.5',  # January 2021
     'scipy>=1.6.0',  # December 2020
     'matplotlib>=3.3.4'  # January 2021 (3.3.0 is July 2020)
 ]
