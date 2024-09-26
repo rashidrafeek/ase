@@ -46,7 +46,7 @@ oldlibs:
 # For testing newest versions of libraries against standard images
 # on dockerhub.
 pipinstall:
-  image: python:3.10
+  image: python:3.11
   extends: .database-configuration
   script:
     - python --version
