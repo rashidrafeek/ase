@@ -171,7 +171,7 @@ def test_find_optimal_cell_shape(
 
     We test from sc to sc; from sc to fcc; and from fcc to sc."""
     supercell_matrix = find_optimal_cell_shape(cell, target_size, target_shape,
-                                               lower_limit=-2, upper_limit=2)
+                                               lower_limit=-1, upper_limit=1)
     cell_metric = get_deviation_from_optimal_cell_shape(
         supercell_matrix @ cell,
         target_shape,
