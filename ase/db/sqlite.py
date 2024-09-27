@@ -324,8 +324,8 @@ class SQLite3Database(Database):
             if not isinstance(data, (str, bytes)):
                 data = encode(data, binary=self.version >= 9)
 
-            values += (row.get('energy'),
-                       row.get('free_energy'),
+            values += (float_if_not_none(row.get('energy')),
+                       float_if_not_none(row.get('free_energy')),
                        blob(row.get('forces')),
                        blob(row.get('stress')),
                        blob(row.get('dipole')),
