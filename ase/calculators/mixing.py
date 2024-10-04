@@ -1,9 +1,4 @@
-from ase.calculators.calculator import (
-    BaseCalculator,
-    CalculatorSetupError,
-    PropertyNotImplementedError,
-    all_changes,
-)
+from ase.calculators.calculator import BaseCalculator, CalculatorSetupError, all_changes
 from ase.stress import full_3x3_to_voigt_6_stress
 
 
@@ -98,9 +93,7 @@ class LinearCombinationCalculator(BaseCalculator):
         self.results = self.mixer.get_properties(properties, atoms)
 
     def __str__(self):
-        calculators = ", ".join(
-            calc.__class__.__name__ for calc in self.mixer.calcs
-        )
+        calculators = ", ".join(calc.__class__.__name__ for calc in self.mixer.calcs)
         return f"{self.__class__.__name__}({calculators})"
 
 
@@ -131,11 +124,7 @@ class MixedCalculator(LinearCombinationCalculator):
 
     def get_energy_contributions(self, atoms=None):
         """Return the potential energy from calc1 and calc2 respectively"""
-        self.calculate(
-            properties=["energy"],
-            atoms=atoms,
-            system_changes=all_changes
-        )
+        self.calculate(properties=["energy"], atoms=atoms, system_changes=all_changes)
         return self.results["energy_contributions"]
 
 
