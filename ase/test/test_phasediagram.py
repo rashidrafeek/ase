@@ -39,7 +39,7 @@ def test_phasediagram_3d():
     pd = PhaseDiagram([ref for ref in refs3d.values() if 'Cu' not in ref[0]])
     energy2, indices, coefs = pd.decompose(Mg=8, I=12)
 
-    assert energy2 == energy3
+    assert energy2 == pytest.approx(energy3, abs=1e-6)
     assert energy2 == pytest.approx(-19.470, abs=0.001)
 
 
