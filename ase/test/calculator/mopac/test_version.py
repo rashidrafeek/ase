@@ -25,9 +25,9 @@ snippets = {
 """,
 }
 
-@pytest.mark.xfail
+
 @pytest.mark.parametrize('version', [*snippets])
 def test_version(version):
     from ase.calculators.mopac import get_version_number
-    text = snippets[version]
-    assert get_version_number(text) == version
+    lines = snippets[version].splitlines()
+    assert get_version_number(lines) == version
