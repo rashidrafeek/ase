@@ -167,7 +167,7 @@ class FreeElectrons(Calculator):
         return 1
 
 
-def numeric_force(atoms, a, i, d=0.001):
+def numeric_force(atoms: Atoms, a: int, i: int, d: float = 0.001) -> float:
     """Compute numeric force on atom with index a, Cartesian component i,
     with finite step of size d
     """
@@ -183,48 +183,82 @@ def numeric_force(atoms, a, i, d=0.001):
     return (eminus - eplus) / (2 * d)
 
 
-def numeric_forces(atoms, d=0.001):
+def numeric_forces(
+    atoms: Atoms,
+    d: float = 0.001,
+) -> np.ndarray:
+    """Calculate forces numerically based on the finite-difference method.
+
+    Parameters
+    ----------
+    atoms : :class:~`ase.Atoms`
+        ASE :class:~`ase.Atoms` object.
+    d : float, default 1e-6
+        Displacement.
+
+    Returns
+    -------
+    forces : np.ndarray
+        Forces computed numerically based on the finite-difference method.
+
+    """
     return np.array([[numeric_force(atoms, a, i, d)
                       for i in range(3)] for a in range(len(atoms))])
 
 
-def numeric_stress(atoms, d=1e-6, voigt=True):
+def numeric_stress(
+    atoms: Atoms,
+    d: float = 1e-6,
+    voigt: bool = True,
+) -> np.ndarray:
+    """Calculate stress numerically based on the finite-difference method.
+
+    Parameters
+    ----------
+    atoms : :class:~`ase.Atoms`
+        ASE :class:~`ase.Atoms` object.
+    d : float, default 1e-6
+        Strain in the Voigt notation.
+    voigt : bool, default True
+        If True, the stress is returned in the Voigt notation.
+
+    Returns
+    -------
+    stress : np.ndarray
+        Stress computed numerically based on the finite-difference method.
+
+    """
     stress = np.zeros((3, 3), dtype=float)
 
     cell = atoms.cell.copy()
-    V = atoms.get_volume()
+    volume = atoms.get_volume()
     for i in range(3):
         x = np.eye(3)
-        x[i, i] += d
-        atoms.set_cell(np.dot(cell, x), scale_atoms=True)
+        x[i, i] = 1.0 + d
+        atoms.set_cell(cell @ x, scale_atoms=True)
         eplus = atoms.get_potential_energy(force_consistent=True)
 
-        x[i, i] -= 2 * d
-        atoms.set_cell(np.dot(cell, x), scale_atoms=True)
+        x[i, i] = 1.0 - d
+        atoms.set_cell(cell @ x, scale_atoms=True)
         eminus = atoms.get_potential_energy(force_consistent=True)
 
-        stress[i, i] = (eplus - eminus) / (2 * d * V)
-        x[i, i] += d
+        stress[i, i] = (eplus - eminus) / (2 * d * volume)
+        x[i, i] = 1.0
 
         j = i - 2
-        x[i, j] = d
-        x[j, i] = d
-        atoms.set_cell(np.dot(cell, x), scale_atoms=True)
+        x[i, j] = x[j, i] = +0.5 * d
+        atoms.set_cell(cell @ x, scale_atoms=True)
         eplus = atoms.get_potential_energy(force_consistent=True)
 
-        x[i, j] = -d
-        x[j, i] = -d
-        atoms.set_cell(np.dot(cell, x), scale_atoms=True)
+        x[i, j] = x[j, i] = -0.5 * d
+        atoms.set_cell(cell @ x, scale_atoms=True)
         eminus = atoms.get_potential_energy(force_consistent=True)
 
-        stress[i, j] = (eplus - eminus) / (4 * d * V)
-        stress[j, i] = stress[i, j]
+        stress[i, j] = stress[j, i] = (eplus - eminus) / (2 * d * volume)
+
     atoms.set_cell(cell, scale_atoms=True)
 
-    if voigt:
-        return stress.flat[[0, 4, 8, 5, 2, 1]]
-    else:
-        return stress
+    return stress.flat[[0, 4, 8, 5, 2, 1]] if voigt else stress
 
 
 def gradient_test(atoms, indices=None):
