@@ -2,6 +2,7 @@ import numpy as np
 
 from ase.calculators.calculator import Calculator, all_changes
 from ase.neighborlist import neighbor_list
+from ase.stress import full_3x3_to_voigt_6_stress
 
 
 def fcut(r: np.ndarray, r0: float, r1: float) -> np.ndarray:
@@ -47,7 +48,9 @@ def fcut_d(r: np.ndarray, r0: float, r1: float) -> np.ndarray:
 class MorsePotential(Calculator):
     """Morse potential."""
 
-    implemented_properties = ['energy', 'energies', 'free_energy', 'forces']
+    implemented_properties = [
+        'energy', 'energies', 'free_energy', 'forces', 'stress',
+    ]
     default_parameters = {'epsilon': 1.0,
                           'rho0': 6.0,
                           'r0': 1.0,
@@ -137,3 +140,7 @@ class MorsePotential(Calculator):
                 minlength=number_of_atoms,
             )
         self.results['forces'] = forces
+
+        if self.atoms.cell.rank == 3:
+            stress = 0.5 * (D.T @ de_vec) / self.atoms.get_volume()
+            self.results['stress'] = full_3x3_to_voigt_6_stress(stress)

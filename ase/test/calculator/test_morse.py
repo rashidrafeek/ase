@@ -34,10 +34,15 @@ def test_cutoff():
         assert check_grad(fcut, fcut_d, np.array([R]), r1, r2) < 1e-5
 
 
-def test_forces():
+def test_forces_and_stress():
     atoms = bulk('Cu', cubic=True)
     atoms.calc = MorsePotential(A=4.0, epsilon=1.0, r0=2.55)
     atoms.rattle(0.1)
+
     forces = atoms.get_forces()
     numerical_forces = atoms.calc.calculate_numerical_forces(atoms, d=1e-5)
-    assert np.abs(forces - numerical_forces).max() < 1e-5
+    np.testing.assert_allclose(forces, numerical_forces, atol=1e-5)
+
+    stress = atoms.get_stress()
+    numerical_stress = atoms.calc.calculate_numerical_stress(atoms, d=1e-5)
+    np.testing.assert_allclose(stress, numerical_stress, atol=1e-5)
