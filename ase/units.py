@@ -111,7 +111,7 @@ CODATA = {
     # CODATA 2018 taken from
     # https://physics.nist.gov/cuu/pdf/all_2018.pdf
     '2018': {'_c': 299792458.,            # Exact
-             '_mu0': 4.0e-7 * pi,         # Exact
+             '_mu0': 1.25663706212e-6,    # +/- 0.000_000_000_19e−6
              '_Grav': 6.67430e-11,        # +/- 0.000_15e-11
              '_hplanck': 6.62607015e-34,  # Exact
              '_e': 1.602176634e-19,       # Exact
