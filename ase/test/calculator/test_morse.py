@@ -4,6 +4,7 @@ from scipy.optimize import check_grad
 from ase import Atoms
 from ase.build import bulk
 from ase.calculators.morse import MorsePotential, fcut, fcut_d
+from ase.calculators.test import numeric_forces, numeric_stress
 from ase.vibrations import Vibrations
 
 De = 5.
@@ -40,9 +41,9 @@ def test_forces_and_stress():
     atoms.rattle(0.1)
 
     forces = atoms.get_forces()
-    numerical_forces = atoms.calc.calculate_numerical_forces(atoms, d=1e-5)
+    numerical_forces = numeric_forces(atoms, d=1e-5)
     np.testing.assert_allclose(forces, numerical_forces, atol=1e-5)
 
     stress = atoms.get_stress()
-    numerical_stress = atoms.calc.calculate_numerical_stress(atoms, d=1e-5)
+    numerical_stress = numeric_stress(atoms, d=1e-5)
     np.testing.assert_allclose(stress, numerical_stress, atol=1e-5)
