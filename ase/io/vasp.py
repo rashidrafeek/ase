@@ -33,12 +33,17 @@ def parse_poscar_scaling_factor(line: str) -> np.ndarray:
     https://www.vasp.at/wiki/index.php/POSCAR#Full_format_specification
 
     """
-    scale = np.array(line.split()[:3], dtype=float)
-    if len(scale) not in [1, 3]:
+    scale = []
+    for _ in line.split()[:3]:
+        try:
+            scale.append(float(_))
+        except ValueError:
+            break
+    if len(scale) not in {1, 3}:
         raise RuntimeError('The number of scaling factors must be 1 or 3.')
-    if len(scale) == 3 and np.any(scale < 0.0):
+    if len(scale) == 3 and any(_ < 0.0 for _ in scale):
         raise RuntimeError('All three scaling factors must be positive.')
-    return scale
+    return np.array(scale)
 
 
 def get_atomtypes(fname):
