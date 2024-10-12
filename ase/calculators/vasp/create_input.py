@@ -1317,8 +1317,27 @@ class GenerateVaspInput:
                 self.dict_params[key] = value
             elif key in self.input_params:
                 self.input_params[key] = value
+            elif isinstance(value, str):
+                self.string_params[key] = value
+            # `bool` is a subclass of `int` and should be checked earlier.
+            # https://docs.python.org/3/c-api/bool.html
+            elif isinstance(value, bool):
+                self.bool_params[key] = value
+            elif isinstance(value, int):
+                self.int_params[key] = value
+            elif isinstance(value, float):
+                self.float_params[key] = value
+            elif isinstance(value, list):
+                if isinstance(value[0], bool):
+                    self.list_bool_params[key] = value
+                elif isinstance(value[0], int):
+                    self.list_int_params[key] = value
+                elif isinstance(value[0], float):
+                    self.list_float_params[key] = value
+                else:
+                    raise TypeError(f'{key} = {value} cannot be parsed.')
             else:
-                raise TypeError('Parameter not defined: ' + key)
+                raise TypeError(f'{key} = {value} cannot be parsed.')
 
     def check_xc(self):
         """Make sure the calculator has functional & pseudopotentials set up
