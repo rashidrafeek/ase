@@ -1294,29 +1294,29 @@ class GenerateVaspInput:
 
         if 'xc' in kwargs:
             self.set_xc_params(kwargs['xc'])
-        for key in kwargs:
+        for key, value in kwargs.items():
             if key in self.float_params:
-                self.float_params[key] = kwargs[key]
+                self.float_params[key] = value
             elif key in self.exp_params:
-                self.exp_params[key] = kwargs[key]
+                self.exp_params[key] = value
             elif key in self.string_params:
-                self.string_params[key] = kwargs[key]
+                self.string_params[key] = value
             elif key in self.int_params:
-                self.int_params[key] = kwargs[key]
+                self.int_params[key] = value
             elif key in self.bool_params:
-                self.bool_params[key] = kwargs[key]
+                self.bool_params[key] = value
             elif key in self.list_bool_params:
-                self.list_bool_params[key] = kwargs[key]
+                self.list_bool_params[key] = value
             elif key in self.list_int_params:
-                self.list_int_params[key] = kwargs[key]
+                self.list_int_params[key] = value
             elif key in self.list_float_params:
-                self.list_float_params[key] = kwargs[key]
+                self.list_float_params[key] = value
             elif key in self.special_params:
-                self.special_params[key] = kwargs[key]
+                self.special_params[key] = value
             elif key in self.dict_params:
-                self.dict_params[key] = kwargs[key]
+                self.dict_params[key] = value
             elif key in self.input_params:
-                self.input_params[key] = kwargs[key]
+                self.input_params[key] = value
             else:
                 raise TypeError('Parameter not defined: ' + key)
 
