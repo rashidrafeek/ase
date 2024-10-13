@@ -321,14 +321,12 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
         execute VASP. After execution, the energy, forces. etc. are read
         from the VASP output files.
         """
+        Calculator.calculate(self, atoms, properties, system_changes)
         # Check for zero-length lattice vectors and PBC
         # and that we actually have an Atoms object.
-        check_atoms(atoms)
+        check_atoms(self.atoms)
 
         self.clear_results()
-
-        if atoms is not None:
-            self.atoms = atoms.copy()
 
         command = self.make_command(self.command)
         self.write_input(self.atoms, properties, system_changes)
