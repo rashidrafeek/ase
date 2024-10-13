@@ -1910,6 +1910,20 @@ class GenerateVaspInput:
                             self.special_params[key] = False
                         else:
                             self.special_params[key] = data[2]
+
+                # non-registered keys
+                elif 'true' in data[2].lower():
+                    self.bool_params[key] = True
+                elif 'false' in data[2].lower():
+                    self.bool_params[key] = False
+                elif data[2].isdigit():
+                    self.int_params[key] = int(data[2])
+                else:
+                    try:
+                        self.float_params[key] = float(data[2])
+                    except ValueError:
+                        self.string_params[key] = data[2]
+
             except KeyError:
                 raise OSError('Keyword "%s" in INCAR is'
                               'not known by calculator.' % key)
