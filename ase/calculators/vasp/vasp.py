@@ -479,13 +479,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
 
     def write_input(self, atoms, properties=None, system_changes=None):
         """Write VASP inputfiles, INCAR, KPOINTS and POTCAR"""
-        # Create the folders where we write the files, if we aren't in the
-        # current working directory.
-        if self.directory != os.curdir and not os.path.isdir(self.directory):
-            os.makedirs(self.directory)
-
         self.initialize(atoms)
-
         GenerateVaspInput.write_input(self, atoms, directory=self.directory)
 
     def read(self, label=None):
