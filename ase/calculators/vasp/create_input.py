@@ -1328,6 +1328,9 @@ class GenerateVaspInput:
             elif isinstance(value, float):
                 self.float_params[key] = value
             elif isinstance(value, list):
+                if len(value) == 0:
+                    msg = f'empty list is given for {key}'
+                    raise ValueError(msg)
                 if isinstance(value[0], bool):
                     self.list_bool_params[key] = value
                 elif isinstance(value[0], int):
