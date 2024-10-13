@@ -421,7 +421,7 @@ class MenuItem:
         if key:
             if key[:4] == 'Ctrl':
                 self.keyname = f'<Control-{key[-1].lower()}>'
-            elif key[:3] == "Alt":
+            elif key[:3] == 'Alt':
                 self.keyname = f'<Alt-{key[-1].lower()}>'
             else:
                 self.keyname = {
