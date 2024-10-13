@@ -1338,9 +1338,11 @@ class GenerateVaspInput:
                 elif isinstance(value[0], float):
                     self.list_float_params[key] = value
                 else:
-                    raise TypeError(f'{key} = {value} cannot be parsed.')
+                    msg = f'cannot handle type of value for {key} = {value!r}'
+                    raise TypeError(msg)
             else:
-                raise TypeError(f'{key} = {value} cannot be parsed.')
+                msg = f'cannot handle type of value for {key} = {value!r}'
+                raise TypeError(msg)
 
     def check_xc(self):
         """Make sure the calculator has functional & pseudopotentials set up
