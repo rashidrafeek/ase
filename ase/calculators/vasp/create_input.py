@@ -1624,8 +1624,7 @@ class GenerateVaspInput:
     def write_incar(self, atoms, directory='./', **kwargs):
         """Writes the INCAR file."""
         incar_params = {}
-        incar_header = \
-            'INCAR created by Atomic Simulation Environment'
+
         # float params
         float_dct = {
             key: f'{val:{FLOAT_FORMAT}}'
@@ -1760,9 +1759,7 @@ class GenerateVaspInput:
         }
         incar_params.update(cust_dict)
 
-        write_incar(directory=directory,
-                    parameters=incar_params,
-                    header=incar_header)
+        write_incar(directory=directory, parameters=incar_params)
 
     def write_kpoints(self, atoms=None, directory='./', **kwargs):
         """Writes the KPOINTS file."""
