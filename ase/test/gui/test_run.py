@@ -285,6 +285,31 @@ def test_movie(animation):
     movie = animation.movie_window
     assert movie is not None
 
+    animation.step('Home')
+    assert movie.frame_number.value == 0
+
+    animation.step('Page-Up')
+    assert movie.frame_number.value == 0
+
+    animation.step('Page-Down')
+    assert movie.frame_number.value == 1
+
+    animation.step('Page-Down')
+    assert movie.frame_number.value == 2
+
+    last_index = len(animation.images) - 1
+    animation.step('End')
+    assert movie.frame_number.value == last_index
+
+    animation.step('Page-Down')
+    assert movie.frame_number.value == last_index
+
+    animation.step('Page-Up')
+    assert movie.frame_number.value == last_index - 1
+
+    animation.step('Page-Up')
+    assert movie.frame_number.value == last_index - 2
+
     movie.play()
     movie.stop()
     movie.close()
