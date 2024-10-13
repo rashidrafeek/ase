@@ -1924,11 +1924,14 @@ class GenerateVaspInput:
                     except ValueError:
                         self.string_params[key] = data[2]
 
-            except KeyError:
-                raise OSError('Keyword "%s" in INCAR is'
-                              'not known by calculator.' % key)
-            except IndexError:
-                raise OSError(f'Value missing for keyword "{key}".')
+            except KeyError as exc:
+                raise KeyError(
+                    f'Keyword "{key}" in INCAR is not known by calculator.'
+                ) from exc
+            except IndexError as exc:
+                raise IndexError(
+                    f'Value missing for keyword "{key}".'
+                ) from exc
 
     def read_kpoints(self, filename):
         """Read kpoints file, typically named KPOINTS."""
