@@ -253,12 +253,12 @@ def test_modify_magmom(gui, modify):
 
 
 def test_repeat(gui):
-    fe = bulk('Fe')
-    gui.new_atoms(fe)
+    atoms = bulk('Fe')
+    gui.new_atoms(atoms)
     repeat = gui.repeat_window()
 
     multiplier = [2, 3, 4]
-    expected_atoms = fe * multiplier
+    expected_atoms = atoms * multiplier
     natoms = np.prod(multiplier)
     for i, value in enumerate(multiplier):
         repeat.repeat[i].value = value
@@ -266,7 +266,7 @@ def test_repeat(gui):
     repeat.change()
     assert len(gui.atoms) == natoms
     assert gui.atoms.positions == pytest.approx(expected_atoms.positions)
-    assert gui.atoms.cell == pytest.approx(fe.cell[:])  # Still old cell
+    assert gui.atoms.cell == pytest.approx(atoms.cell[:])  # Still old cell
 
     repeat.set_unit_cell()
     assert gui.atoms.cell[:] == pytest.approx(expected_atoms.cell[:])
