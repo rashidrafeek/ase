@@ -56,7 +56,7 @@ class Images:
 
     def get_energy(self, atoms):
         try:
-            e = atoms.get_potential_energy() * self.repeat.prod()
+            e = atoms.get_potential_energy()
         except RuntimeError:
             e = np.nan
         return e
