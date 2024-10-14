@@ -56,18 +56,15 @@ class Images:
 
     def get_energy(self, atoms):
         try:
-            e = atoms.get_potential_energy()
+            return atoms.get_potential_energy()
         except RuntimeError:
-            e = np.nan
-        return e
+            return np.nan
 
     def get_forces(self, atoms):
         try:
-            F = atoms.get_forces(apply_constraint=False)
+            return atoms.get_forces(apply_constraint=False)
         except RuntimeError:
             return None
-        else:
-            return F
 
     def initialize(self, images, filenames=None):
         nimages = len(images)
