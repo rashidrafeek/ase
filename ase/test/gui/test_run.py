@@ -254,6 +254,8 @@ def test_modify_magmom(gui, modify):
 
 def test_repeat(gui):
     atoms = bulk('Fe')
+    energy = 1.0
+    atoms.calc = SinglePointCalculator(atoms, energy=energy)
     gui.new_atoms(atoms)
     repeat = gui.repeat_window()
 
@@ -267,6 +269,9 @@ def test_repeat(gui):
     assert len(gui.atoms) == natoms
     assert gui.atoms.positions == pytest.approx(expected_atoms.positions)
     assert gui.atoms.cell == pytest.approx(atoms.cell[:])  # Still old cell
+
+    energy_ref = energy * multiplier[0] * multiplier[1] * multiplier[2]
+    assert gui.images.get_energy(gui.images[0]) == pytest.approx(energy_ref)
 
     repeat.set_unit_cell()
     assert gui.atoms.cell[:] == pytest.approx(expected_atoms.cell[:])
