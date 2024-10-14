@@ -398,6 +398,6 @@ class Images:
         return atoms
 
     def delete(self, i):
-        self.images.pop(i)
+        self._images.pop(i)
         self.filenames.pop(i)
-        self.initialize(self.images, self.filenames)
+        self.initialize(self._images, self.filenames)
