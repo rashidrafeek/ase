@@ -1285,8 +1285,8 @@ class AimsOutCalcChunk(AimsOutChunk):
         line = self.lines[line_start]
         return np.array([float(s) for s in line.split()[-3:]])
 
-    @lazymethod
-    def _parse_hirshfeld(self):
+    @lazyproperty
+    def _hirshfeld(self):
         """Parse the Hirshfled charges volumes, and dipole moments from the
         ouput"""
         line_start = self.reverse_search_for(
@@ -1547,23 +1547,23 @@ the chunk"""
     @lazyproperty
     def hirshfeld_charges(self):
         """The Hirshfeld charges for the chunk"""
-        return self._parse_hirshfeld()["charges"]
+        return self._hirshfeld["charges"]
 
     @lazyproperty
     def hirshfeld_atomic_dipoles(self):
         """The Hirshfeld atomic dipole moments for the chunk"""
-        return self._parse_hirshfeld()["atomic_dipoles"]
+        return self._hirshfeld["atomic_dipoles"]
 
     @lazyproperty
     def hirshfeld_volumes(self):
         """The Hirshfeld volume for the chunk"""
-        return self._parse_hirshfeld()["volumes"]
+        return self._hirshfeld["volumes"]
 
     @lazyproperty
     def hirshfeld_dipole(self):
         """The Hirshfeld systematic dipole moment for the chunk"""
         if not np.any(self._atoms.pbc):
-            return self._parse_hirshfeld()["dipole"]
+            return self._hirshfeld["dipole"]
 
         return None
 
