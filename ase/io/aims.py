@@ -1463,58 +1463,57 @@ outputs to atoms.info"""
             key: value for key,
             value in results.items() if value is not None}
 
-    # Properties from the aims.out header
-    @cached_property
+    @property
     def initial_atoms(self):
         """The initial structure defined in the geoemtry.in file"""
         return self._header["initial_atoms"]
 
-    @cached_property
+    @property
     def initial_cell(self):
         """The initial lattice vectors defined in the geoemtry.in file"""
         return self._header["initial_cell"]
 
-    @cached_property
+    @property
     def constraints(self):
         """The relaxation constraints for the calculation"""
         return self._header["constraints"]
 
-    @cached_property
+    @property
     def n_atoms(self):
         """The number of atoms for the material"""
         return self._header["n_atoms"]
 
-    @cached_property
+    @property
     def n_bands(self):
         """The number of Kohn-Sham states for the chunk"""
         return self._header["n_bands"]
 
-    @cached_property
+    @property
     def n_electrons(self):
         """The number of electrons for the chunk"""
         return self._header["n_electrons"]
 
-    @cached_property
+    @property
     def n_spins(self):
         """The number of spin channels for the chunk"""
         return self._header["n_spins"]
 
-    @cached_property
+    @property
     def electronic_temperature(self):
         """The electronic temperature for the chunk"""
         return self._header["electronic_temperature"]
 
-    @cached_property
+    @property
     def n_k_points(self):
         """The number of electrons for the chunk"""
         return self._header["n_k_points"]
 
-    @cached_property
+    @property
     def k_points(self):
         """The number of spin channels for the chunk"""
         return self._header["k_points"]
 
-    @cached_property
+    @property
     def k_point_weights(self):
         """k_point_weights electronic temperature for the chunk"""
         return self._header["k_point_weights"]
