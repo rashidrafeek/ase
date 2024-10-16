@@ -971,8 +971,8 @@ class AimsOutHeaderChunk(AimsOutChunk):
         return LINE_NOT_FOUND != self.reverse_search_for(
             ["Geometry relaxation:"])
 
-    @lazymethod
-    def _parse_k_points(self):
+    @lazyproperty
+    def _k_points(self):
         """Get the list of k-points used in the calculation"""
         n_kpts = self.parse_scalar("n_kpts")
         if n_kpts is None:
@@ -1077,15 +1077,15 @@ class AimsOutHeaderChunk(AimsOutChunk):
         line = self.lines[line_start]
         return float(line.split("=")[-1].strip().split()[0])
 
-    @lazyproperty
+    @property
     def k_points(self):
         """All k-points listed in the calculation"""
-        return self._parse_k_points()["k_points"]
+        return self._k_points["k_points"]
 
-    @lazyproperty
+    @property
     def k_point_weights(self):
         """The k-point weights for the calculation"""
-        return self._parse_k_points()["k_point_weights"]
+        return self._k_points["k_point_weights"]
 
     @lazyproperty
     def header_summary(self):
