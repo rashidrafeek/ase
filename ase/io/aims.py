@@ -874,8 +874,6 @@ class AimsOutHeaderChunk(AimsOutChunk):
             The lines inside the aims.out header
         """
         super().__init__(lines)
-        self._k_points = None
-        self._k_point_weights = None
 
     @lazyproperty
     def constraints(self):
