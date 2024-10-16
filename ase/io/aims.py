@@ -15,7 +15,7 @@ from ase.constraints import FixAtoms, FixCartesian
 from ase.data import atomic_numbers
 from ase.io import ParseError
 from ase.units import Ang, fs
-from ase.utils import deprecated, lazymethod, lazyproperty, reader, writer
+from ase.utils import deprecated, lazyproperty, reader, writer
 
 v_unit = Ang / (1000.0 * fs)
 
@@ -1334,8 +1334,8 @@ class AimsOutCalcChunk(AimsOutChunk):
             "dipole": hirshfeld_dipole,
         }
 
-    @lazymethod
-    def _parse_eigenvalues(self):
+    @lazyproperty
+    def _eigenvalues(self):
         """Parse the eigenvalues and occupancies of the system. If eigenvalue
         for a particular k-point is not present in the output file
         then set it to np.nan
@@ -1544,22 +1544,22 @@ the chunk"""
         """True if the chunk is a fully converged final structure"""
         return (len(self.lines) > 0) and ("Have a nice day." in self.lines[-5:])
 
-    @lazyproperty
+    @property
     def hirshfeld_charges(self):
         """The Hirshfeld charges for the chunk"""
         return self._hirshfeld["charges"]
 
-    @lazyproperty
+    @property
     def hirshfeld_atomic_dipoles(self):
         """The Hirshfeld atomic dipole moments for the chunk"""
         return self._hirshfeld["atomic_dipoles"]
 
-    @lazyproperty
+    @property
     def hirshfeld_volumes(self):
         """The Hirshfeld volume for the chunk"""
         return self._hirshfeld["volumes"]
 
-    @lazyproperty
+    @property
     def hirshfeld_dipole(self):
         """The Hirshfeld systematic dipole moment for the chunk"""
         if not np.any(self._atoms.pbc):
@@ -1567,15 +1567,15 @@ the chunk"""
 
         return None
 
-    @lazyproperty
+    @property
     def eigenvalues(self):
         """All outputted eigenvalues for the system"""
-        return self._parse_eigenvalues()["eigenvalues"]
+        return self._eigenvalues["eigenvalues"]
 
-    @lazyproperty
+    @property
     def occupancies(self):
         """All outputted occupancies for the system"""
-        return self._parse_eigenvalues()["occupancies"]
+        return self._eigenvalues["occupancies"]
 
 
 def get_header_chunk(fd):
