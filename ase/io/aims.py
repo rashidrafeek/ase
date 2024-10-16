@@ -1123,8 +1123,8 @@ class AimsOutCalcChunk(AimsOutChunk):
         super().__init__(lines)
         self._header = header.header_summary
 
-    @lazymethod
-    def _parse_atoms(self):
+    @lazyproperty
+    def _atoms(self):
         """Create an atoms object for the subsequent structures
         calculated in the aims.out file"""
         start_keys = [
@@ -1244,9 +1244,7 @@ class AimsOutCalcChunk(AimsOutChunk):
     @lazyproperty
     def total_energy(self):
         """Parse the energy from the aims.out file"""
-        atoms = self._parse_atoms()
-
-        if np.all(atoms.pbc) and self.is_metallic:
+        if np.all(self._atoms.pbc) and self.is_metallic:
             line_ind = self.reverse_search_for(["Total energy corrected"])
         else:
             line_ind = self.reverse_search_for(["Total energy uncorrected"])
@@ -1291,8 +1289,6 @@ class AimsOutCalcChunk(AimsOutChunk):
     def _parse_hirshfeld(self):
         """Parse the Hirshfled charges volumes, and dipole moments from the
         ouput"""
-        atoms = self._parse_atoms()
-
         line_start = self.reverse_search_for(
             ["Performing Hirshfeld analysis of fragment charges and moments."]
         )
@@ -1323,9 +1319,10 @@ class AimsOutCalcChunk(AimsOutChunk):
             ]
         )
 
-        if not np.any(atoms.pbc):
+        if not np.any(self._atoms.pbc):
+            positions = self._atoms.get_positions()
             hirshfeld_dipole = np.sum(
-                hirshfeld_charges.reshape((-1, 1)) * atoms.get_positions(),
+                hirshfeld_charges.reshape((-1, 1)) * positions,
                 axis=1,
             )
         else:
@@ -1344,7 +1341,7 @@ class AimsOutCalcChunk(AimsOutChunk):
         then set it to np.nan
         """
 
-        atoms = self._parse_atoms()
+        atoms = self._atoms
 
         line_start = self.reverse_search_for(["Writing Kohn-Sham eigenvalues."])
         if line_start == LINE_NOT_FOUND:
@@ -1369,7 +1366,7 @@ class AimsOutCalcChunk(AimsOutChunk):
         else:
             line_end = min(line_end_1, line_end_2)
 
-        n_kpts = self.n_k_points if np.all(atoms.pbc) else 1
+        n_kpts = self.n_k_points if np.all(self._atoms.pbc) else 1
         if n_kpts is None:
             return {"eigenvalues": None, "occupancies": None}
 
@@ -1421,7 +1418,7 @@ class AimsOutCalcChunk(AimsOutChunk):
     def atoms(self):
         """Convert AimsOutChunk to Atoms object and add all non-standard
 outputs to atoms.info"""
-        atoms = self._parse_atoms()
+        atoms = self._atoms
 
         atoms.calc = SinglePointDFTCalculator(
             atoms,
@@ -1565,9 +1562,7 @@ the chunk"""
     @lazyproperty
     def hirshfeld_dipole(self):
         """The Hirshfeld systematic dipole moment for the chunk"""
-        atoms = self._parse_atoms()
-
-        if not np.any(atoms.pbc):
+        if not np.any(self._atoms.pbc):
             return self._parse_hirshfeld()["dipole"]
 
         return None
