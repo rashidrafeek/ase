@@ -3,6 +3,7 @@ import os
 import re
 import time
 import warnings
+from functools import cached_property
 from pathlib import Path
 from typing import Any, Dict, List, Union
 
@@ -15,7 +16,7 @@ from ase.constraints import FixAtoms, FixCartesian
 from ase.data import atomic_numbers
 from ase.io import ParseError
 from ase.units import Ang, fs
-from ase.utils import deprecated, lazyproperty, reader, writer
+from ase.utils import deprecated, reader, writer
 
 v_unit = Ang / (1000.0 * fs)
 
@@ -875,7 +876,7 @@ class AimsOutHeaderChunk(AimsOutChunk):
         """
         super().__init__(lines)
 
-    @lazyproperty
+    @cached_property
     def constraints(self):
         """Parse the constraints from the aims.out file
 
@@ -917,7 +918,7 @@ class AimsOutHeaderChunk(AimsOutChunk):
 
         return fix_cart
 
-    @lazyproperty
+    @cached_property
     def initial_cell(self):
         """Parse the initial cell from the aims.out file"""
         line_start = self.reverse_search_for(["| Unit cell:"])
@@ -929,7 +930,7 @@ class AimsOutHeaderChunk(AimsOutChunk):
             for line in self.lines[line_start + 1:line_start + 4]
         ]
 
-    @lazyproperty
+    @cached_property
     def initial_atoms(self):
         """Create an atoms object for the initial geometry.in structure
         from the aims.out file"""
@@ -958,20 +959,20 @@ class AimsOutHeaderChunk(AimsOutChunk):
 
         return atoms
 
-    @lazyproperty
+    @cached_property
     def is_md(self):
         """Determine if calculation is a molecular dynamics calculation"""
         return LINE_NOT_FOUND != self.reverse_search_for(
             ["Complete information for previous time-step:"]
         )
 
-    @lazyproperty
+    @cached_property
     def is_relaxation(self):
         """Determine if the calculation is a geometry optimization or not"""
         return LINE_NOT_FOUND != self.reverse_search_for(
             ["Geometry relaxation:"])
 
-    @lazyproperty
+    @cached_property
     def _k_points(self):
         """Get the list of k-points used in the calculation"""
         n_kpts = self.parse_scalar("n_kpts")
@@ -1005,7 +1006,7 @@ class AimsOutHeaderChunk(AimsOutChunk):
             "k_point_weights": k_point_weights,
         }
 
-    @lazyproperty
+    @cached_property
     def n_atoms(self):
         """The number of atoms for the material"""
         n_atoms = self.parse_scalar("n_atoms")
@@ -1015,7 +1016,7 @@ class AimsOutHeaderChunk(AimsOutChunk):
             )
         return int(n_atoms)
 
-    @lazyproperty
+    @cached_property
     def n_bands(self):
         """The number of Kohn-Sham states for the chunk"""
         line_start = self.reverse_search_for(
@@ -1032,7 +1033,7 @@ class AimsOutHeaderChunk(AimsOutChunk):
 
         return int(line.split()[-1].strip()[:-1])
 
-    @lazyproperty
+    @cached_property
     def n_electrons(self):
         """The number of electrons for the chunk"""
         line_start = self.reverse_search_for(
@@ -1046,7 +1047,7 @@ class AimsOutHeaderChunk(AimsOutChunk):
         line = self.lines[line_start]
         return int(float(line.split()[-2]))
 
-    @lazyproperty
+    @cached_property
     def n_k_points(self):
         """The number of k_ppoints for the calculation"""
         n_kpts = self.parse_scalar("n_kpts")
@@ -1055,7 +1056,7 @@ class AimsOutHeaderChunk(AimsOutChunk):
 
         return int(n_kpts)
 
-    @lazyproperty
+    @cached_property
     def n_spins(self):
         """The number of spin channels for the chunk"""
         n_spins = self.parse_scalar("n_spins")
@@ -1065,7 +1066,7 @@ class AimsOutHeaderChunk(AimsOutChunk):
                 "channels in the header.")
         return int(n_spins)
 
-    @lazyproperty
+    @cached_property
     def electronic_temperature(self):
         """The electronic temperature for the chunk"""
         line_start = self.reverse_search_for(
@@ -1087,7 +1088,7 @@ class AimsOutHeaderChunk(AimsOutChunk):
         """The k-point weights for the calculation"""
         return self._k_points["k_point_weights"]
 
-    @lazyproperty
+    @cached_property
     def header_summary(self):
         """Dictionary summarizing the information inside the header"""
         return {
@@ -1123,7 +1124,7 @@ class AimsOutCalcChunk(AimsOutChunk):
         super().__init__(lines)
         self._header = header.header_summary
 
-    @lazyproperty
+    @cached_property
     def _atoms(self):
         """Create an atoms object for the subsequent structures
         calculated in the aims.out file"""
@@ -1179,7 +1180,7 @@ class AimsOutCalcChunk(AimsOutChunk):
 
         return atoms
 
-    @lazyproperty
+    @cached_property
     def forces(self):
         """Parse the forces from the aims.out file"""
         line_start = self.reverse_search_for(["Total atomic forces"])
@@ -1195,7 +1196,7 @@ class AimsOutCalcChunk(AimsOutChunk):
             ]
         )
 
-    @lazyproperty
+    @cached_property
     def stresses(self):
         """Parse the stresses from the aims.out file"""
         line_start = self.reverse_search_for(
@@ -1211,7 +1212,7 @@ class AimsOutCalcChunk(AimsOutChunk):
 
         return np.array(stresses)
 
-    @lazyproperty
+    @cached_property
     def stress(self):
         """Parse the stress from the aims.out file"""
         from ase.stress import full_3x3_to_voigt_6_stress
@@ -1232,7 +1233,7 @@ class AimsOutCalcChunk(AimsOutChunk):
         ]
         return full_3x3_to_voigt_6_stress(stress)
 
-    @lazyproperty
+    @cached_property
     def is_metallic(self):
         """Checks the outputfile to see if the chunk corresponds
         to a metallic system"""
@@ -1241,7 +1242,7 @@ class AimsOutCalcChunk(AimsOutChunk):
              "broadening function (occupation_type)"])
         return line_start != LINE_NOT_FOUND
 
-    @lazyproperty
+    @cached_property
     def total_energy(self):
         """Parse the energy from the aims.out file"""
         if np.all(self._atoms.pbc) and self.is_metallic:
@@ -1253,7 +1254,7 @@ class AimsOutCalcChunk(AimsOutChunk):
 
         return float(self.lines[line_ind].split()[5])
 
-    @lazyproperty
+    @cached_property
     def dipole(self):
         """Parse the electric dipole moment from the aims.out file."""
         line_start = self.reverse_search_for(["Total dipole moment [eAng]"])
@@ -1263,7 +1264,7 @@ class AimsOutCalcChunk(AimsOutChunk):
         line = self.lines[line_start]
         return np.array([float(inp) for inp in line.split()[6:9]])
 
-    @lazyproperty
+    @cached_property
     def dielectric_tensor(self):
         """Parse the dielectric tensor from the aims.out file"""
         line_start = self.reverse_search_for(["PARSE DFPT_dielectric_tensor"])
@@ -1276,7 +1277,7 @@ class AimsOutCalcChunk(AimsOutChunk):
         # make ndarray and return
         return np.array([np.fromstring(line, sep=' ') for line in lines])
 
-    @lazyproperty
+    @cached_property
     def polarization(self):
         """ Parse the polarization vector from the aims.out file"""
         line_start = self.reverse_search_for(["| Cartesian Polarization"])
@@ -1285,7 +1286,7 @@ class AimsOutCalcChunk(AimsOutChunk):
         line = self.lines[line_start]
         return np.array([float(s) for s in line.split()[-3:]])
 
-    @lazyproperty
+    @cached_property
     def _hirshfeld(self):
         """Parse the Hirshfled charges volumes, and dipole moments from the
         ouput"""
@@ -1334,7 +1335,7 @@ class AimsOutCalcChunk(AimsOutChunk):
             "dipole": hirshfeld_dipole,
         }
 
-    @lazyproperty
+    @cached_property
     def _eigenvalues(self):
         """Parse the eigenvalues and occupancies of the system. If eigenvalue
         for a particular k-point is not present in the output file
@@ -1414,7 +1415,7 @@ class AimsOutCalcChunk(AimsOutChunk):
                 occupancies[kpt_ind, ll, spin] = float(split_line[1])
         return {"eigenvalues": eigenvalues, "occupancies": occupancies}
 
-    @lazyproperty
+    @cached_property
     def atoms(self):
         """Convert AimsOutChunk to Atoms object and add all non-standard
 outputs to atoms.info"""
@@ -1463,83 +1464,83 @@ outputs to atoms.info"""
             value in results.items() if value is not None}
 
     # Properties from the aims.out header
-    @lazyproperty
+    @cached_property
     def initial_atoms(self):
         """The initial structure defined in the geoemtry.in file"""
         return self._header["initial_atoms"]
 
-    @lazyproperty
+    @cached_property
     def initial_cell(self):
         """The initial lattice vectors defined in the geoemtry.in file"""
         return self._header["initial_cell"]
 
-    @lazyproperty
+    @cached_property
     def constraints(self):
         """The relaxation constraints for the calculation"""
         return self._header["constraints"]
 
-    @lazyproperty
+    @cached_property
     def n_atoms(self):
         """The number of atoms for the material"""
         return self._header["n_atoms"]
 
-    @lazyproperty
+    @cached_property
     def n_bands(self):
         """The number of Kohn-Sham states for the chunk"""
         return self._header["n_bands"]
 
-    @lazyproperty
+    @cached_property
     def n_electrons(self):
         """The number of electrons for the chunk"""
         return self._header["n_electrons"]
 
-    @lazyproperty
+    @cached_property
     def n_spins(self):
         """The number of spin channels for the chunk"""
         return self._header["n_spins"]
 
-    @lazyproperty
+    @cached_property
     def electronic_temperature(self):
         """The electronic temperature for the chunk"""
         return self._header["electronic_temperature"]
 
-    @lazyproperty
+    @cached_property
     def n_k_points(self):
         """The number of electrons for the chunk"""
         return self._header["n_k_points"]
 
-    @lazyproperty
+    @cached_property
     def k_points(self):
         """The number of spin channels for the chunk"""
         return self._header["k_points"]
 
-    @lazyproperty
+    @cached_property
     def k_point_weights(self):
         """k_point_weights electronic temperature for the chunk"""
         return self._header["k_point_weights"]
 
-    @lazyproperty
+    @cached_property
     def free_energy(self):
         """The free energy for the chunk"""
         return self.parse_scalar("free_energy")
 
-    @lazyproperty
+    @cached_property
     def n_iter(self):
         """The number of SCF iterations needed to converge the SCF cycle for
 the chunk"""
         return self.parse_scalar("number_of_iterations")
 
-    @lazyproperty
+    @cached_property
     def magmom(self):
         """The magnetic moment for the chunk"""
         return self.parse_scalar("magnetic_moment")
 
-    @lazyproperty
+    @cached_property
     def E_f(self):
         """The Fermi energy for the chunk"""
         return self.parse_scalar("fermi_energy")
 
-    @lazyproperty
+    @cached_property
     def converged(self):
         """True if the chunk is a fully converged final structure"""
         return (len(self.lines) > 0) and ("Have a nice day." in self.lines[-5:])
