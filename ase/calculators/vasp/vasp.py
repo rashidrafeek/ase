@@ -321,14 +321,12 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
         execute VASP. After execution, the energy, forces. etc. are read
         from the VASP output files.
         """
+        Calculator.calculate(self, atoms, properties, system_changes)
         # Check for zero-length lattice vectors and PBC
         # and that we actually have an Atoms object.
-        check_atoms(atoms)
+        check_atoms(self.atoms)
 
         self.clear_results()
-
-        if atoms is not None:
-            self.atoms = atoms.copy()
 
         command = self.make_command(self.command)
         self.write_input(self.atoms, properties, system_changes)
@@ -481,13 +479,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
 
     def write_input(self, atoms, properties=None, system_changes=None):
         """Write VASP inputfiles, INCAR, KPOINTS and POTCAR"""
-        # Create the folders where we write the files, if we aren't in the
-        # current working directory.
-        if self.directory != os.curdir and not os.path.isdir(self.directory):
-            os.makedirs(self.directory)
-
         self.initialize(atoms)
-
         GenerateVaspInput.write_input(self, atoms, directory=self.directory)
 
     def read(self, label=None):

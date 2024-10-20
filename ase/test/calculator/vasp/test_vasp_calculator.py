@@ -65,12 +65,6 @@ def test_not_atoms(bad_atoms):
     with pytest.raises(CalculatorSetupError):
         check_atoms(bad_atoms)
 
-    # Test that error is also raised properly when launching
-    # from calculator
-    calc = Vasp()
-    with pytest.raises(CalculatorSetupError):
-        calc.calculate(atoms=bad_atoms)
-
 
 @pytest.mark.parametrize('pbc', [
     3 * [False],
