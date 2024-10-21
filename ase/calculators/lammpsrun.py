@@ -123,7 +123,7 @@ class LAMMPS(Calculator):
         H = Atom('H', position=Ni.cell.diagonal()/2)
         NiH = Ni + H
 
-        lammps = LAMMPS(parameters=parameters, files=files)
+        lammps = LAMMPS(files=files, **parameters)
 
         NiH.calc = lammps
         print("Energy ", NiH.get_potential_energy())

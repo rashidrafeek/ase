@@ -1294,31 +1294,55 @@ class GenerateVaspInput:
 
         if 'xc' in kwargs:
             self.set_xc_params(kwargs['xc'])
-        for key in kwargs:
+        for key, value in kwargs.items():
             if key in self.float_params:
-                self.float_params[key] = kwargs[key]
+                self.float_params[key] = value
             elif key in self.exp_params:
-                self.exp_params[key] = kwargs[key]
+                self.exp_params[key] = value
             elif key in self.string_params:
-                self.string_params[key] = kwargs[key]
+                self.string_params[key] = value
             elif key in self.int_params:
-                self.int_params[key] = kwargs[key]
+                self.int_params[key] = value
             elif key in self.bool_params:
-                self.bool_params[key] = kwargs[key]
+                self.bool_params[key] = value
             elif key in self.list_bool_params:
-                self.list_bool_params[key] = kwargs[key]
+                self.list_bool_params[key] = value
             elif key in self.list_int_params:
-                self.list_int_params[key] = kwargs[key]
+                self.list_int_params[key] = value
             elif key in self.list_float_params:
-                self.list_float_params[key] = kwargs[key]
+                self.list_float_params[key] = value
             elif key in self.special_params:
-                self.special_params[key] = kwargs[key]
+                self.special_params[key] = value
             elif key in self.dict_params:
-                self.dict_params[key] = kwargs[key]
+                self.dict_params[key] = value
             elif key in self.input_params:
-                self.input_params[key] = kwargs[key]
+                self.input_params[key] = value
+            elif isinstance(value, str):
+                self.string_params[key] = value
+            # `bool` is a subclass of `int` and should be checked earlier.
+            # https://docs.python.org/3/c-api/bool.html
+            elif isinstance(value, bool):
+                self.bool_params[key] = value
+            elif isinstance(value, int):
+                self.int_params[key] = value
+            elif isinstance(value, float):
+                self.float_params[key] = value
+            elif isinstance(value, list):
+                if len(value) == 0:
+                    msg = f'empty list is given for {key}'
+                    raise ValueError(msg)
+                if isinstance(value[0], bool):
+                    self.list_bool_params[key] = value
+                elif isinstance(value[0], int):
+                    self.list_int_params[key] = value
+                elif isinstance(value[0], float):
+                    self.list_float_params[key] = value
+                else:
+                    msg = f'cannot handle type of value for {key} = {value!r}'
+                    raise TypeError(msg)
             else:
-                raise TypeError('Parameter not defined: ' + key)
+                msg = f'cannot handle type of value for {key} = {value!r}'
+                raise TypeError(msg)
 
     def check_xc(self):
         """Make sure the calculator has functional & pseudopotentials set up
@@ -1605,8 +1629,7 @@ class GenerateVaspInput:
     def write_incar(self, atoms, directory='./', **kwargs):
         """Writes the INCAR file."""
         incar_params = {}
-        incar_header = \
-            'INCAR created by Atomic Simulation Environment'
+
         # float params
         float_dct = {
             key: f'{val:{FLOAT_FORMAT}}'
@@ -1741,9 +1764,7 @@ class GenerateVaspInput:
         }
         incar_params.update(cust_dict)
 
-        write_incar(directory=directory,
-                    parameters=incar_params,
-                    header=incar_header)
+        write_incar(directory=directory, parameters=incar_params)
 
     def write_kpoints(self, atoms=None, directory='./', **kwargs):
         """Writes the KPOINTS file."""
@@ -1891,11 +1912,28 @@ class GenerateVaspInput:
                             self.special_params[key] = False
                         else:
                             self.special_params[key] = data[2]
-            except KeyError:
-                raise OSError('Keyword "%s" in INCAR is'
-                              'not known by calculator.' % key)
-            except IndexError:
-                raise OSError(f'Value missing for keyword "{key}".')
+
+                # non-registered keys
+                elif 'true' in data[2].lower():
+                    self.bool_params[key] = True
+                elif 'false' in data[2].lower():
+                    self.bool_params[key] = False
+                elif data[2].isdigit():
+                    self.int_params[key] = int(data[2])
+                else:
+                    try:
+                        self.float_params[key] = float(data[2])
+                    except ValueError:
+                        self.string_params[key] = data[2]
+
+            except KeyError as exc:
+                raise KeyError(
+                    f'Keyword "{key}" in INCAR is not known by calculator.'
+                ) from exc
+            except IndexError as exc:
+                raise IndexError(
+                    f'Value missing for keyword "{key}".'
+                ) from exc
 
     def read_kpoints(self, filename):
         """Read kpoints file, typically named KPOINTS."""

@@ -34,7 +34,7 @@ meV = 0.001 * eV
 
 
 def parse_siesta_version(output: bytes) -> str:
-    match = re.search(rb'Siesta Version\s*:\s*(\S+)', output)
+    match = re.search(rb'Version\s*:\s*(\S+)', output)
 
     if match is None:
         raise RuntimeError('Could not get Siesta version info from output '
@@ -483,13 +483,10 @@ class Siesta(FileIOCalculator):
                 name = f"{name}.ghost"
                 atomic_number = -atomic_number
 
-            label = name.rsplit('.', 2)[0]
-
-            if label not in ion_results:
-                fname = self.getpath(label, 'ion.xml')
-                fname = Path(fname)
+            if name not in ion_results:
+                fname = self.getpath(name, 'ion.xml')
                 if fname.is_file():
-                    ion_results[label] = get_ion(fname)
+                    ion_results[name] = get_ion(str(fname))
 
         return ion_results
 
@@ -607,7 +604,7 @@ class SpeciesInfo:
                 src_path = self.pseudo_path / f"{label}.psf"
             else:
                 src_path = Path(spec['pseudopotential'])
-                label = src_path.stem
+
             if not src_path.is_absolute():
                 src_path = self.pseudo_path / src_path
             if not src_path.exists():
@@ -626,7 +623,11 @@ class SpeciesInfo:
             file_instructions.append(instr)
 
             label = '.'.join(np.array(name.split('.'))[:-1])
-            string = '    %d %d %s' % (species_number, atomic_number, label)
+            pseudo_name = ''
+            if src_path.suffix != '.psf':
+                pseudo_name = f'{label}{src_path.suffix}'
+            string = '    %d %d %s %s' % (species_number, atomic_number, label,
+                                          pseudo_name)
             chemical_labels.append(string)
             if isinstance(spec['basis_set'], PAOBasisBlock):
                 pao_basis.append(spec['basis_set'].script(label))

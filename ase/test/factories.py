@@ -272,7 +272,7 @@ class EspressoFactory:
     @lazyproperty
     def pseudopotentials(self):
         pseudopotentials = {}
-        for path in self.profile.pseudo_dir.glob('*.UPF'):
+        for path in Path(self.profile.pseudo_dir).glob('*.UPF'):
             fname = path.name
             # Names are e.g. si_lda_v1.uspp.F.UPF
             symbol = fname.split('_', 1)[0].capitalize()

@@ -298,7 +298,18 @@ def factory(request, factories):
     return CalculatorInputs(factory, kwargs)
 
 
+def check_missing_init(module):
+    # We don't like missing __init__.py because pytest imports those
+    # as toplevel modules, which can cause clashes.
+    if not module.__name__.startswith('ase.test.'):
+        raise RuntimeError(
+            f'Test module {module.__name__} at {module.__file__} does not '
+            'start with "ase.test".  Maybe __init__.py is missing?')
+
+
 def pytest_generate_tests(metafunc):
+    check_missing_init(metafunc.module)
+
     parametrize_calculator_tests(metafunc)
 
     if 'seed' in metafunc.fixturenames:

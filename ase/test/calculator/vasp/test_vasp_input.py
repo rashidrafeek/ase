@@ -268,3 +268,27 @@ def test_ichain(vaspinput_factory):
     assert calc.exp_params['ediffg'] == -0.01
     assert calc.int_params['ibrion'] == 3
     assert calc.float_params['potim'] == 0.0
+
+
+def test_non_registered_keys(vaspinput_factory) -> None:
+    """Test if non-registered INCAR keys can be written and read.
+
+    Here the SCAN meta-GGA functional via LIBXC is tested.
+
+    https://www.vasp.at/wiki/index.php/LIBXC1#Examples_of_INCAR
+
+    """
+    calc = vaspinput_factory(metagga='LIBXC')
+
+    # Be sure that `libxc1` and `libxc2` are not in the registered INCAR keys.
+    assert 'libxc1' not in calc.string_params
+    assert 'libxc2' not in calc.int_params
+
+    calc.set(libxc1='MGGA_X_SCAN')  # or 263
+    calc.set(libxc2=267)  # or "MGGA_C_SCAN"
+
+    calc.write_incar(nacl)
+    calc.read_incar('INCAR')
+
+    assert calc.string_params['libxc1'] == 'MGGA_X_SCAN'
+    assert calc.int_params['libxc2'] == 267

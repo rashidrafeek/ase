@@ -148,7 +148,7 @@ where ``abc`` is the module name and ``ABC`` is the class name.
 .. _Asap: https://wiki.fysik.dtu.dk/asap
 .. _BigDFT: https://l_sim.gitlab.io/bigdft-suite/tutorials/Interoperability-Simulation.html#ASE-Interoperability
 .. _CHGNet: https://github.com/CederGroupHub/chgnet/blob/e2a2b82bf2c64e5a3d39cd75d0addfa864a2771a/chgnet/model/dynamics.py#L63
-.. _GPAW: https://wiki.fysik.dtu.dk/gpaw
+.. _GPAW: https://gpaw.readthedocs.io
 .. _Hotbit: https://github.com/pekkosk/hotbit
 .. _DFTK: https://dftk.org
 .. _DeePMD-kit: https://github.com/deepmodeling/deepmd-kit

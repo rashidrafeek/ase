@@ -253,12 +253,14 @@ def test_modify_magmom(gui, modify):
 
 
 def test_repeat(gui):
-    fe = bulk('Fe')
-    gui.new_atoms(fe)
+    atoms = bulk('Fe')
+    energy = 1.0
+    atoms.calc = SinglePointCalculator(atoms, energy=energy)
+    gui.new_atoms(atoms)
     repeat = gui.repeat_window()
 
     multiplier = [2, 3, 4]
-    expected_atoms = fe * multiplier
+    expected_atoms = atoms * multiplier
     natoms = np.prod(multiplier)
     for i, value in enumerate(multiplier):
         repeat.repeat[i].value = value
@@ -266,7 +268,10 @@ def test_repeat(gui):
     repeat.change()
     assert len(gui.atoms) == natoms
     assert gui.atoms.positions == pytest.approx(expected_atoms.positions)
-    assert gui.atoms.cell == pytest.approx(fe.cell[:])  # Still old cell
+    assert gui.atoms.cell == pytest.approx(atoms.cell[:])  # Still old cell
+
+    energy_ref = energy * multiplier[0] * multiplier[1] * multiplier[2]
+    assert gui.images.get_energy(gui.images[0]) == pytest.approx(energy_ref)
 
     repeat.set_unit_cell()
     assert gui.atoms.cell[:] == pytest.approx(expected_atoms.cell[:])
@@ -284,6 +289,31 @@ def test_surface(gui):
 def test_movie(animation):
     movie = animation.movie_window
     assert movie is not None
+
+    animation.step('Home')
+    assert movie.frame_number.value == 0
+
+    animation.step('Page-Up')
+    assert movie.frame_number.value == 0
+
+    animation.step('Page-Down')
+    assert movie.frame_number.value == 1
+
+    animation.step('Page-Down')
+    assert movie.frame_number.value == 2
+
+    last_index = len(animation.images) - 1
+    animation.step('End')
+    assert movie.frame_number.value == last_index
+
+    animation.step('Page-Down')
+    assert movie.frame_number.value == last_index
+
+    animation.step('Page-Up')
+    assert movie.frame_number.value == last_index - 1
+
+    animation.step('Page-Up')
+    assert movie.frame_number.value == last_index - 2
 
     movie.play()
     movie.stop()

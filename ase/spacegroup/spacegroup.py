@@ -13,6 +13,8 @@ from typing import Union
 
 import numpy as np
 
+from ase.utils import deprecated
+
 __all__ = ['Spacegroup']
 
 
@@ -441,49 +443,57 @@ class Spacegroup:
         >>> kinds
         [0, 0, 0, 0, 1, 1, 1, 1]
         """
-        kinds = []
-        sites = []
+        if onduplicates not in ('keep', 'replace', 'warn', 'error'):
+            raise SpacegroupValueError(
+                'Argument "onduplicates" must be one of: '
+                '"keep", "replace", "warn" or "error".'
+            )
 
         scaled = np.array(scaled_positions, ndmin=2)
-        symop = self.get_symop()
+        rotations, translations = zip(*self.get_symop())
+        rotations = np.array(rotations)
+        translations = np.array(translations)
 
+        def find_orbit(point: np.ndarray) -> np.ndarray:
+            """Find crystallographic orbit of the given point."""
+            candidates = ((rotations @ point) + translations % 1.0) % 1.0
+            orbit = [candidates[0]]
+            for member in candidates[1:]:
+                diff = member - orbit
+                diff -= np.rint(diff)
+                if not np.any(np.all(np.abs(diff) < symprec, axis=1)):
+                    orbit.append(member)
+            return np.array(orbit)
+
+        orbits = []
         for kind, pos in enumerate(scaled):
-            for rot, trans in symop:
-                site = np.mod(np.dot(rot, pos) + trans, 1.)
-                if not sites:
-                    sites.append(site)
-                    kinds.append(kind)
-                    continue
-                t = site - sites
-                mask = np.all(
-                    (abs(t) < symprec) | (abs(abs(t) - 1.0) < symprec), axis=1)
-                if np.any(mask):
-                    inds = np.argwhere(mask).flatten()
-                    for ind in inds:
-                        # then we would just add the same thing again -> skip
-                        if kinds[ind] == kind:
-                            pass
-                        elif onduplicates == 'keep':
-                            pass
-                        elif onduplicates == 'replace':
-                            kinds[ind] = kind
-                        elif onduplicates == 'warn':
-                            warnings.warn('scaled_positions %d and %d '
-                                          'are equivalent' %
-                                          (kinds[ind], kind))
-                        elif onduplicates == 'error':
-                            raise SpacegroupValueError(
-                                'scaled_positions %d and %d are equivalent' %
-                                (kinds[ind], kind))
-                        else:
-                            raise SpacegroupValueError(
-                                'Argument "onduplicates" must be one of: '
-                                '"keep", "replace", "warn" or "error".')
-                else:
-                    sites.append(site)
-                    kinds.append(kind)
+            for i, (kind0, positions0) in enumerate(orbits):
+                diff = pos - positions0
+                diff -= np.rint(diff)
+                if np.any(np.all(np.abs(diff) < symprec, axis=1)):
+                    if onduplicates == 'keep':
+                        pass
+                    elif onduplicates == 'replace':
+                        orbits[i] = (kind, positions0)
+                    elif onduplicates == 'warn':
+                        warnings.warn(
+                            'scaled_positions %d and %d are equivalent' %
+                            (kind0, kind))
+                    elif onduplicates == 'error':
+                        raise SpacegroupValueError(
+                            'scaled_positions %d and %d are equivalent' %
+                            (kind0, kind))
+                    break
+            else:
+                orbits.append((kind, find_orbit(pos)))
 
-        return np.array(sites), kinds
+        kinds = []
+        sites = []
+        for kind, orbit in orbits:
+            kinds.extend(len(orbit) * [kind])
+            sites.append(orbit)
+
+        return np.concatenate(sites, axis=0), kinds
 
     def symmetry_normalised_sites(self,
                                   scaled_positions,
@@ -952,10 +962,27 @@ def spacegroup_from_data(no=None,
     return spg
 
 
+@deprecated(
+    '`get_spacegroup` has been deprecated due to its misleading output. '
+    'The returned `Spacegroup` object has symmetry operations for a '
+    'standard setting regardress of the given `Atoms` object. '
+    'See https://gitlab.com/ase/ase/-/issues/1534 for details. '
+    'Please use `ase.spacegroup.symmetrize.check_symmetry` or `spglib` '
+    'directly to get the symmetry operations for the given `Atoms` object.'
+)
 def get_spacegroup(atoms, symprec=1e-5):
     """Determine the spacegroup to which belongs the Atoms object.
 
     This requires spglib: https://atztogo.github.io/spglib/ .
+
+    .. warning::
+        The returned ``Spacegroup`` object has symmetry operations for a
+        standard setting regardless of the given ``Atoms`` object.
+        See https://gitlab.com/ase/ase/-/issues/1534 for details.
+
+    .. deprecated:: 3.24.0
+        Please use ``ase.spacegroup.symmetrize.check_symmetry`` or ``spglib``
+        directly to get the symmetry operations for the given ``Atoms`` object.
 
     Parameters:
 

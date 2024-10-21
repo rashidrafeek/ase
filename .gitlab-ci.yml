@@ -42,15 +42,11 @@ oldlibs:
       -W "ignore:can't resolve package"
       -W ignore::PendingDeprecationWarning
 
+
 # For testing newest versions of libraries against standard images
 # on dockerhub.
-#
-# psycopg2-binary is for testing the postgres backend for ase.db
-# Currently we have trouble with pyhon3.8 where we need to compile some
-# libraries that don't have binary wheels; we don't want to install gcc
-# in this test job.
 pipinstall:
-  image: python:3.8
+  image: python:3.11
   extends: .database-configuration
   script:
     - python --version
@@ -279,13 +275,13 @@ windows_test:
     # https://stackoverflow.com/questions/61791108/gitlab-ci-shared-windows-runner-for-python
     # https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/gcp/windows-containers/-/issues/13
     - Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
-    - choco install python --version=3.8 -y -f
+    - choco install python --version=3.9 -y -f
     - refreshenv
-  script:
     - python --version
     - python -m pip install --upgrade pip
     - python -m pip install pytest pytest-mock
     - python -m pip install .
+  script:
     - >
       ase test
       --calculators eam,ff,lj,morse,tip3p,tip4p

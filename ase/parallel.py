@@ -199,7 +199,7 @@ world = None
 
 # Check for special MPI-enabled Python interpreters:
 if '_gpaw' in sys.builtin_module_names:
-    # http://wiki.fysik.dtu.dk/gpaw
+    # http://gpaw.readthedocs.io
     import _gpaw
     world = _gpaw.Communicator()
 elif '_asap' in sys.builtin_module_names:

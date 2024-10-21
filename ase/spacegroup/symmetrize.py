@@ -1,6 +1,7 @@
 """
 Provides utility functions for FixSymmetry class
 """
+from collections.abc import MutableMapping
 from typing import Optional
 
 import numpy as np
@@ -10,11 +11,55 @@ from ase.utils import atoms_to_spglib_cell
 __all__ = ['refine_symmetry', 'check_symmetry']
 
 
+def spglib_get_symmetry_dataset(*args, **kwargs):
+    """Temporary compatibility adapter around spglib dataset.
+
+    Return an object that allows attribute-based access
+    in line with recent spglib.  This allows ASE code to not care about
+    older spglib versions.
+    """
+    import spglib
+    dataset = spglib.get_symmetry_dataset(*args, **kwargs)
+    if dataset is None:
+        return None
+    if isinstance(dataset, dict):  # spglib < 2.5.0
+        return SpglibDatasetWrapper(dataset)
+    return dataset  # spglib >= 2.5.0
+
+
+class SpglibDatasetWrapper(MutableMapping):
+    # Spglib 2.5.0 returns SpglibDataset with deprecated __getitem__.
+    # Spglib 2.4.0 and earlier return dict.
+    #
+    # We use this object to wrap dictionaries such that both types of access
+    # work correctly.
+    def __init__(self, spglib_dct):
+        self._spglib_dct = spglib_dct
+
+    def __getattr__(self, attr):
+        return self[attr]
+
+    def __getitem__(self, key):
+        return self._spglib_dct[key]
+
+    def __len__(self):
+        return len(self._spglib_dct)
+
+    def __iter__(self):
+        return iter(self._spglib_dct)
+
+    def __setitem__(self, key, value):
+        self._spglib_dct[key] = value
+
+    def __delitem__(self, item):
+        del self._spglib_dct[item]
+
+
 def print_symmetry(symprec, dataset):
     print("ase.spacegroup.symmetrize: prec", symprec,
-          "got symmetry group number", dataset["number"],
-          ", international (Hermann-Mauguin)", dataset["international"],
-          ", Hall ", dataset["hall"])
+          "got symmetry group number", dataset.number,
+          ", international (Hermann-Mauguin)", dataset.international,
+          ", Hall ", dataset.hall)
 
 
 def refine_symmetry(atoms, symprec=0.01, verbose=False):
@@ -69,11 +114,11 @@ def get_symmetrized_atoms(atoms,
     original_dataset = _check_and_symmetrize_cell(atoms, symprec=symprec)
     intermediate_dataset = _check_and_symmetrize_positions(
         atoms, symprec=symprec)
-    if intermediate_dataset['number'] != original_dataset['number']:
+    if intermediate_dataset.number != original_dataset.number:
         raise IntermediateDatasetError()
     final_symprec = final_symprec or symprec
     final_dataset = check_symmetry(atoms, symprec=final_symprec)
-    assert final_dataset['number'] == original_dataset['number']
+    assert final_dataset.number == original_dataset.number
     return atoms, final_dataset
 
 
@@ -86,9 +131,9 @@ def _check_and_symmetrize_cell(atoms, **kwargs):
 def _symmetrize_cell(atoms, dataset):
     # set actual cell to symmetrized cell vectors by copying
     # transformed and rotated standard cell
-    std_cell = dataset['std_lattice']
-    trans_std_cell = dataset['transformation_matrix'].T @ std_cell
-    rot_trans_std_cell = trans_std_cell @ dataset['std_rotation_matrix']
+    std_cell = dataset.std_lattice
+    trans_std_cell = dataset.transformation_matrix.T @ std_cell
+    rot_trans_std_cell = trans_std_cell @ dataset.std_rotation_matrix
     atoms.set_cell(rot_trans_std_cell, True)
 
 
@@ -106,22 +151,22 @@ def _symmetrize_positions(atoms, dataset, primitive_spglib_cell):
     prim_cell, prim_scaled_pos, prim_types = primitive_spglib_cell
 
     # calculate offset between standard cell and actual cell
-    std_cell = dataset['std_lattice']
-    rot_std_cell = std_cell @ dataset['std_rotation_matrix']
-    rot_std_pos = dataset['std_positions'] @ rot_std_cell
+    std_cell = dataset.std_lattice
+    rot_std_cell = std_cell @ dataset.std_rotation_matrix
+    rot_std_pos = dataset.std_positions @ rot_std_cell
     pos = atoms.get_positions()
-    dp0 = (pos[list(dataset['mapping_to_primitive']).index(0)] - rot_std_pos[
-        list(dataset['std_mapping_to_primitive']).index(0)])
+    dp0 = (pos[list(dataset.mapping_to_primitive).index(0)] - rot_std_pos[
+        list(dataset.std_mapping_to_primitive).index(0)])
 
     # create aligned set of standard cell positions to figure out mapping
-    rot_prim_cell = prim_cell @ dataset['std_rotation_matrix']
+    rot_prim_cell = prim_cell @ dataset.std_rotation_matrix
     inv_rot_prim_cell = np.linalg.inv(rot_prim_cell)
     aligned_std_pos = rot_std_pos + dp0
 
     # find ideal positions from position of corresponding std cell atom +
     #    integer_vec . primitive cell vectors
-    mapping_to_primitive = list(dataset['mapping_to_primitive'])
-    std_mapping_to_primitive = list(dataset['std_mapping_to_primitive'])
+    mapping_to_primitive = list(dataset.mapping_to_primitive)
+    std_mapping_to_primitive = list(dataset.std_mapping_to_primitive)
     pos = atoms.get_positions()
     for i_at in range(len(atoms)):
         std_i_at = std_mapping_to_primitive.index(mapping_to_primitive[i_at])
@@ -137,8 +182,7 @@ def check_symmetry(atoms, symprec=1.0e-6, verbose=False):
 
     Prints a summary and returns result of `spglib.get_symmetry_dataset()`
     """
-    import spglib
-    dataset = spglib.get_symmetry_dataset(atoms_to_spglib_cell(atoms),
+    dataset = spglib_get_symmetry_dataset(atoms_to_spglib_cell(atoms),
                                           symprec=symprec)
     if verbose:
         print_symmetry(symprec, dataset)
@@ -149,8 +193,8 @@ def is_subgroup(sup_data, sub_data, tol=1e-10):
     """
     Test if spglib dataset `sub_data` is a subgroup of dataset `sup_data`
     """
-    for rot1, trns1 in zip(sub_data['rotations'], sub_data['translations']):
-        for rot2, trns2 in zip(sup_data['rotations'], sup_data['translations']):
+    for rot1, trns1 in zip(sub_data.rotations, sub_data.translations):
+        for rot2, trns2 in zip(sup_data.rotations, sup_data.translations):
             if np.all(rot1 == rot2) and np.linalg.norm(trns1 - trns2) < tol:
                 break
         else:
@@ -164,14 +208,12 @@ def prep_symmetry(atoms, symprec=1.0e-6, verbose=False):
 
     Returns a tuple `(rotations, translations, symm_map)`
     """
-    import spglib
-
-    dataset = spglib.get_symmetry_dataset(atoms_to_spglib_cell(atoms),
+    dataset = spglib_get_symmetry_dataset(atoms_to_spglib_cell(atoms),
                                           symprec=symprec)
     if verbose:
         print_symmetry(symprec, dataset)
-    rotations = dataset['rotations'].copy()
-    translations = dataset['translations'].copy()
+    rotations = dataset.rotations.copy()
+    translations = dataset.translations.copy()
     symm_map = []
     scaled_pos = atoms.get_scaled_positions()
     for (rot, trans) in zip(rotations, translations):

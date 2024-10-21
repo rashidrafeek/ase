@@ -34,7 +34,7 @@ The local optimization algorithms available in ASE are: :class:`BFGS`,
 .. seealso::
 
     `Performance test
-    <https://wiki.fysik.dtu.dk/gpaw/devel/ase_optimize/ase_optimize.html>`_
+    <https://gpaw.readthedocs.io/devel/ase_optimize/ase_optimize.html>`_
     for all ASE local optimizers.
 
 

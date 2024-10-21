@@ -254,7 +254,7 @@ Contents
    :target: ase/calculators/gamess_us.html
    :align: middle
 .. |gpaw| image:: static/gpaw.png
-   :target: https://wiki.fysik.dtu.dk/gpaw/
+   :target: https://gpaw.readthedocs.io/
    :align: middle
 .. |gromacs| image:: static/gromacs.png
    :target: ase/calculators/gromacs.html

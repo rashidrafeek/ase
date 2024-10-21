@@ -35,34 +35,44 @@ class Atoms:
     In order to calculate energies, forces and stresses, a calculator
     object has to attached to the atoms object.
 
-    Parameters:
+    Parameters
+    ----------
+    symbols : str | list[str] | list[Atom]
+        Chemical formula, a list of chemical symbols, or list of
+        :class:`~ase.Atom` objects (mutually exclusive with ``numbers``).
 
-    symbols: str (formula) or list of str
-        Can be a string formula, a list of symbols or a list of
-        Atom objects.  Examples: 'H2O', 'COPt12', ['H', 'H', 'O'],
-        [Atom('Ne', (x, y, z)), ...].
-    positions: list of xyz-positions
-        Atomic positions.  Anything that can be converted to an
-        ndarray of shape (n, 3) will do: [(x1,y1,z1), (x2,y2,z2),
-        ...].
-    scaled_positions: list of scaled-positions
-        Like positions, but given in units of the unit cell.
-        Can not be set at the same time as positions.
-    numbers: list of int
-        Atomic numbers (use only one of symbols/numbers).
-    tags: list of int
+        - ``'H2O'``
+        - ``'COPt12'``
+        - ``['H', 'H', 'O']``
+        - ``[Atom('Ne', (x, y, z)), ...]``
+
+    positions : list[tuple[float, float, float]]
+        Atomic positions in Cartesian coordinates
+        (mutually exclusive with ``scaled_positions``).
+        Anything that can be converted to an ndarray of shape (n, 3) works:
+        [(x0, y0, z0), (x1, y1, z1), ...].
+    scaled_positions : list[tuple[float, float, float]]
+        Atomic positions in units of the unit cell
+        (mutually exclusive with ``positions``).
+    numbers : list[int]
+        Atomic numbers (mutually exclusive with ``symbols``).
+    tags : list[int]
         Special purpose tags.
-    momenta: list of xyz-momenta
-        Momenta for all atoms.
-    masses: list of float
+    momenta : list[tuple[float, float, float]]
+        Momenta for all atoms in Cartesian coordinates
+        (mutually exclusive with ``velocities``).
+    velocities : list[tuple[float, float, float]]
+        Velocities for all atoms in Cartesian coordinates
+        (mutually exclusive with ``momenta``).
+    masses : list[float]
         Atomic masses in atomic units.
-    magmoms: list of float or list of xyz-values
+    magmoms : list[float] | list[tuple[float, float, float]]
         Magnetic moments.  Can be either a single value for each atom
         for collinear calculations or three numbers for each atom for
         non-collinear calculations.
-    charges: list of float
+    charges : list[float]
         Initial atomic charges.
-    cell: 3x3 matrix or length 3 or 6 vector
+    cell : 3x3 matrix or length 3 or 6 vector, default: (0, 0, 0)
         Unit cell vectors.  Can also be given as just three
         numbers for orthorhombic cells, or 6 numbers, where
         first three are lengths of unit cell vectors, and the
@@ -70,28 +80,30 @@ class Atoms:
         [len(a), len(b), len(c), angle(b,c), angle(a,c), angle(a,b)].
         First vector will lie in x-direction, second in xy-plane,
         and the third one in z-positive subspace.
-        Default value: [0, 0, 0].
-    celldisp: Vector
+    celldisp : tuple[float, float, float], default: (0, 0, 0)
         Unit cell displacement vector. To visualize a displaced cell
-        around the center of mass of a Systems of atoms. Default value
-        = (0,0,0)
-    pbc: one or three bool
-        Periodic boundary conditions flags.  Examples: True,
-        False, 0, 1, (1, 1, 0), (True, False, False).  Default
-        value: False.
-    constraint: constraint object(s)
-        Used for applying one or more constraints during structure
-        optimization.
-    calculator: calculator object
-        Used to attach a calculator for calculating energies and atomic
-        forces.
-    info: dict of key-value pairs
-        Dictionary of key-value pairs with additional information
-        about the system.  The following keys may be used by ase:
+        around the center of mass of a Systems of atoms.
+    pbc : bool | tuple[bool, bool, bool], default: False
+        Periodic boundary conditions flags.
 
-          - spacegroup: Spacegroup instance
-          - unit_cell: 'conventional' | 'primitive' | int | 3 ints
-          - adsorbate_info: Information about special adsorption sites
+        - ``True``
+        - ``False``
+        - ``0``
+        - ``1``
+        - ``(1, 1, 0)``
+        - ``(True, False, False)``
+
+    constraint : constraint object(s)
+        One or more ASE constraints applied during structure optimization.
+    calculator : calculator object
+        ASE calculator to obtain energies and atomic forces.
+    info : dict | None, default: None
+        Dictionary with additional information about the system.
+        The following keys may be used by ASE:
+
+        - spacegroup: :class:`~ase.spacegroup.Spacegroup` instance
+        - unit_cell: 'conventional' | 'primitive' | int | 3 ints
+        - adsorbate_info: Information about special adsorption sites
 
         Items in the info attribute survives copy and slicing and can
         be stored in and retrieved from trajectory files given that the
@@ -99,11 +111,11 @@ class Atoms:
         user-defined object, its base class is importable.  One should
         not make any assumptions about the existence of keys.
 
-    Examples:
-
-    These three are equivalent:
-
+    Examples
+    --------
     >>> from ase import Atom
+
+    N2 molecule (These three are equivalent):
 
     >>> d = 1.104  # N2 bondlength
     >>> a = Atoms('N2', [(0, 0, 0), (0, 0, d)])
@@ -190,22 +202,19 @@ class Atoms:
 
         self.arrays = {}
 
-        if symbols is None:
-            if numbers is None:
-                if positions is not None:
-                    natoms = len(positions)
-                elif scaled_positions is not None:
-                    natoms = len(scaled_positions)
-                else:
-                    natoms = 0
-                numbers = np.zeros(natoms, int)
-            self.new_array('numbers', numbers, int)
-        else:
-            if numbers is not None:
-                raise TypeError(
-                    'Use only one of "symbols" and "numbers".')
+        if symbols is not None and numbers is not None:
+            raise TypeError('Use only one of "symbols" and "numbers".')
+        if symbols is not None:
+            numbers = symbols2numbers(symbols)
+        elif numbers is None:
+            if positions is not None:
+                natoms = len(positions)
+            elif scaled_positions is not None:
+                natoms = len(scaled_positions)
             else:
-                self.new_array('numbers', symbols2numbers(symbols), int)
+                natoms = 0
+            numbers = np.zeros(natoms, int)
+        self.new_array('numbers', numbers, int)
 
         if self.numbers.ndim != 1:
             raise ValueError('"numbers" must be 1-dimensional.')
@@ -227,7 +236,7 @@ class Atoms:
         else:
             if scaled_positions is not None:
                 raise TypeError(
-                    'Use only one of "symbols" and "numbers".')
+                    'Use only one of "positions" and "scaled_positions".')
         self.new_array('positions', positions, float, (3,))
 
         self.set_constraint(constraint)

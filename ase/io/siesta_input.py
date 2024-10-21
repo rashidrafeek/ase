@@ -91,7 +91,7 @@ class SiestaInput:
             mask = np.logical_and(mask1, mask2)
             if sum(mask) > 0:
                 species_numbers[mask] = i
-                i += 1
+            i += 1
         all_species = default_species + non_default_species
 
         return all_species, species_numbers
