@@ -138,7 +138,7 @@ class Pourbaix:
         T: float
             Temperature in Kelvin.
 
-        .. deprecated:: 3.23.1
+        .. deprecated:: 3.24.0
         """
 
         if formula:
