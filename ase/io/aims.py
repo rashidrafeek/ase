@@ -1270,7 +1270,10 @@ class AimsOutCalcChunk(AimsOutChunk):
     @lazyproperty
     def dielectric_tensor(self):
         """Parse the dielectric tensor from the aims.out file"""
-        line_start = self.reverse_search_for(["PARSE DFPT_dielectric_tensor"])
+        line_start = self.reverse_search_for(
+            ["DFPT for dielectric_constant:--->",
+            "PARSE DFPT_dielectric_tensor"],
+        )
         if line_start == LINE_NOT_FOUND:
             return None
 
