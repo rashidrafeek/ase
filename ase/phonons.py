@@ -1,20 +1,20 @@
 """Module for calculating phonons of periodic systems."""
 
-from math import pi, sqrt
 import warnings
+from math import pi, sqrt
 from pathlib import Path
 
 import numpy as np
-import numpy.linalg as la
 import numpy.fft as fft
+import numpy.linalg as la
 
 import ase
 import ase.units as units
-from ase.parallel import world
 from ase.dft import monkhorst_pack
 from ase.io.trajectory import Trajectory
-from ase.utils.filecache import MultiFileJSONCache
+from ase.parallel import world
 from ase.utils import deprecated
+from ase.utils.filecache import MultiFileJSONCache
 
 
 class Displacement:
@@ -33,7 +33,7 @@ class Displacement:
     """
 
     def __init__(self, atoms, calc=None, supercell=(1, 1, 1), name=None,
-                 delta=0.01, center_refcell=False):
+                 delta=0.01, center_refcell=False, comm=None):
         """Init with an instance of class ``Atoms`` and a calculator.
 
         Parameters:
@@ -53,7 +53,9 @@ class Displacement:
             Reference cell in which the atoms will be displaced. If False, then
             corner cell in supercell is used. If True, then cell in the center
             of the supercell is used.
-
+        comm: communicator
+            MPI communicator for the phonon calculation.
+            Default is to use world.
         """
 
         # Store atoms and calculator
@@ -66,6 +68,10 @@ class Displacement:
         self.delta = delta
         self.center_refcell = center_refcell
         self.supercell = supercell
+
+        if comm is None:
+            comm = world
+        self.comm = comm
 
         self.cache = MultiFileJSONCache(self.name)
 
@@ -82,7 +88,7 @@ class Displacement:
                            N_c[2] // 2)
         return self.offset
 
-    @property  # type: ignore
+    @property
     @ase.utils.deprecated('Please use phonons.supercell instead of .N_c')
     def N_c(self):
         return self._supercell
@@ -204,20 +210,27 @@ class Displacement:
                             # Return to initial positions
                             atoms_N.positions[offset + a, i] = pos[a, i]
 
+        self.comm.barrier()
+
     def clean(self):
         """Delete generated files."""
-        if world.rank != 0:
-            return 0
+        if self.comm.rank == 0:
+            nfiles = self._clean()
+        else:
+            nfiles = 0
+        self.comm.barrier()
+        return nfiles
 
+    def _clean(self):
         name = Path(self.name)
 
-        n = 0
+        nfiles = 0
         if name.is_dir():
             for fname in name.iterdir():
                 fname.unlink()
-                n += 1
+                nfiles += 1
             name.rmdir()
-        return n
+        return nfiles
 
 
 class Phonons(Displacement):
@@ -274,10 +287,12 @@ class Phonons(Displacement):
     >>> from ase.build import bulk
     >>> from ase.phonons import Phonons
     >>> from gpaw import GPAW, FermiDirac
+
     >>> atoms = bulk('Si', 'diamond', a=5.4)
-    >>> calc = GPAW(kpts=(5, 5, 5),
-                    h=0.2,
-                    occupations=FermiDirac(0.))
+    >>> calc = GPAW(mode='fd',
+    ...             kpts=(5, 5, 5),
+    ...             h=0.2,
+    ...             occupations=FermiDirac(0.))
     >>> ph = Phonons(atoms, calc, supercell=(5, 5, 5))
     >>> ph.run()
     >>> ph.read(method='frederiksen', acoustic=True)
@@ -333,7 +348,9 @@ class Phonons(Displacement):
 
         return fmin, fmax, i_min, i_max
 
-    @deprecated('Current implementation of non-analytical correction is likely incorrect, see https://gitlab.com/ase/ase/-/issues/941')
+    @deprecated('Current implementation of non-analytical correction is '
+                'likely incorrect, see '
+                'https://gitlab.com/ase/ase/-/issues/941')
     def read_born_charges(self, name='born', neutrality=True):
         r"""Read Born charges and dieletric tensor from JSON file.
 
@@ -354,6 +371,9 @@ class Phonons(Displacement):
             Key used to identify the file with Born charges for the unit cell
             in the JSON cache.
 
+        .. deprecated:: 3.22.1
+            Current implementation of non-analytical correction is likely
+            incorrect, see :issue:`941`
         """
 
         # Load file with Born charges and dielectric tensor for atoms in the
@@ -443,7 +463,7 @@ class Phonons(Displacement):
 
         # Symmetrize force constants
         if symmetrize:
-            for i in range(symmetrize):
+            for _ in range(symmetrize):
                 # Symmetrize
                 C_N = self.symmetrize(C_N)
                 # Restore acoustic sum-rule
@@ -555,14 +575,67 @@ class Phonons(Displacement):
         return self.C_N
 
     def get_band_structure(self, path, modes=False, born=False, verbose=True):
-        omega_kl = self.band_structure(path.kpts, modes, born, verbose)
+        """Calculate and return the phonon band structure.
+
+        This method computes the phonon band structure for a given path
+        in reciprocal space. It is a wrapper around the internal
+        `band_structure` method of the `Phonons` class. The method can
+        optionally calculate and return phonon modes.
+
+        Frequencies and modes are in units of eV and 1/sqrt(amu),
+        respectively.
+
+        Parameters:
+
+        path : BandPath object
+            The BandPath object defining the path in the reciprocal
+            space over which the phonon band structure is calculated.
+        modes : bool, optional
+            If True, phonon modes will also be calculated and returned.
+            Defaults to False.
+        born : bool, optional
+            If True, includes the effect of Born effective charges in
+            the phonon calculations.
+            Defaults to False.
+        verbose : bool, optional
+            If True, enables verbose output during the calculation.
+            Defaults to True.
+
+        Returns:
+
+        BandStructure or tuple of (BandStructure, ndarray)
+            If ``modes`` is False, returns a ``BandStructure`` object
+            containing the phonon band structure. If ``modes`` is True,
+            returns a tuple, where the first element is the
+            ``BandStructure`` object and the second element is an ndarray
+            of phonon modes.
+
+            If modes are returned, the array is of shape
+            (k-point, bands, atoms, 3) and the norm-squared of the mode
+            is `1 / m_{eff}`, where `m_{eff}` is the effective mass of the
+            mode.
+
+        Example:
+
+        >>> from ase.dft.kpoints import BandPath
+        >>> path = BandPath(...)  # Define the band path
+        >>> phonons = Phonons(...)
+        >>> bs, modes = phonons.get_band_structure(path, modes=True)
+        """
+        result = self.band_structure(path.kpts,
+                                     modes=modes,
+                                     born=born,
+                                     verbose=verbose)
         if modes:
-            assert 0
-            omega_kl, modes = omega_kl
+            omega_kl, omega_modes = result
+        else:
+            omega_kl = result
 
         from ase.spectrum.band_structure import BandStructure
         bs = BandStructure(path, energies=omega_kl[None])
-        return bs
+
+        # Return based on the modes flag
+        return (bs, omega_modes) if modes else bs
 
     def compute_dynamical_matrix(self, q_scaled: np.ndarray, D_N: np.ndarray):
         """ Computation of the dynamical matrix in momentum space D_ab(q).
@@ -594,7 +667,7 @@ class Phonons(Displacement):
         eigenvalues (squared frequency), the corresponding negative frequency
         is returned.
 
-        Frequencies and modes are in units of eV and Ang/sqrt(amu),
+        Frequencies and modes are in units of eV and 1/sqrt(amu),
         respectively.
 
         Parameters:
@@ -613,6 +686,11 @@ class Phonons(Displacement):
         verbose: bool
             Print warnings when imaginary frequncies are detected.
 
+        Returns:
+
+        If modes=False: Array of energies
+
+        If modes=True: Tuple of two arrays with energies and modes.
         """
 
         assert self.D_N is not None
@@ -633,7 +711,6 @@ class Phonons(Displacement):
         vol = abs(la.det(self.atoms.cell)) / units.Bohr**3
 
         for q_c in path_kc:
-
             # Add non-analytic part
             if born:
                 # q-vector in cartesian coordinates
@@ -661,7 +738,8 @@ class Phonons(Displacement):
             if modes:
                 omega2_l, u_xl = la.eigh(D_q, UPLO='U')
                 # Sort eigenmodes according to eigenvalues (see below) and
-                # multiply with mass prefactor
+                # multiply with mass prefactor.  This gives the eigenmode
+                # (which is now not normalized!) with units 1/sqrt(amu).
                 u_lx = (self.m_inv_x[:, np.newaxis] *
                         u_xl[:, omega2_l.argsort()]).T.copy()
                 u_kl.append(u_lx.reshape((-1, len(self.indices), 3)))
@@ -696,29 +774,63 @@ class Phonons(Displacement):
 
         return omega_kl
 
-    def get_dos(self, kpts=(10, 10, 10), npts=1000, delta=1e-3, indices=None):
+    def get_dos(self, kpts=(10, 10, 10), indices=None, verbose=True):
+        """Return a phonon density of states.
+
+        Parameters:
+
+        kpts: tuple
+            Shape of Monkhorst-Pack grid for sampling the Brillouin zone.
+        indices: list
+            If indices is not None, the amplitude-weighted atomic-partial
+            DOS for the specified atoms will be calculated.
+        verbose: bool
+            Print warnings when imaginary frequncies are detected.
+
+        Returns:
+            A RawDOSData object containing the density of states.
+        """
         from ase.spectrum.dosdata import RawDOSData
+
         # dos = self.dos(kpts, npts, delta, indices)
         kpts_kc = monkhorst_pack(kpts)
-        omega_w = self.band_structure(kpts_kc).ravel()
-        dos = RawDOSData(omega_w, np.ones_like(omega_w))
+        if indices is None:
+            # Return the total DOS
+            omega_w = self.band_structure(kpts_kc, verbose=verbose).ravel()
+            dos = RawDOSData(omega_w, np.ones_like(omega_w))
+        else:
+            # Return a partial DOS
+            omegas, amplitudes = self.band_structure(kpts_kc,
+                                                     modes=True,
+                                                     verbose=verbose)
+            # omegas.shape = (k-points, bands)
+            # amplitudes.shape = (k-points, bands, atoms, 3)
+            ampl_sq = (np.abs(amplitudes)**2).sum(axis=3)
+            assert ampl_sq.ndim == 3
+            assert ampl_sq.shape == omegas.shape + (len(self.indices),)
+            weights = ampl_sq[:, :, indices].sum(axis=2) / ampl_sq.sum(axis=2)
+            dos = RawDOSData(omegas.ravel(), weights.ravel())
         return dos
 
-    def dos(self, kpts=(10, 10, 10), npts=1000, delta=1e-3, indices=None):
+    @deprecated('Please use Phonons.get_dos() instead of Phonons.dos().')
+    def dos(self, kpts=(10, 10, 10), npts=1000, delta=1e-3):
         """Calculate phonon dos as a function of energy.
 
         Parameters:
 
-        qpts: tuple
+        kpts: tuple
             Shape of Monkhorst-Pack grid for sampling the Brillouin zone.
         npts: int
             Number of energy points.
         delta: float
             Broadening of Lorentzian line-shape in eV.
-        indices: list
-            If indices is not None, the atomic-partial dos for the specified
-            atoms will be calculated.
 
+        Returns:
+            Tuple of (frequencies, dos).  The frequencies are in units of eV.
+
+        .. deprecated:: 3.23.1
+            Please use the ``.get_dos()`` method instead, it returns a proper
+            RawDOSData object.
         """
 
         # Monkhorst-Pack grid
@@ -746,7 +858,7 @@ class Phonons(Displacement):
 
         Parameters:
 
-        q_c: ndarray
+        q_c: ndarray of shape (3,)
             q-vector of the modes.
         branches: int or list
             Branch index of modes.
@@ -764,6 +876,8 @@ class Phonons(Displacement):
         center: bool
             Center atoms in unit cell if True (default: False).
 
+        To exaggerate the amplitudes for better visualization, multiply
+        kT by the square of the desired factor.
         """
 
         if isinstance(branches, int):
@@ -790,13 +904,20 @@ class Phonons(Displacement):
         phase_N = np.exp(2.j * pi * np.dot(q_c, R_cN))
         phase_Na = phase_N.repeat(len(self.atoms))
 
-        for l in branch_l:
+        hbar = units._hbar * units.J * units.second
+        for lval in branch_l:
 
-            omega = omega_l[0, l]
-            u_av = u_l[0, l]
+            omega = omega_l[0, lval]
+            u_av = u_l[0, lval]
+            assert u_av.ndim == 2
 
-            # Mean displacement of a classical oscillator at temperature T
-            u_av *= sqrt(kT) / abs(omega)
+            # For a classical harmonic oscillator, <x^2> = k T / m omega^2
+            # and <x^2> = 1/2 u^2 where u is the amplitude and m is the
+            # effective mass of the mode.
+            # The reciprocal mass is already included in the normalization
+            # of the modes.  The variable omega is actually hbar*omega (it
+            # is in eV, not reciprocal ASE time units).
+            u_av *= hbar * sqrt(2 * kT) / abs(omega)
 
             mode_av = np.zeros((len(self.atoms), 3), dtype=complex)
             # Insert slice with atomic displacements for the included atoms
@@ -804,7 +925,8 @@ class Phonons(Displacement):
             # Repeat and multiply by Bloch phase factor
             mode_Nav = np.vstack(N * [mode_av]) * phase_Na[:, np.newaxis]
 
-            with Trajectory('%s.mode.%d.traj' % (self.name, l), 'w') as traj:
+            with Trajectory('%s.mode.%d.traj'
+                            % (self.name, lval), 'w') as traj:
                 for x in np.linspace(0, 2 * pi, nimages, endpoint=False):
                     atoms.set_positions((pos_Nav + np.exp(1.j * x) *
                                          mode_Nav).real)

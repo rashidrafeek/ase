@@ -1,7 +1,7 @@
 """A Module to safely parse/evaluate Mathematical Expressions"""
 import ast
-import operator as op
 import math
+import operator as op
 
 from numpy import int64
 
@@ -143,8 +143,8 @@ def limit(max_=None):
 def _eval(node):
     """Evaluate a mathematical expression string parsed by ast"""
     # Allow evaluate certain types of operators
-    if isinstance(node, ast.Num):  # <number>
-        return node.n
+    if isinstance(node, ast.Constant) and isinstance(node.value, (float, int)):
+        return node.value
     elif isinstance(node, ast.BinOp):  # <left> <operator> <right>
         return operators[type(node.op)](_eval(node.left), _eval(node.right))
     elif isinstance(node, ast.UnaryOp):  # <operator> <operand> e.g., -1
@@ -162,12 +162,15 @@ def _eval(node):
         elif node.id.lower() == "tau":
             return math.pi * 2.0
         else:
-            raise TypeError("Found a str in the expression, either param_dct/the expression has a mistake in the parameter names or attempting to parse non-mathematical code")
+            raise TypeError(
+                "Found a str in the expression, either param_dct/the "
+                "expression has a mistake in the parameter names or "
+                "attempting to parse non-mathematical code")
     else:
         raise TypeError(node)
 
 
-def eval_expression(expression, param_dct=dict()):
+def eval_expression(expression, param_dct={}):
     """Parse a mathematical expression,
 
     Replaces variables with the values in param_dict and solves the expression

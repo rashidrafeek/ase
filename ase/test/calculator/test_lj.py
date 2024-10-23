@@ -5,7 +5,6 @@ from ase import Atoms
 from ase.build import bulk
 from ase.calculators.lj import LennardJones
 
-
 # test non-bulk properties
 reference_potential_energy = pytest.approx(-1.0)
 
@@ -30,7 +29,8 @@ def test_minimum_energy():
 
     for atoms in systems_minimum():
         assert atoms.get_potential_energy() == reference_potential_energy
-        assert atoms.get_potential_energies().sum() == reference_potential_energy
+        assert atoms.get_potential_energies().sum() == \
+            reference_potential_energy
 
 
 def test_minimum_forces():
@@ -57,7 +57,8 @@ def test_finite_difference():
     atoms.calc = calc
     atoms2.calc = calc
 
-    fd_force = (atoms2.get_potential_energy() - atoms.get_potential_energy()) / h
+    fd_force = (atoms2.get_potential_energy() -
+                atoms.get_potential_energy()) / h
     force = atoms.get_forces()[0, 0]
 
     np.testing.assert_allclose(fd_force, force)

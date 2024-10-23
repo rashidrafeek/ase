@@ -40,10 +40,10 @@ Supported calculators
 
 The calculators can be divided in four groups:
 
-1) Asap_, BigDFT_, DeePMD-kit_, DFTD3_, DFTD4_, DFTK_, GPAW_, Hotbit_, TBLite_, and XTB_
-   have their own native ASE interfaces.
+1) Abacus_, ALIGNN_, AMS_, Asap_, BigDFT_, CHGNet_, DeePMD-kit_, DFTD3_, DFTD4_, DFTK_, FLEUR_, GPAW_, Hotbit_, M3GNet_, MACE_, TBLite_, and XTB_
+   have their own native or external ASE interfaces.
 
-2) ABINIT, AMBER, CP2K, CASTEP, deMon2k, DFTB+, ELK, EXCITING, FHI-aims, FLEUR, GAUSSIAN,
+2) ABINIT, AMBER, CP2K, CASTEP, deMon2k, DFTB+, ELK, EXCITING, FHI-aims, GAUSSIAN,
    Gromacs, LAMMPS, MOPAC, NWChem, Octopus, ONETEP, PLUMED, psi4, Q-Chem, Quantum ESPRESSO, SIESTA,
    TURBOMOLE and VASP, have Python wrappers in the ASE package, but the actual
    FORTRAN/C/C++ codes are not part of ASE.
@@ -65,14 +65,21 @@ The calculators can be divided in four groups:
 ========================================= ===========================================
 name                                      description
 ========================================= ===========================================
+Abacus_                                   DFT supporting both pw and lcao basis
+ALIGNN_                                   Atomistic Line Graph Neural Network force field
+AMS_                                      Amsterdam Modeling Suite
 Asap_                                     Highly efficient EMT code
 BigDFT_                                   Wavelet based code for DFT
+CHGNet_                                   Universal neural network  potential for charge-informed atomistics
 DeePMD-kit_                               A deep learning package for many-body potential energy representation
 DFTD3_                                    London-dispersion correction
 DFTD4_                                    Charge-dependent London-dispersion correction
 DFTK_                                     Plane-wave code for DFT and related models
+FLEUR_                                    Full Potential LAPW code
 GPAW_                                     Real-space/plane-wave/LCAO PAW code
 Hotbit_                                   DFT based tight binding
+M3GNet_                                   Materials 3-body Graph Network universal potential
+MACE_                                     Many-body potential using higher-order equivariant message passing
 TBLite_                                   Light-weight tight-binding framework
 XTB_                                      Semiemprical extended tight-binding program package
 :mod:`~ase.calculators.abinit`            Plane-wave pseudopotential code
@@ -88,7 +95,6 @@ elk                                       Full Potential LAPW code
 :mod:`~ase.calculators.espresso`          Plane-wave pseudopotential code
 :mod:`~ase.calculators.exciting`          Full Potential LAPW code
 :mod:`~ase.calculators.aims`              Numeric atomic orbital, full potential code
-:mod:`~ase.calculators.fleur`             Full Potential LAPW code
 :mod:`~ase.calculators.gamess_us`         Gaussian based electronic structure code
 :mod:`~ase.calculators.gaussian`          Gaussian based electronic structure code
 :mod:`~ase.calculators.gromacs`           Classical molecular dynamics code
@@ -136,86 +142,77 @@ The calculators included in ASE are used like this:
 
 where ``abc`` is the module name and ``ABC`` is the class name.
 
-
+.. _Abacus: https://gitlab.com/1041176461/ase-abacus
+.. _ALIGNN: https://github.com/usnistgov/alignn?tab=readme-ov-file#alignnff
+.. _AMS: https://www.scm.com/doc/plams/examples/AMSCalculator/ASECalculator.html#asecalculatorexample
 .. _Asap: https://wiki.fysik.dtu.dk/asap
 .. _BigDFT: https://l_sim.gitlab.io/bigdft-suite/tutorials/Interoperability-Simulation.html#ASE-Interoperability
-.. _GPAW: https://wiki.fysik.dtu.dk/gpaw
+.. _CHGNet: https://github.com/CederGroupHub/chgnet/blob/e2a2b82bf2c64e5a3d39cd75d0addfa864a2771a/chgnet/model/dynamics.py#L63
+.. _GPAW: https://gpaw.readthedocs.io
 .. _Hotbit: https://github.com/pekkosk/hotbit
 .. _DFTK: https://dftk.org
 .. _DeePMD-kit: https://github.com/deepmodeling/deepmd-kit
 .. _DFTD4: https://github.com/dftd4/dftd4/tree/main/python
 .. _DFTD3: https://dftd3.readthedocs.io/en/latest/api/python.html#module-dftd3.ase
+.. _FLEUR: https://github.com/JuDFTteam/ase-fleur
+.. _M3GNet: https://matgl.ai/matgl.ext.html#class-matglextasem3gnetcalculatorpotential-potential-state_attr-torchtensor--none--none-stress_weight-float--10-kwargs
+.. _MACE: https://mace-docs.readthedocs.io/en/latest/guide/ase.html
 .. _TBLite: https://tblite.readthedocs.io/en/latest/users/ase.html
 .. _XTB: https://xtb-python.readthedocs.io/en/latest/ase-calculator.html
 
-Calculator keywords
-===================
+Calculator configuration
+========================
 
-Example for a hypothetical ABC calculator:
+Calculators that depend on external codes or files are generally
+configurable.  ASE loads the configuration from a configfile located
+at ``~/.config/ase/config.ini``.  The default path can be overriden by
+setting the environment variable ``ASE_CONFIG_PATH`` to another path
+or paths separated by colon.
 
-.. class:: ABC(restart=None, ignore_bad_restart_file=False, label=None,
-               atoms=None, parameters=None, command='abc > PREFIX.abc',
-               xc=None, kpts=[1, 1, 1], smearing=None,
-               charge=0.0, nbands=None, **kwargs)
+To see the full configuration on a given machine, run
+:command:`ase info --calculators`.
 
-   Create ABC calculator
+An example of a config file is as follows::
 
-   restart: str
-       Prefix for restart file.  May contain a directory.  Default
-       is None: don't restart.
-   ignore_bad_restart_file: bool
-       Ignore broken or missing restart file.  By default, it is an
-       error if the restart file is missing or broken.
-   label: str
-       Name used for all files.  May contain a directory.
-   atoms: Atoms object
-       Optional Atoms object to which the calculator will be
-       attached.  When restarting, atoms will get its positions and
-       unit-cell updated from file.
-   command: str
-       Command used to start calculation.  This will override any value
-       in an :envvar:`ASE_ABC_COMMAND` environment variable.
-   parameters: str
-       Read parameters from file.
-   xc: str
-       XC-functional (``'LDA'``, ``'PBE'``, ...).
-   kpts:
-       Brillouin zone sampling:
+    [abinit]
+    command = mpiexec /usr/bin/abinit
+    pp_paths = /usr/share/abinit/pseudopotentials
 
-       * ``(1,1,1)``: Gamma-point
-       * ``(n1,n2,n3)``: Monkhorst-Pack grid
-       * ``(n1,n2,n3,'gamma')``: Shifted Monkhorst-Pack grid that includes
-         `\Gamma`
-       * ``[(k11,k12,k13),(k21,k22,k23),...]``: Explicit list in units of the
-         reciprocal lattice vectors
-       * ``kpts=3.5``: `\vec k`-point density as in 3.5 `\vec k`-points per
-         Å\ `^{-1}`.
-   smearing: tuple
-       The smearing of occupation numbers.  Must be a tuple:
+    [espresso]
+    command = mpiexec pw.x
+    pseudo_path = /home/ase/upf_pseudos
 
-       * ``('Fermi-Dirac', width)``
-       * ``('Gaussian', width)``
-       * ``('Methfessel-Paxton', width, n)``, where `n` is the order
-         (`n=0` is the same as ``'Gaussian'``)
+Calculators build a full command by appending command-line arguments
+to the configured command.  Therefore, the command should normally consist
+of any parallel arguments followed by the binary, but should not
+include further flags unless desired for a specific reason.
+The command is also used to build a full command for e.g.
+socket I/O calculators.
 
-       Lower-case names are also allowed.  The ``width`` parameter is
-       given in eV units.
-   charge: float
-      Charge of the system in units of `|e|` (``charge=1`` means one
-      electron has been removed).  Default is ``charge=0``.
-   nbands: int
-      Number of bands.  Each band can be occupied by two electrons.
+The Espresso calculator can then invoked in the following way::
 
-Not all of the above arguments make sense for all of ASE's
-calculators.  As an example, Gromacs will not accept DFT related
-keywords such as ``xc`` and ``smearing``.  In addition to the keywords
-mentioned above, each calculator may have native keywords that are
-specific to only that calculator.
+    >>> from ase.build import bulk
+    >>> from ase.calculators.espresso import Espresso
+    >>> espresso = Espresso(
+                       input_data = {
+                            'system': {
+                               'ecutwfc': 60,
+                            }},
+                       pseudopotentials = {'Si': 'si_lda_v1.uspp.F.UPF'},
+                       )
+    >>> si = bulk('Si')
+    >>> si.calc = espresso
+    >>> si.get_potential_energy()
+    -244.76638508140397
 
-Keyword arguments can also be set or changed at a later stage using
-the :meth:`set` method:
-
-.. method:: set(key1=value1, key2=value2, ...)
+It can be useful for software libraries to override the local
+configuration.  To do so, the code should supply the configurable
+information by instantiating a “profile”, e.g.,
+``Abinit(profile=AbinitProfile(command=command))``.  The profile
+encloses the configurable information specific to a particular code,
+so this may differ depending on which code.  It can also be
+useful for software libraries that manage their own configuration
+to set the ``ASE_CONFIG_PATH`` to an empty string.
 
 
 .. toctree::
@@ -244,7 +241,6 @@ the :meth:`set` method:
    jacapo
    kim
    lammps
-   lammpsrun
    mopac
    nwchem
    octopus

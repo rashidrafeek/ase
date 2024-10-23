@@ -2,12 +2,12 @@ import numpy as np
 import pytest
 
 from ase import Atoms
-from ase.io.jsonio import encode, decode
 from ase.build import bulk, molecule
 from ase.constraints import FixAtoms, FixCartesian
+from ase.io.jsonio import decode, encode
 
 
-@pytest.fixture
+@pytest.fixture()
 def silver_bulk() -> Atoms:
     return bulk('Ag', cubic=True)
 
@@ -18,7 +18,8 @@ def test_jsonio_atoms():
         assert atoms1 == atoms2
         assert set(atoms1.arrays) == set(atoms2.arrays)
         for name in atoms1.arrays:
-            assert np.array_equal(atoms1.arrays[name], atoms2.arrays[name]), name
+            assert np.array_equal(
+                atoms1.arrays[name], atoms2.arrays[name]), name
 
     atoms = bulk('Ti')
     txt = encode(atoms)

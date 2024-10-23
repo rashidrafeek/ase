@@ -1,9 +1,10 @@
 # type: ignore
 import pytest
+
 from ase.calculators.turbomole import TurbomoleParameters
 
 
-@pytest.fixture
+@pytest.fixture()
 def default_params():
     return TurbomoleParameters(multiplicity=1)
 
@@ -16,7 +17,8 @@ def test_tm_parameters_default():
     assert all(v['type'] is not None for v in params.parameter_spec.values())
     assert all(params[k] == v for k, v in defaults.items())
     assert all(v['default'] == defaults[k] for k, v in pspec.items())
-    assert all(isinstance(params[k], (v['type'], type(None))) for k, v in pspec.items())
+    assert all(isinstance(params[k], (v['type'], type(None)))
+               for k, v in pspec.items())
 
 
 def test_tm_parameters_uhf():

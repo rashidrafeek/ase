@@ -1,10 +1,11 @@
 # creates: WL.png, Ni111slab2x2.png, WL_rot_c.png, WL_rot_a.png, WL_wrap.png, interface-h2o-wrap.png
+# flake8: noqa
 import runpy
 
 import numpy as np
 
-from ase.io import read, write
 from ase.build import fcc111
+from ase.io import read, write
 
 runpy.run_path('WL.py')
 

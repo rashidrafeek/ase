@@ -3,8 +3,13 @@ from numpy.linalg import eigh, norm, pinv
 from scipy.linalg import lstsq  # performs better than numpy.linalg.lstsq
 
 from ase import units
-from ase.calculators.calculator import Calculator, BaseCalculator, all_changes
-from ase.calculators.calculator import CalculatorSetupError, CalculationFailed
+from ase.calculators.calculator import (
+    BaseCalculator,
+    CalculationFailed,
+    Calculator,
+    CalculatorSetupError,
+    all_changes,
+)
 
 
 class HarmonicCalculator(BaseCalculator):
@@ -37,29 +42,31 @@ class HarmonicForceField:
                  get_jacobian=None, cartesian=True, variable_orientation=False,
                  hessian_limit=0.0, constrained_q=None, rcond=1e-7,
                  zero_thresh=0.0):
-        """
-        Class that represents a Hessian-based harmonic force field.
+        """Class that represents a Hessian-based harmonic force field.
 
-        Energy and forces of this force field are based on the Cartesian Hessian
-        for a local reference configuration, i.e. if desired, on the Hessian
-        matrix transformed to a user-defined coordinate system.
-        The required Hessian has to be passed as an argument, e.g. predetermined
-        numerically via central finite differences in Cartesian coordinates.
-        Note that a potential being harmonic in Cartesian coordinates **x** is not
-        necessarily equivalently harmonic in another coordinate system **q**,
-        e.g. when the transformation between the coordinate systems is non-linear.
-        By default, the force field is evaluated in Cartesian coordinates in which
-        energy and forces are not rotationally and translationally invariant.
-        Systems with variable orientation, require rotationally and translationally
-        invariant calculations for which a set of appropriate coordinates has to
-        be defined. This can be a set of (redundant) internal coordinates (bonds,
-        angles, dihedrals, coordination numbers, ...) or any other user-defined
+        Energy and forces of this force field are based on the
+        Cartesian Hessian for a local reference configuration, i.e. if
+        desired, on the Hessian matrix transformed to a user-defined
+        coordinate system.  The required Hessian has to be passed as
+        an argument, e.g. predetermined numerically via central finite
+        differences in Cartesian coordinates.  Note that a potential
+        being harmonic in Cartesian coordinates **x** is not
+        necessarily equivalently harmonic in another coordinate system
+        **q**, e.g. when the transformation between the coordinate
+        systems is non-linear.  By default, the force field is
+        evaluated in Cartesian coordinates in which energy and forces
+        are not rotationally and translationally invariant.  Systems
+        with variable orientation, require rotationally and
+        translationally invariant calculations for which a set of
+        appropriate coordinates has to be defined. This can be a set
+        of (redundant) internal coordinates (bonds, angles, dihedrals,
+        coordination numbers, ...) or any other user-defined
         coordinate system.
 
         Together with the :class:`HarmonicCalculator` this
         :class:`HarmonicForceField` can be used to compute
         Anharmonic Corrections to the Harmonic Approximation. [1]_
-        
+
         Parameters
         ----------
         ref_atoms: :class:`~ase.Atoms` object
@@ -125,6 +132,7 @@ class HarmonicForceField:
         zero_thresh: float
             Reconstruct the reference Hessian matrix with absolute eigenvalues
             below this threshold set to zero.
+
         """
         self.check_input([get_q_from_x, get_jacobian],
                          variable_orientation, cartesian)
@@ -145,7 +153,8 @@ class HarmonicForceField:
         self.get_q_from_x = (self.parameters['get_q_from_x'] or
                              (lambda atoms: atoms.get_positions()))
         self.get_jacobian = (self.parameters['get_jacobian'] or
-                             (lambda atoms: np.diagflat(np.ones(3 * len(atoms)))))
+                             (lambda atoms: np.diagflat(
+                                 np.ones(3 * len(atoms)))))
 
         # reference Cartesian coords. x0; reference user-defined coords. q0
         self.x0 = self.parameters['ref_atoms'].get_positions().ravel()
@@ -162,7 +171,7 @@ class HarmonicForceField:
     @staticmethod
     def check_input(coord_functions, variable_orientation, cartesian):
         if None in coord_functions:
-            if not all([func is None for func in coord_functions]):
+            if not all(func is None for func in coord_functions):
                 msg = ('A user-defined coordinate system requires both '
                        '`get_q_from_x` and `get_jacobian`.')
                 raise CalculatorSetupError(msg)
@@ -182,7 +191,8 @@ class HarmonicForceField:
         and back. Relevant literature:
         * Peng, C. et al. J. Comput. Chem. 1996, 17 (1), 49-56.
         * Baker, J. et al. J. Chem. Phys. 1996, 105 (1), 192–212."""
-        jac0 = self.get_jacobian(self.parameters['ref_atoms'])  # Jacobian (dq/dx)
+        jac0 = self.get_jacobian(
+            self.parameters['ref_atoms'])  # Jacobian (dq/dx)
         jac0 = self.constrain_jac(jac0)  # for reference Cartesian coordinates
         ijac0 = self.get_ijac(jac0, self.parameters['rcond'])
         self.transform2reference_hessians(jac0, ijac0)  # perform projection
@@ -213,8 +223,9 @@ class HarmonicForceField:
         hessian_x = 0.5 * (hessian_x + hessian_x.T)  # guarantee symmetry
         w, v = eigh(hessian_x)  # rot. and trans. degrees of freedom are removed
         w[np.abs(w) < self.parameters['zero_thresh']] = 0.0  # noise-cancelling
-        w[(0.0 < w) &  # substitute small eigenvalues by lower limit
-          (w < self.parameters['hessian_limit'])] = self.parameters['hessian_limit']
+        w[(w > 0.0) & (w < self.parameters['hessian_limit'])] = self.parameters[
+            'hessian_limit'
+        ]
         # reconstruct Hessian from new eigenvalues and preserved eigenvectors
         hessian_x = v @ np.diagflat(w) @ v.T  # v.T == inv(v) due to symmetry
         self._hessian_x = 0.5 * (hessian_x + hessian_x.T)  # guarantee symmetry
@@ -232,12 +243,12 @@ class HarmonicForceField:
         """Return a tuple with energy and forces in Cartesian coordinates for
         a given :class:`~ase.Atoms` object."""
         q = self.get_q_from_x(atoms).ravel()
- 
+
         if self.parameters['cartesian']:
             x = atoms.get_positions().ravel()
             x0 = self.x0
             hessian_x = self._hessian_x
- 
+
             if self.parameters['variable_orientation']:
                 # determine x0 for present orientation
                 x0 = self.back_transform(x, q, self.q0, atoms.copy())
@@ -249,11 +260,11 @@ class HarmonicForceField:
                 self.check_redundancy(jac0)  # check for coordinate failure
                 # determine hessian_x for present orientation
                 hessian_x = jac0.T @ self._hessian_q @ jac0
- 
+
             xdiff = x - x0
             forces_x = -hessian_x @ xdiff
             energy = -0.5 * (forces_x * xdiff).sum()
- 
+
         else:
             jac = self.get_jacobian(atoms)
             self.check_redundancy(jac)  # check for coordinate failure
@@ -261,7 +272,7 @@ class HarmonicForceField:
             forces_q = -self._hessian_q @ qdiff
             forces_x = forces_q @ jac
             energy = -0.5 * (forces_q * qdiff).sum()
- 
+
         energy += self.parameters['ref_energy']
         forces_x = forces_x.reshape(int(forces_x.size / 3), 3)
         return energy, forces_x
@@ -363,7 +374,9 @@ class SpringCalculator(Calculator):
         F = 0.0
         masses, counts = np.unique(self.atoms.get_masses(), return_counts=True)
         for m, c in zip(masses, counts):
-            F += c * SpringCalculator.compute_Einstein_solid_free_energy(self.k, m, T, method)
+            F += c * \
+                SpringCalculator.compute_Einstein_solid_free_energy(
+                    self.k, m, T, method)
         return F
 
     @staticmethod
@@ -398,7 +411,8 @@ class SpringCalculator(Calculator):
         omega = np.sqrt(k / m)        # angular frequency 1/s
 
         if method == 'classical':
-            F_einstein = 3 * units.kB * T * np.log(hbar * omega / (units.kB * T))
+            F_einstein = 3 * units.kB * T * \
+                np.log(hbar * omega / (units.kB * T))
         elif method == 'QM':
             log_factor = np.log(1.0 - np.exp(-hbar * omega / (units.kB * T)))
             F_einstein = 3 * units.kB * T * log_factor + 1.5 * hbar * omega

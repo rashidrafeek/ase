@@ -1,18 +1,10 @@
 # flake8: noqa
 import numpy as np
-from ase.io import read
-from ase.io.aims import (
-    AimsParseError,
-    AimsOutChunk,
-    AimsOutHeaderChunk,
-    AimsOutCalcChunk,
-    LINE_NOT_FOUND,
-)
-from ase.stress import full_3x3_to_voigt_6_stress
-
-from numpy.linalg import norm
-
 import pytest
+
+from ase.io.aims import (LINE_NOT_FOUND, AimsOutCalcChunk, AimsOutChunk,
+                         AimsOutHeaderChunk, AimsParseError)
+from ase.stress import full_3x3_to_voigt_6_stress
 
 eps_hp = 1e-15  # The espsilon value used to compare numbers that are high-precision
 eps_lp = 1e-7  # The espsilon value used to compare numbers that are low-precision
@@ -180,7 +172,7 @@ def test_header_constraints(header_chunk):
     assert len(header_chunk.constraints) == 2
     assert header_chunk.constraints[0].index == 0
     assert header_chunk.constraints[1].index == 1
-    assert np.all(header_chunk.constraints[0].mask == [False, False, True])
+    assert np.all(header_chunk.constraints[0].mask == [True, True, False])
 
 
 def test_header_initial_atoms(header_chunk, initial_cell, initial_positions):
@@ -192,12 +184,10 @@ def test_header_initial_atoms(header_chunk, initial_cell, initial_positions):
     assert np.allclose(header_chunk.initial_atoms.positions, initial_positions)
     assert np.all(["Na", "Cl"] == header_chunk.initial_atoms.symbols)
     assert all(
-        [
-            str(const_1) == str(const_2)
-            for const_1, const_2 in zip(
-                header_chunk.constraints, header_chunk.initial_atoms.constraints
-            )
-        ]
+        str(const_1) == str(const_2)
+        for const_1, const_2 in zip(
+            header_chunk.constraints, header_chunk.initial_atoms.constraints
+        )
     )
 
 
@@ -298,7 +288,7 @@ def test_header_transfer_constraints(empty_calc_chunk):
     assert len(empty_calc_chunk.constraints) == 2
     assert empty_calc_chunk.constraints[0].index == 0
     assert empty_calc_chunk.constraints[1].index == 1
-    assert np.all(empty_calc_chunk.constraints[0].mask == [False, False, True])
+    assert np.all(empty_calc_chunk.constraints[0].mask == [True, True, False])
 
 
 def test_header_transfer_initial_cell(empty_calc_chunk, initial_cell):
@@ -313,15 +303,16 @@ def test_header_transfer_initial_atoms(
     )
     assert len(empty_calc_chunk.initial_atoms) == 2
     assert np.allclose(empty_calc_chunk.initial_atoms.cell, initial_cell)
-    assert np.allclose(empty_calc_chunk.initial_atoms.positions, initial_positions)
+    assert np.allclose(
+        empty_calc_chunk.initial_atoms.positions,
+        initial_positions)
     assert np.all(["Na", "Cl"] == empty_calc_chunk.initial_atoms.symbols)
     assert all(
-        [
-            str(const_1) == str(const_2)
-            for const_1, const_2 in zip(
-                empty_calc_chunk.constraints, empty_calc_chunk.initial_atoms.constraints
-            )
-        ]
+        str(const_1) == str(const_2)
+        for const_1, const_2 in zip(
+            empty_calc_chunk.constraints,
+            empty_calc_chunk.initial_atoms.constraints,
+        )
     )
 
 
@@ -345,7 +336,7 @@ def test_default_calc_energy_raises_error(empty_calc_chunk):
     with pytest.raises(
         AimsParseError, match="No energy is associated with the structure."
     ):
-        getattr(empty_calc_chunk, "energy")
+        getattr(empty_calc_chunk, "total_energy")
 
 
 @pytest.mark.parametrize(
@@ -608,6 +599,211 @@ def calc_chunk(header_chunk):
 
 
 @pytest.fixture
+def numerical_stress_chunk(header_chunk):
+    lines = """
+        | Number of self-consistency cycles          :           58
+        | N = N_up - N_down (sum over all k points):         0.00000
+        | Chemical potential (Fermi level):    -8.24271207 eV
+        Total atomic forces (unitary forces were cleaned, then relaxation constraints were applied) [eV/Ang]:
+        |    1          1.000000000000000E+00          2.000000000000000E+00          3.000000000000000E+00
+        |    2          6.000000000000000E+00          5.000000000000000E+00          4.000000000000000E+00
+        - Per atom stress (eV) used for heat flux calculation:
+        Atom   | Stress components (1,1), (2,2), (3,3), (1,2), (1,3), (2,3)
+        -------------------------------------------------------------------
+        1 |    -1.0000000000E+01   -2.0000000000E+01   -3.0000000000E+01   -4.0000000000E+01   -5.0000000000E+01   -6.0000000000E+01
+        2 |     1.0000000000E+01    2.0000000000E+01    3.0000000000E+01    4.0000000000E+01    5.0000000000E+01    6.0000000000E+01
+        -------------------------------------------------------------------
+        +-------------------------------------------------------------------+
+        |                       Numerical stress tensor                     |
+        |                    Cartesian components [eV/A**3]                 |
+        +-------------------------------------------------------------------+
+        |                x                y                z                |
+        |                                                                   |
+        |  x         1.00000000       2.00000000       3.00000000           |
+        |  y         2.00000000       5.00000000       6.00000000           |
+        |  z         3.00000000       6.00000000       7.00000000           |
+        |                                                                   |
+        |  Pressure:       0.00383825   [eV/A**3]                           |
+        |                                                                   |
+        +-------------------------------------------------------------------+
+        Energy and forces in a compact form:
+        | Total energy uncorrected      :         -0.169503986610555E+05 eV
+        | Total energy corrected        :         -2.169503986610555E+05 eV  <-- do not rely on this value for anything but (periodic) metals
+        | Electronic free energy        :         -3.169503986610555E+05 eV
+
+        Writing Kohn-Sham eigenvalues.
+
+        Spin-up eigenvalues:
+        K-point:       1 at    0.000000    0.000000    0.000000 (in units of recip. lattice)
+
+        State    Occupation    Eigenvalue [Ha]    Eigenvalue [eV]
+        1        1             0.036749           1.000000
+        2        1             0.183747           5.000000
+        3        0             0.330744           9.000000
+
+        Spin-down eigenvalues:
+        K-point:       1 at    0.000000    0.000000    0.000000 (in units of recip. lattice)
+
+        State    Occupation    Eigenvalue [Ha]    Eigenvalue [eV]
+        1        1             0.110248           3.000000
+        2        1             0.257245           7.000000
+        3        0             0.404243           11.000000
+
+
+        Spin-up eigenvalues:
+        K-point:       2 at    0.000000    0.000000    0.500000 (in units of recip. lattice)
+
+        State    Occupation    Eigenvalue [Ha]    Eigenvalue [eV]
+        1        1             0.477741           13.000000
+        2        1             0.624739           17.000000
+        3        0             0.771736           21.000000
+
+        Spin-down eigenvalues:
+        K-point:       2 at    0.000000    0.000000    0.500000 (in units of recip. lattice)
+
+        State    Occupation    Eigenvalue [Ha]    Eigenvalue [eV]
+        1        1             0.551240           15.000000
+        2        1             0.698237           19.000000
+        3        0             0.845234           23.000000
+
+
+        Spin-up eigenvalues:
+        K-point:       3 at    0.000000    0.500000    0.000000 (in units of recip. lattice)
+
+        State    Occupation    Eigenvalue [Ha]    Eigenvalue [eV]
+        1        1             0.918733           25.000000
+        2        1             1.065730           29.000000
+        3        0             1.212728           33.000000
+
+        Spin-down eigenvalues:
+        K-point:       3 at    0.000000    0.500000    0.000000 (in units of recip. lattice)
+
+        State    Occupation    Eigenvalue [Ha]    Eigenvalue [eV]
+        1        1             0.992232           27.000000
+        2        1             1.139229           31.000000
+        3        0             1.286226           35.000000
+
+
+        Spin-up eigenvalues:
+        K-point:       4 at    0.000000    0.500000    0.500000 (in units of recip. lattice)
+
+        State    Occupation    Eigenvalue [Ha]    Eigenvalue [eV]
+        1        1             1.359725           37.000000
+        2        1             1.506722           41.000000
+        3        0             1.653720           45.000000
+
+        Spin-down eigenvalues:
+        K-point:       4 at    0.000000    0.500000    0.500000 (in units of recip. lattice)
+
+        State    Occupation    Eigenvalue [Ha]    Eigenvalue [eV]
+        1        1             1.433224           39.000000
+        2        1             1.580221           43.000000
+        3        0             1.727218           47.000000
+
+
+        Spin-up eigenvalues:
+        K-point:       5 at    0.500000    0.000000    0.000000 (in units of recip. lattice)
+
+        State    Occupation    Eigenvalue [Ha]    Eigenvalue [eV]
+        1        1             1.800717           49.000000
+        2        1             1.947714           53.000000
+        3        0             2.094711           57.000000
+
+        Spin-down eigenvalues:
+        K-point:       5 at    0.500000    0.000000    0.000000 (in units of recip. lattice)
+
+        State    Occupation    Eigenvalue [Ha]    Eigenvalue [eV]
+        1        1             1.874216           51.000000
+        2        1             2.021213           55.000000
+        3        0             2.168210           59.000000
+
+
+        Spin-up eigenvalues:
+        K-point:       6 at    0.500000    0.000000    0.500000 (in units of recip. lattice)
+
+        State    Occupation    Eigenvalue [Ha]    Eigenvalue [eV]
+        1        1             2.241709           61.000000
+        2        1             2.388706           65.000000
+        3        0             2.535703           69.000000
+
+        Spin-down eigenvalues:
+        K-point:       6 at    0.500000    0.000000    0.500000 (in units of recip. lattice)
+
+        State    Occupation    Eigenvalue [Ha]    Eigenvalue [eV]
+        1        1             2.315207           63.000000
+        2        1             2.462205           67.000000
+        3        0             2.609202           71.000000
+
+
+        Spin-up eigenvalues:
+        K-point:       7 at    0.500000    0.500000    0.000000 (in units of recip. lattice)
+
+        State    Occupation    Eigenvalue [Ha]    Eigenvalue [eV]
+        1        1             2.682701           73.000000
+        2        1             2.829698           77.000000
+        3        0             2.976695           81.000000
+
+        Spin-down eigenvalues:
+        K-point:       7 at    0.500000    0.500000    0.000000 (in units of recip. lattice)
+
+        State    Occupation    Eigenvalue [Ha]    Eigenvalue [eV]
+        1        1             2.756199           75.000000
+        2        1             2.903197           79.000000
+        3        0             3.050194           83.000000
+
+
+        Spin-up eigenvalues:
+        K-point:       8 at    0.500000    0.500000    0.500000 (in units of recip. lattice)
+
+        State    Occupation    Eigenvalue [Ha]    Eigenvalue [eV]
+        1        1             3.123693           85.000000
+        2        1             3.270690           89.000000
+        3        0             3.417687           93.000000
+
+        Spin-down eigenvalues:
+        K-point:       8 at    0.500000    0.500000    0.500000 (in units of recip. lattice)
+
+        State    Occupation    Eigenvalue [Ha]    Eigenvalue [eV]
+        1        1             3.197191           87.000000
+        2        1             3.344189           91.000000
+        3        0             3.491186           95.000000
+
+        Current spin moment of the entire structure :
+        | N = N_up - N_down (sum over all k points):         0.00000
+        | S (sum over all k points)                :         0.00000
+
+        What follows are estimated values for band gap, HOMO, LUMO, etc.
+        | They are estimated on a discrete k-point grid and not necessarily exact.
+        | For converged numbers, create a DOS and/or band structure plot on a denser k-grid.
+
+        Highest occupied state (VBM) at     -8.19345940 eV (relative to internal zero)
+        | Occupation number:      1.00000000
+        | K-point:       1 at    0.000000    0.000000    0.000000 (in units of recip. lattice)
+        | Spin channel:        1
+
+        Lowest unoccupied state (CBM) at    -3.62542909 eV (relative to internal zero)
+        | Occupation number:      0.00000000
+        | K-point:       1 at    0.000000    0.000000    0.000000 (in units of recip. lattice)
+        | Spin channel:        1
+
+        ESTIMATED overall HOMO-LUMO gap:      4.56803031 eV between HOMO at k-point 1 and LUMO at k-point 1
+        | This appears to be a direct band gap.
+        The gap value is above 0.2 eV. Unless you are using a very sparse k-point grid
+        this system is most likely an insulator or a semiconductor.
+        | Chemical Potential                          :    -7.44914181 eV
+
+        Self-consistency cycle converged.
+        material is metallic within the approximate finite broadening function (occupation_type)
+        Have a nice day.
+        ------------------------------------------------------------
+    """
+    lines = lines.splitlines()
+    for ll, line in enumerate(lines):
+        lines[ll] = line.strip()
+    return AimsOutCalcChunk(lines, header_chunk)
+
+
+@pytest.fixture
 def eigenvalues_occupancies():
     eigenvalues_occupancies = np.arange(8 * 3 * 4).reshape((8, 3, 2, 2))
     eigenvalues_occupancies[:, 0, :, 0] = 1.0
@@ -623,12 +819,10 @@ def test_calc_atoms(calc_chunk, initial_cell, initial_positions):
     assert np.allclose(calc_chunk.atoms.positions, initial_positions)
     assert np.all(["Na", "Cl"] == calc_chunk.atoms.symbols)
     assert all(
-        [
-            str(const_1) == str(const_2)
-            for const_1, const_2 in zip(
-                calc_chunk.constraints, calc_chunk.atoms.constraints
-            )
-        ]
+        str(const_1) == str(const_2)
+        for const_1, const_2 in zip(
+            calc_chunk.constraints, calc_chunk.atoms.constraints
+        )
     )
 
 
@@ -638,9 +832,12 @@ def test_calc_forces(calc_chunk):
 
     # Different because of the constraints
     assert np.allclose(
-        calc_chunk.atoms.get_forces(), np.array([[0.0, 0.0, 3.0], [0.0, 0.0, 0.0]])
+        calc_chunk.atoms.get_forces(), np.array(
+            [[0.0, 0.0, 3.0], [0.0, 0.0, 0.0]])
     )
-    assert np.allclose(calc_chunk.atoms.get_forces(apply_constraint=False), forces)
+    assert np.allclose(
+        calc_chunk.atoms.get_forces(
+            apply_constraint=False), forces)
     assert np.allclose(calc_chunk.results["forces"], forces)
 
 
@@ -671,20 +868,37 @@ def test_calc_stress(calc_chunk):
     assert np.allclose(calc_chunk.results["stress"], stress)
 
 
+def test_calc_num_stress(numerical_stress_chunk):
+    stress = full_3x3_to_voigt_6_stress(
+        np.array(
+            [
+                [1.00000000, 2.00000000, 3.00000000],
+                [2.00000000, 5.00000000, 6.00000000],
+                [3.00000000, 6.00000000, 7.00000000],
+            ]
+        )
+    )
+    assert np.allclose(numerical_stress_chunk.stress, stress)
+    assert np.allclose(numerical_stress_chunk.atoms.get_stress(), stress)
+    assert np.allclose(numerical_stress_chunk.results["stress"], stress)
+
+
 def test_calc_free_energy(calc_chunk):
     free_energy = -3.169503986610555e05
     assert np.abs(calc_chunk.free_energy - free_energy) < eps_hp
     assert (
-        np.abs(calc_chunk.atoms.calc.get_property("free_energy") - free_energy) < eps_hp
+        np.abs(calc_chunk.atoms.calc.get_property(
+            "free_energy") - free_energy) < eps_hp
     )
     assert np.abs(calc_chunk.results["free_energy"] - free_energy) < eps_hp
 
 
 def test_calc_energy(calc_chunk):
-    energy = -2.169503986610555e05
-    assert np.abs(calc_chunk.energy - energy) < eps_hp
-    assert np.abs(calc_chunk.atoms.get_potential_energy() - energy) < eps_hp
-    assert np.abs(calc_chunk.results["energy"] - energy) < eps_hp
+    total_energy = -2.169503986610555e05
+    free_energy = -3.169503986610555e05
+    assert np.abs(calc_chunk.total_energy - total_energy) < eps_hp
+    assert np.abs(calc_chunk.atoms.get_potential_energy() - free_energy) < eps_hp
+    assert np.abs(calc_chunk.results["total_energy"] - total_energy) < eps_hp
 
 
 def test_calc_magnetic_moment(calc_chunk):
@@ -721,18 +935,24 @@ def test_calc_converged(calc_chunk):
 def test_calc_hirshfeld_charges(calc_chunk):
     hirshfeld_charges = [0.20898543, -0.20840994]
     assert np.allclose(calc_chunk.hirshfeld_charges, hirshfeld_charges)
-    assert np.allclose(calc_chunk.results["hirshfeld_charges"], hirshfeld_charges)
+    assert np.allclose(
+        calc_chunk.results["hirshfeld_charges"],
+        hirshfeld_charges)
 
 
 def test_calc_hirshfeld_volumes(calc_chunk):
     hirshfeld_volumes = [73.39467444, 62.86011074]
     assert np.allclose(calc_chunk.hirshfeld_volumes, hirshfeld_volumes)
-    assert np.allclose(calc_chunk.results["hirshfeld_volumes"], hirshfeld_volumes)
+    assert np.allclose(
+        calc_chunk.results["hirshfeld_volumes"],
+        hirshfeld_volumes)
 
 
 def test_calc_hirshfeld_atomic_dipoles(calc_chunk):
     hirshfeld_atomic_dipoles = np.zeros((2, 3))
-    assert np.allclose(calc_chunk.hirshfeld_atomic_dipoles, hirshfeld_atomic_dipoles)
+    assert np.allclose(
+        calc_chunk.hirshfeld_atomic_dipoles,
+        hirshfeld_atomic_dipoles)
     assert np.allclose(
         calc_chunk.results["hirshfeld_atomic_dipoles"], hirshfeld_atomic_dipoles
     )
@@ -743,27 +963,18 @@ def test_calc_hirshfeld_dipole(calc_chunk):
 
 
 def test_calc_eigenvalues(calc_chunk, eigenvalues_occupancies):
-    assert np.allclose(calc_chunk.eigenvalues, eigenvalues_occupancies[:, :, :, 1])
+    assert np.allclose(calc_chunk.eigenvalues,
+                       eigenvalues_occupancies[:, :, :, 1])
     assert np.allclose(
         calc_chunk.results["eigenvalues"], eigenvalues_occupancies[:, :, :, 1]
     )
 
 
 def test_calc_occupancies(calc_chunk, eigenvalues_occupancies):
-    assert np.allclose(calc_chunk.occupancies, eigenvalues_occupancies[:, :, :, 0])
+    assert np.allclose(calc_chunk.occupancies,
+                       eigenvalues_occupancies[:, :, :, 0])
     assert np.allclose(
         calc_chunk.results["occupancies"], eigenvalues_occupancies[:, :, :, 0]
-    )
-
-
-@pytest.fixture
-def molecular_positions():
-    return np.array(
-        [
-            [0.00000000, 0.00000000, 0.00000000],
-            [0.95840000, 0.00000000, 0.00000000],
-            [-0.24000000, 0.92790000, 0.00000000],
-        ]
     )
 
 
@@ -813,9 +1024,11 @@ def test_molecular_header_n_bands(molecular_header_chunk):
     assert molecular_header_chunk.n_bands == 7
 
 
-def test_molecular_header_initial_atoms(molecular_header_chunk, molecular_positions):
+def test_molecular_header_initial_atoms(
+        molecular_header_chunk, molecular_positions):
     assert len(molecular_header_chunk.initial_atoms) == 3
-    assert np.all(["O", "H", "H"] == molecular_header_chunk.initial_atoms.symbols)
+    assert np.all(["O", "H", "H"] ==
+                  molecular_header_chunk.initial_atoms.symbols)
     assert np.allclose(
         molecular_header_chunk.initial_atoms.positions,
         np.array(
@@ -923,7 +1136,9 @@ def molecular_positions():
 
 def test_molecular_calc_atoms(molecular_calc_chunk, molecular_positions):
     assert len(molecular_calc_chunk.atoms) == 3
-    assert np.allclose(molecular_calc_chunk.atoms.positions, molecular_positions)
+    assert np.allclose(
+        molecular_calc_chunk.atoms.positions,
+        molecular_positions)
     assert np.all(["O", "H", "H"] == molecular_calc_chunk.atoms.symbols)
 
 
@@ -956,20 +1171,26 @@ def test_chunk_molecular_defaults_none(attrname, molecular_calc_chunk):
 def test_molecular_calc_free_energy(molecular_calc_chunk):
     free_energy = -2.206778551123339e04
     assert np.abs(molecular_calc_chunk.free_energy - free_energy) < eps_hp
-    assert np.abs(molecular_calc_chunk.results["free_energy"] - free_energy) < eps_hp
+    assert np.abs(
+        molecular_calc_chunk.results["free_energy"] -
+        free_energy) < eps_hp
     assert (
         np.abs(
-            molecular_calc_chunk.atoms.calc.get_property("free_energy") - free_energy
+            molecular_calc_chunk.atoms.calc.get_property(
+                "free_energy") - free_energy
         )
         < eps_hp
     )
 
 
 def test_molecular_calc_energy(molecular_calc_chunk):
-    energy = -0.206778551123339e04
-    assert np.abs(molecular_calc_chunk.energy - energy) < eps_hp
-    assert np.abs(molecular_calc_chunk.atoms.get_potential_energy() - energy) < eps_hp
-    assert np.abs(molecular_calc_chunk.results["energy"] - energy) < eps_hp
+    free_energy = -2.206778551123339e04
+    total_energy = -0.206778551123339e04
+    assert np.abs(molecular_calc_chunk.total_energy - total_energy) < eps_hp
+    assert np.abs(
+        molecular_calc_chunk.atoms.get_potential_energy() -
+        free_energy) < eps_hp
+    assert np.abs(molecular_calc_chunk.results["total_energy"] - total_energy) < eps_hp
 
 
 def test_molecular_calc_n_iter(molecular_calc_chunk):
@@ -1011,7 +1232,9 @@ def test_molecular_calc_hirshfeld_charges(
 
 def test_molecular_calc_hirshfeld_volumes(molecular_calc_chunk):
     hirshfeld_volumes = np.array([21.83060659, 6.07674041, 6.07684447])
-    assert np.allclose(molecular_calc_chunk.hirshfeld_volumes, hirshfeld_volumes)
+    assert np.allclose(
+        molecular_calc_chunk.hirshfeld_volumes,
+        hirshfeld_volumes)
     assert np.allclose(
         molecular_calc_chunk.results["hirshfeld_volumes"], hirshfeld_volumes
     )

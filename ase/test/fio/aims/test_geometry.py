@@ -1,38 +1,40 @@
 import warnings
 
 import numpy as np
-from ase.build import bulk
-from ase.atoms import Atoms
-from ase.io.aims import read_aims as read
-from ase.io.aims import parse_geometry_lines
 import pytest
 from pytest import approx
+
+from ase.atoms import Atoms
+from ase.build import bulk
 from ase.constraints import (
     FixAtoms,
     FixCartesian,
-    FixScaledParametricRelations,
     FixCartesianParametricRelations,
+    FixScaledParametricRelations,
 )
+from ase.io.aims import parse_geometry_lines
+from ase.io.aims import read_aims as read
 
 format = "aims"
 
 file = "geometry.in"
 
 
-@pytest.fixture
+@pytest.fixture()
 def Si():
     return bulk("Si")
 
 
-@pytest.fixture
+@pytest.fixture()
 def H2O():
-    return Atoms("H2O", [(0.9584, 0.0, 0.0), (-0.2400, 0.9279, 0.0), (0.0, 0.0, 0.0)])
+    return Atoms("H2O", [(0.9584, 0.0, 0.0),
+                 (-0.2400, 0.9279, 0.0), (0.0, 0.0, 0.0)])
 
 
 def test_cartesian_Si(Si):
     """write cartesian coords and check if structure was preserved"""
     Si.write(file, format=format)
-    new_atoms = read((file))
+    new_atoms = read(file)
     assert np.allclose(Si.positions, new_atoms.positions)
 
 
@@ -125,23 +127,27 @@ def test_constraints_Si(Si):
 
 
 def test_cartesian_H2O(H2O):
-    """write cartesian coords and check if structure was preserved for molecular systems"""
+    """write cartesian coords and check if structure was preserved for
+    molecular systems"""
     H2O.write(file, format=format)
-    new_atoms = read((file))
+    new_atoms = read(file)
     assert np.allclose(H2O.positions, new_atoms.positions)
 
 
 def test_scaled_H2O(H2O):
-    """Attempt to write fractional coordinates and see if scaled is set to False and can be written properly"""
+    """Attempt to write fractional coordinates and see if scaled is set to
+    False and can be written properly"""
     with pytest.raises(
         ValueError,
-        match="Requesting scaled for a calculation where scaled=True, but the system is not periodic",
+        match="Requesting scaled for a calculation where scaled=True, "
+            "but the system is not periodic",
     ):
         H2O.write(file, format=format, scaled=True, wrap=False)
 
 
 def test_param_const_H2O(H2O):
-    """Check to ensure if geo_constrain is True it does not affect the final geometry.in file for molecular systems"""
+    """Check to ensure if geo_constrain is True it does not affect the
+    final geometry.in file for molecular systems"""
     with warnings.catch_warnings(record=True) as w:
         # Cause all warnings to always be triggered.
         warnings.simplefilter("always")
@@ -159,7 +165,8 @@ def test_param_const_H2O(H2O):
 
 
 def test_velocities_H2O(H2O):
-    """Confirm that the velocities are passed to the geometry.in file and can be read back in"""
+    """Confirm that the velocities are passed to the geometry.in file and
+    can be read back in"""
     velocities = [(1.0, 0.0, 0.0), (-1.0, 1.0, 0.0), (0.0, 0.0, 0.0)]
     H2O.set_velocities(velocities)
     H2O.write(file, format=format, scaled=False, write_velocities=True)
@@ -171,7 +178,7 @@ def test_velocities_H2O(H2O):
 def test_info_str(H2O):
     """Confirm that the passed info_str is passed to the geometry.in file"""
     H2O.write(file, format=format, info_str="TEST INFO STR")
-    with open(file, "r") as fd:
+    with open(file) as fd:
         geometry_lines = fd.readlines()
         print(geometry_lines)
         assert "# Additional information:" in geometry_lines[6]
@@ -180,9 +187,9 @@ def test_info_str(H2O):
 
 sample_geometry_1 = """\
 lattice_vector 4.5521460059804628 0.0000000000000000 0.0000000000000000
-lattice_vector -2.2760730029902314 3.9422740829149499 0.0000000000000000 # Dummy comment
+lattice_vector -2.2760730029902314 3.9422740829149499 0.000 # Dummy comment
 lattice_vector 0.0000000000000000 0.0000000000000000 7.1603474299999998
-atom_frac 0.0000000000000000 0.0000000000000000 0.0000000000000000 Pb # Dummy comment
+atom_frac 0.0000000000000000 0.0000000000000000 0.000000 Pb # Dummy comment
 atom_frac 0.6666666666666666 0.3333333333333333 0.7349025600000001 I
 atom_frac 0.3333333333333333 0.6666666666666666 0.2650974399999999 I
 #=======================================================
@@ -199,7 +206,7 @@ symmetry_frac 0.3333333333333, 0.6666666666667, d0_z
 """
 
 sample_geometry_2 = """\
-atom 0.0000000000000000 0.0000000000000000 0.0000000000000000 Pb # Dummy comment
+atom 0.0000000000000000 0.0000000000000000 0.0000000000000 Pb # Dummy comment
     constrain_relaxation .true.
 atom 0.6666666666666666 0.3333333333333333 0.7349025600000001 I
     initial_moment 1

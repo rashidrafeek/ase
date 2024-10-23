@@ -1,12 +1,12 @@
-from typing import List, Sequence, Set, Dict, Union, Iterator
-import warnings
 import collections.abc
+import numbers
+import warnings
+from typing import Dict, Iterator, List, Sequence, Set, Union
 
 import numpy as np
 
 from ase.data import atomic_numbers, chemical_symbols
 from ase.formula import Formula
-
 
 Integers = Union[Sequence[int], np.ndarray]
 
@@ -43,8 +43,8 @@ class Symbols(collections.abc.Sequence):
     Symbols('C2OH6')
     >>> atoms.symbols[:3]
     Symbols('C2O')
-    >>> atoms.symbols == 'H'
-    array([False, False, False,  True,  True,  True,  True,  True,  True], dtype=bool)
+    >>> atoms.symbols == 'H'  # doctest: +ELLIPSIS
+    array([False, False, False,  True,  True,  True,  True,  True,  True]...)
     >>> atoms.symbols[-3:] = 'Pu'
     >>> atoms.symbols
     Symbols('C2OH3Pu3')
@@ -58,6 +58,7 @@ class Symbols(collections.abc.Sequence):
     formatting options and analysis.
 
     """
+
     def __init__(self, numbers) -> None:
         self.numbers = np.asarray(numbers, int)
 
@@ -74,7 +75,7 @@ class Symbols(collections.abc.Sequence):
 
     def __getitem__(self, key) -> Union['Symbols', str]:
         num = self.numbers[key]
-        if np.isscalar(num):
+        if isinstance(num, numbers.Integral):
             return chemical_symbols[num]
         return Symbols(num)
 
@@ -96,7 +97,7 @@ class Symbols(collections.abc.Sequence):
         return self.get_chemical_formula('reduce')
 
     def __repr__(self) -> str:
-        return 'Symbols(\'{}\')'.format(self)
+        return f'Symbols(\'{self}\')'
 
     def __eq__(self, obj) -> bool:
         if not hasattr(obj, '__len__'):
@@ -183,7 +184,7 @@ class Symbols(collections.abc.Sequence):
 
     def species_indices(self) -> Sequence[int]:
         """Return the indices of each atom within their individual species.
-    
+
         >>> from ase import Atoms
         >>> atoms = Atoms('CH3CH2OH')
         >>> atoms.symbols.species_indices()
@@ -192,11 +193,11 @@ class Symbols(collections.abc.Sequence):
          ^  ^  ^  ^  ^  ^  ^  ^  ^
          C  H  H  H  C  H  H  O  H
 
-        """ 
+        """
 
         counts: Dict[str, int] = {}
         result = []
-        for i, n in enumerate(self.numbers): 
+        for i, n in enumerate(self.numbers):
             counts[n] = counts.get(n, -1) + 1
             result.append(counts[n])
 

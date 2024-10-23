@@ -1,6 +1,5 @@
 import numpy as np
 
-
 delta = 1e-10
 
 
@@ -14,7 +13,7 @@ def wulff_construction(symbol, surfaces, energies, size, structure,
     surface energy of the cluster.
 
     Parameters
-    ---------- 
+    ----------
     symbol : str or int
         The chemical symbol (or atomic number) of the desired element.
 
@@ -50,7 +49,7 @@ def wulff_construction(symbol, surfaces, energies, size, structure,
               (size, rounding))
 
         if rounding not in ['above', 'below', 'closest']:
-            raise ValueError('Invalid rounding: %s' % rounding)
+            raise ValueError(f'Invalid rounding: {rounding}')
 
     # Interpret structure, if it is a string.
     if isinstance(structure, str):
@@ -61,12 +60,11 @@ def wulff_construction(symbol, surfaces, energies, size, structure,
         elif structure == 'sc':
             from ase.cluster.cubic import SimpleCubic as structure
         elif structure == 'hcp':
-            from ase.cluster.hexagonal import \
-                HexagonalClosedPacked as structure
+            from ase.cluster.hexagonal import HexagonalClosedPacked as structure
         elif structure == 'graphite':
             from ase.cluster.hexagonal import Graphite as structure
         else:
-            error = 'Crystal structure %s is not supported.' % structure
+            error = f'Crystal structure {structure} is not supported.'
             raise NotImplementedError(error)
 
     # Check number of surfaces
@@ -91,7 +89,7 @@ def wulff_construction(symbol, surfaces, energies, size, structure,
     for i, s in enumerate(surfaces):
         d = atoms.get_layer_distance(s)
         energies[i] /= d
-        
+
     # First guess a size that is not too large.
     wanted_size = size ** (1.0 / 3.0)
     max_e = max(energies)

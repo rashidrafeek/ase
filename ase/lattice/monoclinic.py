@@ -5,8 +5,9 @@ The following lattice creator is defined:
     BaseCenteredMonoclinic
 """
 
-from ase.lattice.triclinic import TriclinicFactory
 import numpy as np
+
+from ase.lattice.triclinic import TriclinicFactory
 
 
 class SimpleMonoclinicFactory(TriclinicFactory):
@@ -15,7 +16,8 @@ class SimpleMonoclinicFactory(TriclinicFactory):
     xtal_name = "monoclinic"
 
     def make_crystal_basis(self):
-        "Make the basis matrix for the crystal unit cell and the system unit cell."
+        """Make the basis matrix for the crystal unit cell and the system
+        unit cell."""
         # First convert the basis specification to a triclinic one
         if isinstance(self.latticeconstant, type({})):
             self.latticeconstant['beta'] = 90
@@ -24,10 +26,11 @@ class SimpleMonoclinicFactory(TriclinicFactory):
             if len(self.latticeconstant) == 4:
                 self.latticeconstant = self.latticeconstant + (90, 90)
             else:
-                raise ValueError("Improper lattice constants for monoclinic crystal.")
+                raise ValueError(
+                    "Improper lattice constants for monoclinic crystal.")
 
         TriclinicFactory.make_crystal_basis(self)
-        
+
 
 SimpleMonoclinic = SimpleMonoclinicFactory()
 

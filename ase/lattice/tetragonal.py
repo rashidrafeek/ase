@@ -5,8 +5,10 @@ The following lattice creators are defined:
     CenteredTetragonal
 """
 
-from ase.lattice.orthorhombic import (SimpleOrthorhombicFactory,
-                                      BodyCenteredOrthorhombicFactory)
+from ase.lattice.orthorhombic import (
+    BodyCenteredOrthorhombicFactory,
+    SimpleOrthorhombicFactory,
+)
 
 
 class _Tetragonalize:
@@ -28,7 +30,7 @@ class _Tetragonalize:
         self.latticeconstant = lattice
         self.orthobase.make_crystal_basis(self)
 
-        
+
 class SimpleTetragonalFactory(_Tetragonalize, SimpleOrthorhombicFactory):
     "A factory for creating simple tetragonal lattices."
     orthobase = SimpleOrthorhombicFactory

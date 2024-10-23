@@ -1,14 +1,18 @@
 """A collection of mutations that can be used."""
+from math import cos, pi, sin
+
 import numpy as np
-from math import cos, sin, pi
-from ase.cell import Cell
-from ase.calculators.lammpslib import convert_cell
-from ase.ga.utilities import (atoms_too_close,
-                              atoms_too_close_two_sets,
-                              gather_atoms_by_tag,
-                              get_rotation_matrix)
-from ase.ga.offspring_creator import OffspringCreator, CombinationMutation
+
 from ase import Atoms
+from ase.calculators.lammps.coordinatetransform import calc_rotated_cell
+from ase.cell import Cell
+from ase.ga.offspring_creator import CombinationMutation, OffspringCreator
+from ase.ga.utilities import (
+    atoms_too_close,
+    atoms_too_close_two_sets,
+    gather_atoms_by_tag,
+    get_rotation_matrix,
+)
 
 
 class RattleMutation(OffspringCreator):
@@ -39,6 +43,7 @@ class RattleMutation(OffspringCreator):
     rng: Random number generator
         By default numpy.random.
     """
+
     def __init__(self, blmin, n_top, rattle_strength=0.8,
                  rattle_prop=0.4, test_dist_to_slab=True, use_tags=False,
                  verbose=False, rng=np.random):
@@ -133,6 +138,7 @@ class PermutationMutation(OffspringCreator):
     rng: Random number generator
         By default numpy.random.
     """
+
     def __init__(self, n_top, probability=0.33, test_dist_to_slab=True,
                  use_tags=False, blmin=None, rng=np.random, verbose=False):
         OffspringCreator.__init__(self, verbose, rng=rng)
@@ -238,6 +244,7 @@ class MirrorMutation(OffspringCreator):
     rng: Random number generator
         By default numpy.random.
     """
+
     def __init__(self, blmin, n_top, reflect=False, rng=np.random,
                  verbose=False):
         OffspringCreator.__init__(self, verbose, rng=rng)
@@ -268,10 +275,7 @@ class MirrorMutation(OffspringCreator):
         top = atoms[len(atoms) - self.n_top: len(atoms)]
         num = top.numbers
         unique_types = list(set(num))
-        nu = dict()
-        for u in unique_types:
-            nu[u] = sum(num == u)
-
+        nu = {u: sum(num == u) for u in unique_types}
         n_tries = 1000
         counter = 0
         changed = False
@@ -297,7 +301,7 @@ class MirrorMutation(OffspringCreator):
 
             # Sort the atoms by their signed distance
             D.sort(key=lambda x: x[1])
-            nu_taken = dict()
+            nu_taken = {}
 
             # Select half of the atoms needed for a full cluster
             p_use = []
@@ -323,7 +327,7 @@ class MirrorMutation(OffspringCreator):
 
             # In the case of an uneven number of
             # atoms we need to add one extra
-            for n in nu.keys():
+            for n in nu:
                 if nu[n] % 2 == 0:
                     continue
                 while sum(n_use == n) > nu[n]:
@@ -411,6 +415,7 @@ class StrainMutation(OffspringCreator):
     rng: Random number generator
         By default numpy.random.
     """
+
     def __init__(self, blmin, cellbounds=None, stddev=0.7,
                  number_of_variable_cell_vectors=3, use_tags=False,
                  rng=np.random, verbose=False):
@@ -499,7 +504,7 @@ class StrainMutation(OffspringCreator):
 
             # convert the submatrix with the variable cell vectors
             # to a lower triangular form
-            cell_new = convert_cell(cell_new)[0].T
+            cell_new = calc_rotated_cell(cell_new)
             for i in range(self.number_of_variable_cell_vectors, 3):
                 cell_new[i] = cell_ref[i]
 
@@ -565,10 +570,11 @@ class PermuStrainMutation(CombinationMutation):
     strainmutation: OffspringCreator instance
         A mutation that mutates by straining.
     """
+
     def __init__(self, permutationmutation, strainmutation, verbose=False):
-        super(PermuStrainMutation, self).__init__(permutationmutation,
-                                                  strainmutation,
-                                                  verbose=verbose)
+        super().__init__(permutationmutation,
+                         strainmutation,
+                         verbose=verbose)
         self.descriptor = 'permustrain'
 
 
@@ -614,6 +620,7 @@ class RotationalMutation(OffspringCreator):
     rng: Random number generator
         By default numpy.random.
     """
+
     def __init__(self, blmin, n_top=None, fraction=0.33, tags=None,
                  min_angle=1.57, test_dist_to_slab=True, rng=np.random,
                  verbose=False):
@@ -715,8 +722,9 @@ class RattleRotationalMutation(CombinationMutation):
     rotationalmutation: OffspringCreator instance
         A mutation that rotates moieties.
     """
+
     def __init__(self, rattlemutation, rotationalmutation, verbose=False):
-        super(RattleRotationalMutation, self).__init__(rattlemutation,
-                                                       rotationalmutation,
-                                                       verbose=verbose)
+        super().__init__(rattlemutation,
+                         rotationalmutation,
+                         verbose=verbose)
         self.descriptor = 'rattlerotational'

@@ -1,13 +1,23 @@
 import os
 
-import pytest
 import numpy as np
-import ase
+import pytest
+
 import ase.lattice.cubic
-from ase.calculators.castep import (Castep, CastepOption,
-                                    CastepParam, CastepCell,
-                                    make_cell_dict, make_param_dict,
-                                    CastepKeywords)
+from ase.build import bulk
+from ase.calculators.castep import (
+    Castep,
+    CastepKeywords,
+    _get_indices_to_sort_back,
+    make_cell_dict,
+    make_param_dict,
+)
+from ase.dft.kpoints import BandPath
+from ase.io.castep.castep_input_file import (
+    CastepCell,
+    CastepOption,
+    CastepParam,
+)
 
 calc = pytest.mark.calculator
 
@@ -19,7 +29,7 @@ kw_types = ['Real', 'String', 'Defined', 'Integer Vector',
 kw_levels = ['Dummy', 'Intermediate', 'Expert', 'Basic']
 
 
-@pytest.fixture
+@pytest.fixture()
 def testing_keywords():
 
     kw_data = {}
@@ -28,10 +38,10 @@ def testing_keywords():
         kwtlow = kwt.lower().replace(' ', '_')
         if 'Boolean' in kwt:
             kwtlow = 'boolean'
-        kw = 'test_{0}_kw'.format(kwtlow)
+        kw = f'test_{kwtlow}_kw'
 
         kw_data[kw] = {
-            'docstring': 'A fake {0} keyword'.format(kwt),
+            'docstring': f'A fake {kwt} keyword',
             'option_type': kwt,
             'keyword': kw,
             'level': 'Dummy'
@@ -42,14 +52,15 @@ def testing_keywords():
     # Special keywords for the CastepParam object
     param_kws = [('continuation', 'String'), ('reuse', 'String')]
 
-    param_kw_data = {}
-    for (pkw, t) in param_kws:
-        param_kw_data[pkw] = {
-            'docstring': 'Dummy {0} keyword'.format(pkw),
+    param_kw_data = {
+        pkw: {
+            'docstring': f'Dummy {pkw} keyword',
             'option_type': t,
             'keyword': pkw,
-            'level': 'Dummy'
+            'level': 'Dummy',
         }
+        for pkw, t in param_kws
+    }
     param_kw_data.update(kw_data)
 
     # Special keywords for the CastepCell object
@@ -64,14 +75,15 @@ def testing_keywords():
                 ('kpoint_list', 'Block'),
                 ('bs_kpoint_list', 'Block')]
 
-    cell_kw_data = {}
-    for (ckw, t) in cell_kws:
-        cell_kw_data[ckw] = {
-            'docstring': 'Dummy {0} keyword'.format(ckw),
+    cell_kw_data = {
+        ckw: {
+            'docstring': f'Dummy {ckw} keyword',
             'option_type': t,
             'keyword': ckw,
-            'level': 'Dummy'
+            'level': 'Dummy',
         }
+        for ckw, t in cell_kws
+    }
     cell_kw_data.update(kw_data)
 
     param_dict = make_param_dict(param_kw_data)
@@ -81,20 +93,20 @@ def testing_keywords():
                           'Castep v.Fake')
 
 
-@pytest.fixture
+@pytest.fixture()
 def pspot_tmp_path(tmp_path):
 
     path = os.path.join(tmp_path, 'ppots')
     os.mkdir(path)
 
     for el in ase.data.chemical_symbols:
-        with open(os.path.join(path, '{0}_test.usp'.format(el)), 'w') as fd:
+        with open(os.path.join(path, f'{el}_test.usp'), 'w') as fd:
             fd.write('Fake PPOT')
 
     return path
 
 
-@pytest.fixture
+@pytest.fixture()
 def testing_calculator(testing_keywords, tmp_path, pspot_tmp_path):
     castep_path = os.path.join(tmp_path, 'CASTEP')
     os.mkdir(castep_path)
@@ -188,9 +200,9 @@ He He_test.usp"""
     R = np.array([np.eye(3), -np.eye(3)])
     T = np.zeros((2, 3))
     ccell.symmetry_ops = (R, T)
-    strblock = [l.strip() for l in ccell.symmetry_ops.value.split('\n')
-                if l.strip() != '']
-    fblock = np.array([list(map(float, l.split())) for l in strblock])
+    strblock = [line.strip() for line in ccell.symmetry_ops.value.split('\n')
+                if line.strip() != '']
+    fblock = np.array([list(map(float, line.split())) for line in strblock])
 
     assert np.isclose(fblock[:3], R[0]).all()
     assert np.isclose(fblock[3], T[0]).all()
@@ -213,10 +225,10 @@ He He_test.usp"""
 
         pos_lines = []
         while len(lines) > 0:
-            l = lines.pop(0).strip()
-            if l == '':
+            line = lines.pop(0).strip()
+            if line == '':
                 continue
-            el, x, y, z = l.split()
+            el, x, y, z = line.split()
             xyz = np.array(list(map(float, [x, y, z])))
             pos_lines.append((el, xyz))
 
@@ -272,13 +284,14 @@ def test_castep_param(testing_keywords):
         cparam.basis_precision = 'FINE'
 
 
+@pytest.mark.skipif(os.name == "nt", reason="No symlink on Windows")
 def test_workflow(testing_calculator):
     c = testing_calculator
     c._build_missing_pspots = False
     c._find_pspots = True
     c.set_label('test_label_pspots')
 
-    atoms = ase.build.bulk('Ag')
+    atoms = bulk('Ag')
     atoms.calc = c
 
     # Should find them automatically!
@@ -319,14 +332,14 @@ def test_set_kpoints(testing_calculator):
     c.set_kpts({'size': (2, 2, 4), 'even': False})
     assert c.cell.kpoint_mp_grid.value == '3 3 5'
     assert c.cell.kpoint_mp_offset.value == '0.0 0.0 0.0'
-    atoms = ase.build.bulk('Ag')
+    atoms = bulk('Ag')
     atoms.calc = c
     c.set_kpts({'density': 10, 'gamma': False, 'even': None})
     assert c.cell.kpoint_mp_grid.value == '27 27 27'
     assert c.cell.kpoint_mp_offset.value == '0.018519 0.018519 0.018519'
     c.set_kpts({'spacing': (1 / (np.pi * 10)),
                 'gamma': False, 'even': True})
-    assert c.cell.kpoint_mp_grid.value == '28 28 28'
+    assert c.cell.kpoint_mp_grid.value == '14 14 14'
     assert c.cell.kpoint_mp_offset.value == '0.0 0.0 0.0'
 
 
@@ -334,9 +347,7 @@ def test_band_structure_setup(testing_calculator):
 
     c = testing_calculator
 
-    from ase.dft.kpoints import BandPath
-
-    atoms = ase.build.bulk('Ag')
+    atoms = bulk('Ag')
     bp = BandPath(cell=atoms.cell,
                   path='GX',
                   special_points={'G': [0, 0, 0], 'X': [0.5, 0, 0.5]})
@@ -348,3 +359,13 @@ def test_band_structure_setup(testing_calculator):
     assert len(kpt_list) == 10
     assert list(map(float, kpt_list[0].split())) == [0., 0., 0.]
     assert list(map(float, kpt_list[-1].split())) == [0.5, 0.0, 0.5]
+
+
+def test_get_indices_to_sort_back():
+    """Test if spicies in .castep are sorted back to atoms.symbols."""
+    symbols = ['Si', 'Al', 'P', 'Al', 'P', 'Al', 'P', 'C']
+    species = ['C', 'Al', 'Al', 'Al', 'Si', 'P', 'P', 'P']
+    indices_ref = [4, 1, 5, 2, 6, 3, 7, 0]
+    assert [species[_] for _ in indices_ref] == symbols
+    indices = _get_indices_to_sort_back(symbols, species)
+    assert indices.tolist() == indices_ref

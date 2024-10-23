@@ -2,11 +2,12 @@ import pytest
 
 from ase import Atoms
 from ase.calculators.lj import LennardJones
-from ase.neb import NEB, NEBTools, idpp_interpolate
-from ase.optimize import FIRE, BFGS
+from ase.mep import NEB, NEBTools, idpp_interpolate
+from ase.optimize import BFGS, FIRE
 
 
-@pytest.mark.slow
+@pytest.mark.optimize()
+@pytest.mark.slow()
 def test_neb_tr(testdir):
     nimages = 3
     fmax = 0.01
@@ -33,7 +34,7 @@ def test_neb_tr(testdir):
         images = [initial]
 
         # Set calculator
-        for i in range(nimages):
+        for _ in range(nimages):
             image = initial.copy()
             image.calc = LennardJones()
             images.append(image)
@@ -43,8 +44,9 @@ def test_neb_tr(testdir):
         # Define the NEB and make a linear interpolation
         # with removing translational
         # and rotational degrees of freedom
-        neb = NEB(images,
-                  remove_rotation_and_translation=remove_rotation_and_translation)
+        neb = NEB(
+            images,
+            remove_rotation_and_translation=remove_rotation_and_translation)
         neb.interpolate()
         # Test used these old defaults which are not optimial, but work
         # in this particular system
@@ -55,8 +57,9 @@ def test_neb_tr(testdir):
 
         # Switch to CI-NEB, still removing the external degrees of freedom
         # Also specify the linearly varying spring constants
-        neb = NEB(images, climb=True,
-                  remove_rotation_and_translation=remove_rotation_and_translation)
+        neb = NEB(
+            images, climb=True,
+            remove_rotation_and_translation=remove_rotation_and_translation)
         qn = FIRE(neb, dt=0.005, maxstep=0.05, dtmax=0.1)
         qn.run(fmax=fmax)
 

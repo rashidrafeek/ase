@@ -3,12 +3,13 @@ import pytest
 
 from ase.build import bulk
 from ase.calculators.emt import EMT
-from ase.optimize.precon import Exp, PreconLBFGS, PreconFIRE
-from ase.constraints import FixBondLength, FixAtoms
+from ase.constraints import FixAtoms, FixBondLength
+from ase.optimize.precon import Exp, PreconFIRE, PreconLBFGS
 
 
-#@pytest.mark.skip('FAILS WITH PYAMG')
-@pytest.mark.slow
+# @pytest.mark.skip('FAILS WITH PYAMG')
+@pytest.mark.optimize()
+@pytest.mark.slow()
 def test_preconlbfgs():
     N = 1
     a0 = bulk('Cu', cubic=True)
@@ -41,11 +42,11 @@ def test_preconlbfgs():
     for precon in [None, Exp(mu=1.0)]:
         cu = cu0.copy()
         cu.calc = EMT()
-        cu.set_distance(0, 1, a0*1.2)
+        cu.set_distance(0, 1, a0 * 1.2)
         cu.set_constraint(cons)
         opt = PreconLBFGS(cu, precon=precon, use_armijo=True)
         opt.run(fmax=1e-3)
 
-        assert abs(cu.get_distance(0, 1)/a0 - 1.2) < 1e-3
+        assert abs(cu.get_distance(0, 1) / a0 - 1.2) < 1e-3
         assert np.all(abs(cu.positions[2] - cu0.positions[2]) < 1e-3)
         assert np.all(abs(cu.positions[3] - cu0.positions[3]) < 1e-3)

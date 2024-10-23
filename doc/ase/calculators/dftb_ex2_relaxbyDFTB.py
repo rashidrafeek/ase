@@ -1,10 +1,9 @@
-from ase.calculators.dftb import Dftb
-from ase.io import write, read
 from ase.build import molecule
+from ase.calculators.dftb import Dftb
+from ase.io import read, write
 
 atoms = molecule('H2O')
-calc = Dftb(atoms=atoms,
-            label='h2o',
+calc = Dftb(label='h2o',
             Driver_='ConjugateGradient',
             Driver_MaxForceComponent=1e-4,
             Driver_MaxSteps=1000,

@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 from pytest import mark
+
 from ase import Atoms
 
 
@@ -38,7 +39,12 @@ def test_update_neighbor_parameters(KIM):
     Mo_cutoff_index = 4879
     Mo_cutoff = calc.get_parameters(cutoffs=Mo_cutoff_index)["cutoffs"][1]
     cutoffs_extent = calc.parameters_metadata()["cutoffs"]["extent"]
-    calc.set_parameters(cutoffs=[list(range(cutoffs_extent)), [0.0] * cutoffs_extent])
+    calc.set_parameters(
+        cutoffs=[
+            list(
+                range(cutoffs_extent)),
+            [0.0] *
+            cutoffs_extent])
     calc.set_parameters(cutoffs=[Mo_cutoff_index, Mo_cutoff])
 
     # Create trimer such that nearest neighbor interactions occur:  each of the
@@ -59,7 +65,8 @@ def test_update_neighbor_parameters(KIM):
 
     # Update the cutoff parameter so that the end atoms will interact with one
     # another
-    long_cutoff = 1.1 * np.linalg.norm(np.array(pos[2][:]) - np.array(pos[0][:]))
+    long_cutoff = 1.1 * \
+        np.linalg.norm(np.array(pos[2][:]) - np.array(pos[0][:]))
     calc.set_parameters(cutoffs=[Mo_cutoff_index, long_cutoff])
 
     # Energy of the trimer after modifying cutoff

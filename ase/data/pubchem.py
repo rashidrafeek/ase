@@ -1,11 +1,11 @@
-from collections import namedtuple
-import warnings
-import urllib.request
-from urllib.error import URLError, HTTPError
 import json
-from io import StringIO, BytesIO
-from ase.io import read
+import urllib.request
+import warnings
+from collections import namedtuple
+from io import BytesIO, StringIO
+from urllib.error import HTTPError, URLError
 
+from ase.io import read
 
 base_url = 'https://pubchem.ncbi.nlm.nih.gov/rest/pug'
 
@@ -16,6 +16,7 @@ class PubchemData:
     """
     a specialized class for entries from the pubchem database
     """
+
     def __init__(self, atoms, data):
         self.atoms = atoms
         self.data = data
@@ -48,44 +49,42 @@ def search_pubchem_raw(search, field, silent=False, mock_test=False):
         data (str):
             a string containing the raw response from pubchem.
     """
-    suffix = 'sdf?record_type=3d'
-
-    if field == 'conformers':
-        # we don't use the "compound" flag when looking for conformers
-        url = '{}/{}/{}/{}'.format(base_url, field, str(search),
-                                   suffix)
-    else:
-        url = '{}/compound/{}/{}/{}'.format(base_url, field,
-                                            str(search), suffix)
     if mock_test:  # for testing only
         r = BytesIO(test_output)
     else:
+        suffix = 'sdf?record_type=3d'
+
+        url = (
+            f'{base_url}/{field}/{search!s}/{suffix}'
+            if field == 'conformers'
+            else f'{base_url}/compound/{field}/{search!s}/{suffix}'
+        )
         try:
             r = urllib.request.urlopen(url)
         except HTTPError as e:
-            print(e.reason)
-            raise ValueError('the search term {} could not be found'
-                             ' for the field {}'.format(search, field))
+            raise ValueError(
+                f'the search term {search} could not be found for the field '
+                f'{field}'
+            ) from e
         except URLError as e:
-            print(e.reason)
-            raise ValueError('Couldn\'t reach the pubchem servers, check'
-                             ' your internet connection')
+            raise ValueError(
+                'Couldn\'t reach the pubchem servers, check'
+                ' your internet connection'
+            ) from e
 
     # check if there are confomers and warn them if there are
     if field != 'conformers' and not silent:
         conformer_ids = available_conformer_search(search, field,
                                                    mock_test=mock_test)
         if len(conformer_ids) > 1:
-            warnings.warn('The structure "{}" has more than one '
-                          'conformer in PubChem. By default, the '
-                          'first conformer is returned, please ensure'
-                          ' you are using the structure you intend to'
-                          ' or use the '
-                          '`ase.data.pubchem.pubchem_conformer_search`'
-                          ' function'.format(search))
+            warnings.warn(
+                f'The structure "{search}" has more than one conformer in '
+                'PubChem. By default, the first conformer is returned, please '
+                'ensure you are using the structure you intend to or use the '
+                '`ase.data.pubchem.pubchem_conformer_search` function'
+            )
 
-    data = r.read().decode('utf-8')
-    return data
+    return r.read().decode('utf-8')
 
 
 def parse_pubchem_raw(data):
@@ -130,7 +129,7 @@ def parse_pubchem_raw(data):
             entry_value = entry_value[0]
         pubchem_data[field_name] = entry_value
     # recover partial charges
-    if 'PUBCHEM_MMFF94_PARTIAL_CHARGES' in pubchem_data.keys():
+    if 'PUBCHEM_MMFF94_PARTIAL_CHARGES' in pubchem_data:
         # the first entry just contains the number of atoms with charges
         charges = pubchem_data['PUBCHEM_MMFF94_PARTIAL_CHARGES'][1:]
         # each subsequent entry contains the index and charge of the atoms
@@ -204,16 +203,17 @@ def available_conformer_search(search, field, mock_test=False):
                 than the CID numbers
     """
     suffix = 'conformers/JSON'
-    url = '{}/compound/{}/{}/{}'.format(base_url, field, str(search),
-                                        suffix)
+    url = f'{base_url}/compound/{field}/{search!s}/{suffix}'
     if mock_test:
         r = BytesIO(test_conformer_output)
     else:
         try:
             r = urllib.request.urlopen(url)
         except HTTPError as e:
-            err = ValueError('the search term {} could not be found'
-                             ' for the field {}'.format(search, field))
+            err = ValueError(
+                f'the search term {search} could not be found for the field '
+                f'{field}'
+            )
             raise err from e
         except URLError as e:
             err = ValueError('Couldn\'t reach the pubchem servers, check'
@@ -221,9 +221,7 @@ def available_conformer_search(search, field, mock_test=False):
             raise err from e
     record = r.read().decode('utf-8')
     record = json.loads(record)
-    # note: cid = compound id != conformer id
-    conformer_ids = record['InformationList']['Information'][0]['ConformerID']
-    return conformer_ids
+    return record['InformationList']['Information'][0]['ConformerID']
 
 
 def pubchem_search(*args, mock_test=False, **kwargs):
@@ -251,8 +249,7 @@ def pubchem_search(*args, mock_test=False, **kwargs):
     search, field = analyze_input(*args, **kwargs)
     raw_pubchem = search_pubchem_raw(search, field, mock_test=mock_test)
     atoms, data = parse_pubchem_raw(raw_pubchem)
-    result = PubchemData(atoms, data)
-    return result
+    return PubchemData(atoms, data)
 
 
 def pubchem_conformer_search(*args, mock_test=False, **kwargs):
@@ -273,12 +270,10 @@ def pubchem_conformer_search(*args, mock_test=False, **kwargs):
 
     conformer_ids = available_conformer_search(search, field,
                                                mock_test=mock_test)
-    conformers = []
-
-    for id_ in conformer_ids:
-        conformers.append(pubchem_search(mock_test=mock_test,
-                                         conformer=id_))
-    return conformers
+    return [
+        pubchem_search(mock_test=mock_test, conformer=id_)
+        for id_ in conformer_ids
+    ]
 
 
 def pubchem_atoms_search(*args, **kwargs):
@@ -316,5 +311,5 @@ def pubchem_atoms_conformer_search(*args, **kwargs):
     return conformers
 
 
-test_output = b'222\n  -OEChem-10071914343D\n\n  4  3  0     0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.4417    0.2906    0.8711 H   0  0  0  0  0  0  0  0  0  0  0  0\n    0.7256    0.6896   -0.1907 H   0  0  0  0  0  0  0  0  0  0  0  0\n    0.4875   -0.8701    0.2089 H   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\n  1  3  1  0  0  0  0\n  1  4  1  0  0  0  0\nM  END\n> <PUBCHEM_COMPOUND_CID>\n222\n\n> <PUBCHEM_CONFORMER_RMSD>\n0.4\n\n> <PUBCHEM_CONFORMER_DIVERSEORDER>\n1\n\n> <PUBCHEM_MMFF94_PARTIAL_CHARGES>\n4\n1 -1.08\n2 0.36\n3 0.36\n4 0.36\n\n> <PUBCHEM_EFFECTIVE_ROTOR_COUNT>\n0\n\n> <PUBCHEM_PHARMACOPHORE_FEATURES>\n1\n1 1 cation\n\n> <PUBCHEM_HEAVY_ATOM_COUNT>\n1\n\n> <PUBCHEM_ATOM_DEF_STEREO_COUNT>\n0\n\n> <PUBCHEM_ATOM_UDEF_STEREO_COUNT>\n0\n\n> <PUBCHEM_BOND_DEF_STEREO_COUNT>\n0\n\n> <PUBCHEM_BOND_UDEF_STEREO_COUNT>\n0\n\n> <PUBCHEM_ISOTOPIC_ATOM_COUNT>\n0\n\n> <PUBCHEM_COMPONENT_COUNT>\n1\n\n> <PUBCHEM_CACTVS_TAUTO_COUNT>\n1\n\n> <PUBCHEM_CONFORMER_ID>\n000000DE00000001\n\n> <PUBCHEM_MMFF94_ENERGY>\n0\n\n> <PUBCHEM_FEATURE_SELFOVERLAP>\n5.074\n\n> <PUBCHEM_SHAPE_FINGERPRINT>\n260 1 18410856563934756871\n\n> <PUBCHEM_SHAPE_MULTIPOLES>\n15.6\n0.51\n0.51\n0.51\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n\n> <PUBCHEM_SHAPE_SELFOVERLAP>\n14.89\n\n> <PUBCHEM_SHAPE_VOLUME>\n15.6\n\n> <PUBCHEM_COORDINATE_TYPE>\n2\n5\n10\n\n$$$$\n'
-test_conformer_output = b'{\n  "InformationList": {\n    "Information": [\n      {\n        "CID": 222,\n        "ConformerID": [\n          "000000DE00000001"\n        ]\n      }\n    ]\n  }\n}\n'
+test_output = b'222\n  -OEChem-10071914343D\n\n  4  3  0     0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.4417    0.2906    0.8711 H   0  0  0  0  0  0  0  0  0  0  0  0\n    0.7256    0.6896   -0.1907 H   0  0  0  0  0  0  0  0  0  0  0  0\n    0.4875   -0.8701    0.2089 H   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\n  1  3  1  0  0  0  0\n  1  4  1  0  0  0  0\nM  END\n> <PUBCHEM_COMPOUND_CID>\n222\n\n> <PUBCHEM_CONFORMER_RMSD>\n0.4\n\n> <PUBCHEM_CONFORMER_DIVERSEORDER>\n1\n\n> <PUBCHEM_MMFF94_PARTIAL_CHARGES>\n4\n1 -1.08\n2 0.36\n3 0.36\n4 0.36\n\n> <PUBCHEM_EFFECTIVE_ROTOR_COUNT>\n0\n\n> <PUBCHEM_PHARMACOPHORE_FEATURES>\n1\n1 1 cation\n\n> <PUBCHEM_HEAVY_ATOM_COUNT>\n1\n\n> <PUBCHEM_ATOM_DEF_STEREO_COUNT>\n0\n\n> <PUBCHEM_ATOM_UDEF_STEREO_COUNT>\n0\n\n> <PUBCHEM_BOND_DEF_STEREO_COUNT>\n0\n\n> <PUBCHEM_BOND_UDEF_STEREO_COUNT>\n0\n\n> <PUBCHEM_ISOTOPIC_ATOM_COUNT>\n0\n\n> <PUBCHEM_COMPONENT_COUNT>\n1\n\n> <PUBCHEM_CACTVS_TAUTO_COUNT>\n1\n\n> <PUBCHEM_CONFORMER_ID>\n000000DE00000001\n\n> <PUBCHEM_MMFF94_ENERGY>\n0\n\n> <PUBCHEM_FEATURE_SELFOVERLAP>\n5.074\n\n> <PUBCHEM_SHAPE_FINGERPRINT>\n260 1 18410856563934756871\n\n> <PUBCHEM_SHAPE_MULTIPOLES>\n15.6\n0.51\n0.51\n0.51\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n\n> <PUBCHEM_SHAPE_SELFOVERLAP>\n14.89\n\n> <PUBCHEM_SHAPE_VOLUME>\n15.6\n\n> <PUBCHEM_COORDINATE_TYPE>\n2\n5\n10\n\n$$$$\n'  # noqa
+test_conformer_output = b'{\n  "InformationList": {\n    "Information": [\n      {\n        "CID": 222,\n        "ConformerID": [\n          "000000DE00000001"\n        ]\n      }\n    ]\n  }\n}\n'  # noqa

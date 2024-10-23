@@ -1,24 +1,26 @@
 import pytest
 
-from ase.vibrations.resonant_raman import ResonantRamanCalculator
-from ase.calculators.h2morse import (H2Morse,
-                                     H2MorseExcitedStates,
-                                     H2MorseExcitedStatesCalculator)
+from ase.calculators.h2morse import (
+    H2Morse,
+    H2MorseExcitedStates,
+    H2MorseExcitedStatesCalculator,
+)
 from ase.vibrations.albrecht import Albrecht
+from ase.vibrations.resonant_raman import ResonantRamanCalculator
 
 
-@pytest.fixture
+@pytest.fixture()
 def atoms():
     return H2Morse()
 
 
-@pytest.fixture
+@pytest.fixture()
 def rrname(atoms):
     """Prepare the Resonant Raman calculation"""
     name = 'rrmorse'
     with ResonantRamanCalculator(atoms, H2MorseExcitedStatesCalculator,
-                                  overlap=lambda x, y: x.overlap(y),
-                                  name=name, txt='-') as rmc:
+                                 overlap=lambda x, y: x.overlap(y),
+                                 name=name, txt='-') as rmc:
         rmc.run()
     return name
 

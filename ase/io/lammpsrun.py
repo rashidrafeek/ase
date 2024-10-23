@@ -88,6 +88,8 @@ def lammps_data_to_ase_atoms(
     :rtype: Atoms
 
     """
+    if len(data.shape) == 1:
+        data = data[np.newaxis, :]
 
     # read IDs if given and order if needed
     if "id" in colnames:
@@ -155,7 +157,7 @@ def lammps_data_to_ase_atoms(
         celldisp = prismobj.vector_to_ase(celldisp)
         cell = prismobj.update_cell(cell)
 
-    if quaternions:
+    if quaternions is not None:
         out_atoms = Quaternions(
             symbols=elements,
             positions=positions,
@@ -191,7 +193,7 @@ def lammps_data_to_ase_atoms(
             velocities = prismobj.vector_to_ase(velocities)
         out_atoms.set_velocities(velocities)
     if charges is not None:
-        out_atoms.set_initial_charges(charges)
+        out_atoms.set_initial_charges([charge[0] for charge in charges])
     if forces is not None:
         if prismobj:
             forces = prismobj.vector_to_ase(forces)
@@ -313,7 +315,7 @@ def read_lammps_dump_text(fileobj, index=-1, **kwargs):
         if "ITEM: ATOMS" in line:
             colnames = line.split()[2:]
             datarows = [lines.popleft() for _ in range(n_atoms)]
-            data = np.loadtxt(datarows, dtype=str)
+            data = np.loadtxt(datarows, dtype=str, ndmin=2)
             out_atoms = lammps_data_to_ase_atoms(
                 data=data,
                 colnames=colnames,
@@ -418,8 +420,8 @@ def read_lammps_dump_binary(
                 raise ValueError("Provided columns do not match binary file")
 
             if magic_string and revision > 1:
-                # New binary dump format includes units string, columns string, and
-                # time
+                # New binary dump format includes units string,
+                # columns string, and time
                 units_str_len, = read_variables("=i")
 
                 if units_str_len > 0:

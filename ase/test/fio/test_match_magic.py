@@ -1,5 +1,8 @@
+from ase.io.formats import ioformats
+
+
+# flake8: noqa
 def test_match_magic():
-    from ase.io.formats import ioformats
 
     text = b"""
 

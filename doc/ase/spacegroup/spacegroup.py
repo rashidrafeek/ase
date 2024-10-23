@@ -1,10 +1,11 @@
 # creates: spacegroup-al.png spacegroup-fe.png spacegroup-rutile.png spacegroup-cosb3.png spacegroup-mg.png spacegroup-skutterudite.png spacegroup-diamond.png spacegroup-nacl.png
+# flake8: noqa
 import runpy
 
 import ase.io
 
 for name in ['al', 'mg', 'fe', 'diamond', 'nacl', 'rutile', 'skutterudite']:
-    py = 'spacegroup-{0}.py'.format(name)
+    py = f'spacegroup-{name}.py'
     dct = runpy.run_path(py)
     atoms = dct[name]
     renderer = ase.io.write('spacegroup-%s.pov' % name,

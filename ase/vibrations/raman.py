@@ -1,11 +1,11 @@
 import numpy as np
 
 import ase.units as u
+from ase.dft import monkhorst_pack
 from ase.parallel import world
 from ase.phonons import Phonons
-from ase.vibrations.vibrations import Vibrations, AtomicDisplacements
-from ase.dft import monkhorst_pack
 from ase.utils import IOContext
+from ase.vibrations.vibrations import AtomicDisplacements, Vibrations
 
 
 class RamanCalculatorBase(IOContext):
@@ -37,7 +37,7 @@ class RamanCalculatorBase(IOContext):
 
         self.exext = exext
 
-        self.txt = self.openfile(txt, comm)
+        self.txt = self.openfile(file=txt, comm=comm)
         self.verbose = verbose
 
         self.comm = comm
@@ -46,6 +46,7 @@ class RamanCalculatorBase(IOContext):
 class StaticRamanCalculatorBase(RamanCalculatorBase):
     """Base class for Raman intensities derived from
     static polarizabilities"""
+
     def __init__(self, atoms, exobj, exkwargs=None, *args, **kwargs):
         self.exobj = exobj
         if exkwargs is None:
@@ -102,7 +103,7 @@ class RamanBase(AtomicDisplacements, IOContext):
             self.exname = exname
         self.exext = exext
 
-        self.txt = self.openfile(txt, comm)
+        self.txt = self.openfile(file=txt, comm=comm)
         self.verbose = verbose
 
         self.comm = comm
@@ -110,6 +111,7 @@ class RamanBase(AtomicDisplacements, IOContext):
 
 class RamanData(RamanBase):
     """Base class to evaluate Raman spectra from pre-computed data"""
+
     def __init__(self, atoms,  # XXX do we need atoms at this stage ?
                  *args,
                  exname=None,      # name for excited state calculations
@@ -206,7 +208,7 @@ class RamanData(RamanBase):
         unit e^4 Angstrom^4 / eV^2
         """
         self.calculate_energies_and_modes()
-        
+
         m2 = Raman.m2
         alpha_Qcc = self.me_Qcc(*args, **kwargs)
         if not self.observation:  # XXXX remove
@@ -273,7 +275,7 @@ class RamanData(RamanBase):
     def summary(self, log='-'):
         """Print summary for given omega [eV]"""
         with IOContext() as io:
-            log = io.openfile(log, comm=self.comm, mode='a')
+            log = io.openfile(file=log, mode='a', comm=self.comm)
             return self._summary(log)
 
     def _summary(self, log):
@@ -287,11 +289,11 @@ class RamanData(RamanBase):
         elif te > -2 and te < 3:
             ts = str(10**te)
         else:
-            ts = '10^{0}'.format(te)
+            ts = f'10^{te}'
 
         print('-------------------------------------', file=log)
         print(' Mode    Frequency        Intensity', file=log)
-        print('  #    meV     cm^-1      [{0}A^4/amu]'.format(ts), file=log)
+        print(f'  #    meV     cm^-1      [{ts}A^4/amu]', file=log)
         print('-------------------------------------', file=log)
         for n, e in enumerate(hnu):
             if e.imag != 0:
@@ -318,14 +320,14 @@ class Raman(RamanData):
             kwargs.pop(key, None)
         kwargs['name'] = kwargs.get('name', self.name)
         self.vibrations = Vibrations(atoms, *args, **kwargs)
-        
+
         self.delta = self.vibrations.delta
         self.indices = self.vibrations.indices
 
     def calculate_energies_and_modes(self):
         if hasattr(self, 'im_r'):
             return
-        
+
         self.read()
 
         self.im_r = self.vibrations.im

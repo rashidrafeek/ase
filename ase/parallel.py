@@ -1,9 +1,10 @@
-import os
 import atexit
 import functools
+import os
 import pickle
 import sys
 import time
+import warnings
 
 import numpy as np
 
@@ -58,7 +59,13 @@ class DummyMPI:
         return None
 
     def sum(self, a, root=-1):
+        if np.isscalar(a):
+            warnings.warn('Please use sum_scalar(...) for scalar arguments',
+                          FutureWarning)
         return self._returnval(a)
+
+    def sum_scalar(self, a, root=-1):
+        return a
 
     def product(self, a, root=-1):
         return self._returnval(a)
@@ -81,18 +88,21 @@ class MPI:
     * a dummy implementation for serial runs
 
     """
+
     def __init__(self):
         self.comm = None
 
     def __getattr__(self, name):
-        # Pickling of objects that carry instances of MPI class (e.g. NEB) raises
-        # RecursionError since it tries to access the optional __setstate__ method 
-        # (which we do not implement) when unpickling. The two lines below prevent the 
-        # RecursionError. This also affects modules that use pickling e.g. multiprocessing. 
-        # For more details see: https://gitlab.com/ase/ase/-/merge_requests/2695
+        # Pickling of objects that carry instances of MPI class
+        # (e.g. NEB) raises RecursionError since it tries to access
+        # the optional __setstate__ method (which we do not implement)
+        # when unpickling. The two lines below prevent the
+        # RecursionError. This also affects modules that use pickling
+        # e.g. multiprocessing.  For more details see:
+        # https://gitlab.com/ase/ase/-/merge_requests/2695
         if name == '__setstate__':
             raise AttributeError(name)
-            
+
         if self.comm is None:
             self.comm = _get_comm()
         return getattr(self.comm, name)
@@ -147,7 +157,17 @@ class MPI4PY:
             b = self.comm.allreduce(a)
         else:
             b = self.comm.reduce(a, root)
+        if np.isscalar(a):
+            warnings.warn('Please use sum_scalar(...) for scalar arguments',
+                          FutureWarning)
         return self._returnval(a, b)
+
+    def sum_scalar(self, a, root=-1):
+        if root == -1:
+            b = self.comm.allreduce(a)
+        else:
+            b = self.comm.reduce(a, root)
+        return b
 
     def split(self, split_size=None):
         """Divide the communicator."""
@@ -171,7 +191,7 @@ class MPI4PY:
         if self.rank == root:
             if np.isscalar(a):
                 return a
-            return
+            return None
         return self._returnval(a, b)
 
 
@@ -179,7 +199,7 @@ world = None
 
 # Check for special MPI-enabled Python interpreters:
 if '_gpaw' in sys.builtin_module_names:
-    # http://wiki.fysik.dtu.dk/gpaw
+    # http://gpaw.readthedocs.io
     import _gpaw
     world = _gpaw.Communicator()
 elif '_asap' in sys.builtin_module_names:
@@ -246,7 +266,7 @@ def parallel_function(func):
     def new_func(*args, **kwargs):
         if (world.size == 1 or
             args and getattr(args[0], 'serial', False) or
-            not kwargs.pop('parallel', True)):
+                not kwargs.pop('parallel', True)):
             # Disable:
             return func(*args, **kwargs)
 
@@ -277,7 +297,7 @@ def parallel_generator(generator):
     def new_generator(*args, **kwargs):
         if (world.size == 1 or
             args and getattr(args[0], 'serial', False) or
-            not kwargs.pop('parallel', True)):
+                not kwargs.pop('parallel', True)):
             # Disable:
             for result in generator(*args, **kwargs):
                 yield result

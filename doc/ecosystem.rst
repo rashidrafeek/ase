@@ -13,11 +13,29 @@ Listed in alphabetical order, for want of a better approach.
    abTEM provides a Python API for running simulations of (scanning)
    transmission electron microscopy images and diffraction patterns.
 
+ * `ACAT <https://asm-dtu.gitlab.io/acat/>`_:
+   ACAT is a Python package for atomistic modelling of metal or alloy 
+   heterogeneoues catalysts. ACAT provides automatic identification of 
+   adsorption sites and adsorbate coverages for a wide range of surfaces 
+   and nanoparticles. ACAT also provides tools for structure generation 
+   and global optimization of catalysts with and without adsorbates.
+
+ * `AGOX <https://gitlab.com/agox/agox/>`_:
+   The Atomistic Global Optimization X package contains a collection of 
+   tools for global optimization of atomic systems. The package allows 
+   running a variety of standard global optimization algorithms, such as random structure
+   search, basin-hopping in addition to machine-learning enhanced algorithms like 
+   GOFEE. Any ASE calculator can be used as the objective function for the optimization.
+
  * `atomicrex <https://atomicrex.org/>`_:
    atomicrex is a versatile tool for the construction of interatomic
    potential models. It includes a Python interface for integration
    with first-principles codes via ASE as well as other Python
    libraries.
+
+ * `CHGNet <https://github.com/CederGroupHub/chgnet>`_:
+   A pretrained universal neural network potential for charge-informed
+   atomistic modeling
 
  * `CLEASE <https://gitlab.com/computationalmaterials/clease#clease>`_:
    CLuster Expansion in Atomic Simulation Environment (CLEASE) is a package
@@ -31,6 +49,16 @@ Listed in alphabetical order, for want of a better approach.
    package is useful for analysing properties of bond-breaking
    reactions, such as how much force is required to break a chemical
    bond.
+
+ * `DebyeCalculator <https://github.com/FrederikLizakJohansen/DebyeCalculator>`_:
+   A vectorised implementation of the Debye Scattering Equation on CPU and GPU to calculate the scattering intensity I(Q), the Total Scattering Structure
+   Function S(Q), the Reduced Total Scattering Function F(Q), or the Reduced Atomic Pair Distribution Function G(r) from an atomic structure. Use 
+   DebyeCalculator to simulate powder diffraction, total scattering with pair distribution function or small-angle scattering data of finite systems such as   
+   nanoparticles.
+
+ * `effmass <https://github.com/lucydot/effmass/>`_:
+   Calculates various definitions of effective mass from the electronic 
+   bandstructure of a semiconductor.
 
  * `evgraf <https://github.com/pmla/evgraf>`_:
    A python library for crystal reduction (i.e. finding primitive cells), and
@@ -63,11 +91,28 @@ Listed in alphabetical order, for want of a better approach.
    validation techniques, and includes a Monte Carlo module with
    support for many different thermodynamic ensembles.
 
-* `NequIP <https://github.com/mir-group/nequip>`_:
+ * `matgl <https://github.com/materialsvirtuallab/matgl>`_:
+   Graph deep learning library for materials
+
+ * `matscipy <https://github.com/libAtoms/matscipy>`_:
+   matscipy is a generic materials science toolbox built around ASE.
+   It provides useful routines for plasticity and dislocations, fracture
+   mechanics, electro-chemistry, tribology, and elastic properties.
+   In addition to domain-specific routines, it also implements a set of
+   general-purpose, low-level utilities such as efficient neighbour lists.
+
+ * `NequIP <https://github.com/mir-group/nequip>`_:
    Euclidian Equivariant neural network potentials.  Nequip can fit
    neural network potentials to series of DFT calculations (using
    e.g. ASE trajectory files), and then be used to perform
    optimization and molecular dynamics in ASE or LAMMPS.
+
+ * `QuAcc <https://github.com/Quantum-Accelerators/quacc>`_:
+   A flexible platform for high-throughput, database-driven computational 
+   materials science and quantum chemistry workflows built around ASE.
+
+ * `SchNet Pack <https://github.com/atomistic-machine-learning/schnetpack>`_:
+   Deep Neural Networks for Atomistic Systems
 
  * `Sella <https://github.com/zadorlab/sella>`_:
    Sella is a saddle point refinement (optimization) tool which uses
@@ -75,6 +120,9 @@ Listed in alphabetical order, for want of a better approach.
    refinement of arbitrary-order saddle points with constraints.
    Additionally, Sella can perform intrinsic reaction coordinate (IRC)
    calculations.
+
+ * `TorchANI <https://github.com/aiqm/torchani>`_:
+   Accurate Neural Network Potential on PyTorch
 
  * `Wulffpack <https://wulffpack.materialsmodeling.org/>`_:
    Python package for making Wulff constructions, typically for finding

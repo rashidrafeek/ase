@@ -3,14 +3,14 @@ import subprocess
 import sys
 import weakref
 from functools import partial
-from ase.gui.i18n import _
 from time import time
 
 import numpy as np
 
-from ase import Atoms, __version__
 import ase.gui.ui as ui
+from ase import Atoms, __version__
 from ase.gui.defaults import read_defaults
+from ase.gui.i18n import _
 from ase.gui.images import Images
 from ase.gui.nanoparticle import SetupNanoparticle
 from ase.gui.nanotube import SetupNanotube
@@ -112,7 +112,7 @@ class GUI(View, Status):
         i = max(0, min(len(self.images) - 1, self.frame + d))
         self.set_frame(i)
         if self.movie_window is not None:
-            self.movie_window.frame_number.value = i + 1
+            self.movie_window.frame_number.value = i
 
     def copy_image(self, key=None):
         self.images._images.append(self.atoms.copy())
@@ -298,11 +298,11 @@ class GUI(View, Status):
     def reciprocal(self):
         if self.atoms.cell.rank != 3:
             self.bad_plot(_('Requires 3D cell.'))
-            return
+            return None
 
-        kwargs = dict(cell=self.atoms.cell.uncomplete(self.atoms.pbc),
-                      vectors=True)
-        return self.pipe('reciprocal', kwargs)
+        cell = self.atoms.cell.uncomplete(self.atoms.pbc)
+        bandpath = cell.bandpath(npoints=0)
+        return self.pipe('reciprocal', bandpath)
 
     def open(self, button=None, filename=None):
         chooser = ui.ASEFileChooser(self.window.win)

@@ -1,20 +1,11 @@
-from abc import abstractmethod, ABC
-import functools
-import warnings
-import numpy as np
+from abc import ABC, abstractmethod
 from typing import Dict, List
 
+import numpy as np
+
 from ase.cell import Cell
-from ase.build.bulk import bulk as newbulk
-from ase.dft.kpoints import parse_path_string, sc_special_points, BandPath
+from ase.dft.kpoints import BandPath, parse_path_string, sc_special_points
 from ase.utils import pbc2pbc
-
-
-@functools.wraps(newbulk)
-def bulk(*args, **kwargs):
-    warnings.warn('Use ase.build.bulk() instead', stacklevel=2)
-    return newbulk(*args, **kwargs)
-
 
 _degrees = np.pi / 180
 
@@ -73,6 +64,8 @@ class BravaisLattice(ABC):
     def variant(self) -> str:
         """Return name of lattice variant.
 
+        >>> from ase.lattice import BCT
+
         >>> BCT(3, 5).variant
         'BCT2'
         """
@@ -117,6 +110,8 @@ class BravaisLattice(ABC):
     @property
     def special_point_names(self) -> List[str]:
         """Return all special point names as a list of strings.
+
+        >>> from ase.lattice import BCT
 
         >>> BCT(3, 5).special_point_names
         ['G', 'N', 'P', 'S', 'S1', 'X', 'Y', 'Y1', 'Z']
@@ -167,6 +162,8 @@ class BravaisLattice(ABC):
         """Return a :class:`~ase.dft.kpoints.BandPath` for this lattice.
 
         See :meth:`ase.cell.Cell.bandpath` for description of parameters.
+
+        >>> from ase.lattice import BCT
 
         >>> BCT(3, 5).bandpath()
         BandPath(path='GXYSGZS1NPY1Z,XP', cell=[3x3], \
@@ -220,7 +217,7 @@ special_points={GNPSS1XYY1Z}, kpts=[51x3])
         tokens = []
         if not spec:
             spec = '.6g'
-        template = '{}={:%s}' % spec
+        template = f'{{}}={{:{spec}}}'
 
         for name in self.parameters:
             value = self._parameters[name]
@@ -673,7 +670,7 @@ class RHL(BravaisLattice):
 
 
 def check_mcl(a, b, c, alpha):
-    if not (b <= c and alpha < 90):
+    if b > c or alpha >= 90:
         raise UnconventionalLattice('Expected b <= c, alpha < 90; '
                                     'got a={}, b={}, c={}, alpha={}'
                                     .format(a, b, c, alpha))
@@ -970,10 +967,7 @@ class TRI(BravaisLattice):
 
 
 def get_subset_points(names, points):
-    newpoints = {}
-    for name in names:
-        newpoints[name] = points[name]
-
+    newpoints = {name: points[name] for name in names}
     return newpoints
 
 
@@ -1182,23 +1176,41 @@ def identify_lattice(cell, eps=2e-4, *, pbc=True):
                 op = normalization_op @ np.linalg.inv(reduction_op)
                 matching_lattices.append((lat, op))
 
-        # Among any matching lattices, return the one with lowest
-        # orthogonality defect:
-        best = None
-        best_defect = np.inf
-        for lat, op in matching_lattices:
-            cell = lat.tocell()
-            lengths = cell.lengths()[pbc]
-            generalized_volume = cell.complete().volume
-            defect = np.prod(lengths) / generalized_volume
-            if defect < best_defect:
-                best = lat, op
-                best_defect = defect
+        if not matching_lattices:
+            continue  # Move to next Bravais lattice
 
-        if best is not None:
-            return best
+        lat, op = pick_best_lattice(matching_lattices)
+
+        if npbc == 2 and op[2, 2] < 0:
+            op = flip_2d_handedness(op)
+
+        return lat, op
 
     raise RuntimeError('Failed to recognize lattice')
+
+
+def flip_2d_handedness(op):
+    # The 3x3 operation may flip the z axis, but then the x/y
+    # components are necessarily also left-handed which
+    # means a defacto left-handed 2D bandpath.
+    #
+    # We repair this by applying an operation that unflips the
+    # z axis and interchanges x/y:
+    repair_op = np.array([[0, 1, 0], [1, 0, 0], [0, 0, -1]])
+    return repair_op @ op
+
+
+def pick_best_lattice(matching_lattices):
+    """Return (lat, op) with lowest orthogonality defect."""
+    best = None
+    best_defect = np.inf
+    for lat, op in matching_lattices:
+        cell = lat.tocell().complete()
+        orthogonality_defect = np.prod(cell.lengths()) / cell.volume
+        if orthogonality_defect < best_defect:
+            best = lat, op
+            best_defect = orthogonality_defect
+    return best
 
 
 class LatticeChecker:
@@ -1257,10 +1269,9 @@ class LatticeChecker:
             lat = self.query(name)
             if lat:
                 return lat
-        else:
-            raise RuntimeError('Could not find lattice type for cell '
-                               'with lengths and angles {}'
-                               .format(self.cell.cellpar().tolist()))
+        raise RuntimeError('Could not find lattice type for cell '
+                           'with lengths and angles {}'
+                           .format(self.cell.cellpar().tolist()))
 
     def query(self, latname):
         """Match cell against named Bravais lattice.

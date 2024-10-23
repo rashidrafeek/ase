@@ -1,11 +1,11 @@
 """This test ensures that logging to a text file and to the trajectory file are
 reporting the same values as in the ContourExploration object."""
 
-import pytest
-from ase.md.contour_exploration import ContourExploration
 import numpy as np
-from ase import io
+import pytest
 
+from ase import io
+from ase.md.contour_exploration import ContourExploration
 
 from .test_ce_potentiostat import Al_block, bulk_Al_settings
 
@@ -40,14 +40,14 @@ def test_logging(testdir):
         stepsizes = [dyn.step_size]
         deviation_per_atom = [dev]
 
-        # we shift the target_energy to ensure it's actaully being logged when it
-        # changes.
+        # we shift the target_energy to ensure it's actaully being
+        # logged when it changes.
         de = 0.001 * len(atoms)
 
         # these print statements, mirror the log file.
         # print(energy_target, dyn.curvature, dyn.step_size, dev)
 
-        for i in range(0, 5):
+        for i in range(5):
             energy_target = initial_energy + de * i
 
             dyn.energy_target = energy_target
@@ -66,7 +66,7 @@ def test_logging(testdir):
         length = len(fd.readlines())
     assert length == 7, length
 
-    with io.Trajectory(traj_name, 'r') as traj, open(log_name, 'r') as fd:
+    with io.Trajectory(traj_name, 'r') as traj, open(log_name) as fd:
         # skip the first line because it's a small initialization step
         lines = fd.readlines()[1:]
         for i, (im, line) in enumerate(zip(traj, lines)):

@@ -1,9 +1,10 @@
-def test_h2o_xas_xes():
-    import ase.calculators.demon as demon
-    from ase import Atoms
-    #from ase.optimize import BFGS
-    import numpy as np
+import numpy as np
 
+import ase.calculators.demon as demon
+from ase import Atoms
+
+
+def test_h2o_xas_xes(demon_factory):
     # d = 0.9575
     d = 0.9775
     # t = np.pi / 180 * 104.51
@@ -20,7 +21,7 @@ def test_h2o_xas_xes():
     # XAS hch
     input_arguments = {'GRID': 'FINE',
                        'MOMODIFY': [[1, 0],
-                                    [1, 0.5]], 
+                                    [1, 0.5]],
                        'CHARGE': 0,
                        'XRAY': 'XAS'}
 
@@ -44,7 +45,7 @@ def test_h2o_xas_xes():
     print(error)
 
     tol = 1.0e-4
-    assert(error < tol)
+    assert error < tol
 
     # check xas
     results = calc.results
@@ -58,7 +59,7 @@ def test_h2o_xas_xes():
     print(error)
 
     tol = 1.0e-4
-    assert(error < tol)
+    assert error < tol
 
     print('xray, first transition, transition dipole moments')
     value = results['xray']['trans_dip'][0]
@@ -69,7 +70,7 @@ def test_h2o_xas_xes():
     print(error)
 
     tol = 1.0e-4
-    assert(error < tol)
+    assert error < tol
 
     # XES
     input_arguments = {'GRID': 'FINE',
@@ -91,13 +92,13 @@ def test_h2o_xas_xes():
     print('energy')
     energy = atoms.get_potential_energy()
     print(energy)
-    ref = -2079.6635944 
+    ref = -2079.6635944
     error = np.sqrt(np.sum((energy - ref)**2))
     print('diff from reference:')
     print(error)
 
     tol = 1.0e-4
-    assert(error < tol)
+    assert error < tol
 
     # check xes
     results = calc.results
@@ -111,7 +112,7 @@ def test_h2o_xas_xes():
     print(error)
 
     tol = 1.0e-4
-    assert(error < tol)
+    assert error < tol
 
     print('xray, first transition, transition dipole moments')
     value = results['xray']['trans_dip'][0]
@@ -122,12 +123,12 @@ def test_h2o_xas_xes():
     print(error)
 
     tol = 1.0e-4
-    assert(error < tol)
+    assert error < tol
 
     # and XPS
     input_arguments = {'GRID': 'FINE',
                        'MOMODIFY': [[1, 0],
-                                    [1, 0.0]], 
+                                    [1, 0.0]],
                        'CHARGE': 0,
                        'XRAY': 'XAS'}
 
@@ -152,12 +153,12 @@ def test_h2o_xas_xes():
     print(error)
 
     tol = 1.0e-4
-    assert(error < tol)
+    assert error < tol
 
     # First excited state
     input_arguments = {'GRID': 'FINE',
                        'MOMODIFY': [[1, 0],
-                                    [1, 0.0]], 
+                                    [1, 0.0]],
                        'CHARGE': -1}
 
     calc = demon.Demon(basis=basis,
@@ -181,6 +182,6 @@ def test_h2o_xas_xes():
     print(error)
 
     tol = 1.0e-4
-    assert(error < tol)
+    assert error < tol
 
     print('tests passed')

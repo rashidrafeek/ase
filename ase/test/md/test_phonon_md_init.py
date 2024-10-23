@@ -1,15 +1,15 @@
 import numpy as np
-from numpy.random import RandomState
 import pytest
-from ase.phonons import Phonons
-from ase.data import atomic_numbers
-from ase.optimize import FIRE
-#from asap3 import EMT
+from numpy.random import RandomState
+
 from ase.build import bulk
+from ase.data import atomic_numbers
 from ase.md.velocitydistribution import PhononHarmonics
+from ase.optimize import FIRE
+from ase.phonons import Phonons
 
 
-@pytest.mark.slow
+@pytest.mark.slow()
 def test_phonon_md_init(asap3, testdir):
     # Tests the phonon-based perturbation and velocity distribution
     # for thermal equilibration in MD.
@@ -94,11 +94,3 @@ def test_phonon_md_init(asap3, testdir):
     assert Terr < 0.1 * T, Terr  # error in Kelvin for instantaneous velocity
     # Epot == Ekin give or take 2 %:
     assert relative_imbalance < 0.1, relative_imbalance
-
-    if 0:
-        import matplotlib.pyplot as plt
-        I = np.arange(len(Epots))
-        plt.plot(I, Epots, 'o', label='pot')
-        plt.plot(I, Ekins, 'o', label='kin')
-        plt.plot(I, Etots, 'o', label='tot')
-        plt.show()

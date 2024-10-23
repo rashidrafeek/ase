@@ -1,19 +1,26 @@
 import os
 import socket
-from subprocess import Popen, PIPE
 from contextlib import contextmanager
+from subprocess import PIPE, Popen
 
 import numpy as np
 
-from ase.calculators.calculator import (Calculator, all_changes,
-                                        PropertyNotImplementedError)
 import ase.units as units
-from ase.utils import IOContext
+from ase.calculators.calculator import (
+    Calculator,
+    OldShellProfile,
+    PropertyNotImplementedError,
+    StandardProfile,
+    all_changes,
+)
+from ase.calculators.genericfileio import GenericFileIOCalculator
+from ase.parallel import world
 from ase.stress import full_3x3_to_voigt_6_stress
+from ase.utils import IOContext
 
 
 def actualunixsocketname(name):
-    return '/tmp/ipi_{}'.format(name)
+    return f'/tmp/ipi_{name}'
 
 
 class SocketClosed(OSError):
@@ -51,7 +58,7 @@ class IPIProtocol:
             chunk = self.socket.recv(remaining)
             if len(chunk) == 0:
                 # (If socket is still open, recv returns at least one byte)
-                raise SocketClosed()
+                raise SocketClosed
             chunks.append(chunk)
             remaining -= len(chunk)
         msg = b''.join(chunks)
@@ -61,7 +68,7 @@ class IPIProtocol:
     def recvmsg(self):
         msg = self._recvall(12)
         if not msg:
-            raise SocketClosed()
+            raise SocketClosed
 
         assert len(msg) == 12, msg
         msg = msg.rstrip().decode('ascii')
@@ -72,7 +79,7 @@ class IPIProtocol:
     def send(self, a, dtype):
         buf = np.asarray(a, dtype).tobytes()
         # self.log('  send {}'.format(np.array(a).ravel().tolist()))
-        self.log('  send {} bytes of {}'.format(len(buf), dtype))
+        self.log(f'  send {len(buf)} bytes of {dtype}')
         self.socket.sendall(buf)
 
     def recv(self, shape, dtype):
@@ -80,7 +87,7 @@ class IPIProtocol:
         nbytes = np.dtype(dtype).itemsize * np.prod(shape)
         buf = self._recvall(nbytes)
         assert len(buf) == nbytes, (len(buf), nbytes)
-        self.log('  recv {} bytes of {}'.format(len(buf), dtype))
+        self.log(f'  recv {len(buf)} bytes of {dtype}')
         # print(np.frombuffer(buf, dtype=dtype))
         a.flat[:] = np.frombuffer(buf, dtype=dtype)
         # self.log('  recv {}'.format(a.ravel().tolist()))
@@ -102,8 +109,7 @@ class IPIProtocol:
     def recvposdata(self):
         cell = self.recv((3, 3), np.float64).T.copy()
         icell = self.recv((3, 3), np.float64).T.copy()
-        natoms = self.recv(1, np.int32)
-        natoms = int(natoms)
+        natoms = self.recv(1, np.int32)[0]
         positions = self.recv((natoms, 3), np.float64)
         return cell * units.Bohr, icell / units.Bohr, positions * units.Bohr
 
@@ -113,17 +119,12 @@ class IPIProtocol:
         msg = self.recvmsg()
         assert msg == 'FORCEREADY', msg
         e = self.recv(1, np.float64)[0]
-        natoms = self.recv(1, np.int32)
+        natoms = self.recv(1, np.int32)[0]
         assert natoms >= 0
         forces = self.recv((int(natoms), 3), np.float64)
         virial = self.recv((3, 3), np.float64).T.copy()
-        nmorebytes = self.recv(1, np.int32)
-        nmorebytes = int(nmorebytes)
-        if nmorebytes > 0:
-            # Receiving 0 bytes will block forever on python2.
-            morebytes = self.recv(nmorebytes, np.byte)
-        else:
-            morebytes = b''
+        nmorebytes = self.recv(1, np.int32)[0]
+        morebytes = self.recv(nmorebytes, np.byte)
         return (e * units.Ha, (units.Ha / units.Bohr) * forces,
                 units.Ha * virial, morebytes)
 
@@ -191,9 +192,8 @@ class IPIProtocol:
         e, forces, virial, morebytes = self.sendrecv_force()
         r = dict(energy=e,
                  forces=forces,
-                 virial=virial)
-        if morebytes:
-            r['morebytes'] = morebytes
+                 virial=virial,
+                 morebytes=morebytes)
         return r
 
 
@@ -204,7 +204,7 @@ def bind_unixsocket(socketfile):
     try:
         serversocket.bind(socketfile)
     except OSError as err:
-        raise OSError('{}: {}'.format(err, repr(socketfile)))
+        raise OSError(f'{err}: {socketfile!r}')
 
     try:
         with serversocket:
@@ -229,19 +229,40 @@ class FileIOSocketClientLauncher:
 
     def __call__(self, atoms, properties=None, port=None, unixsocket=None):
         assert self.calc is not None
-        self.calc.write_input(atoms, properties=properties,
-                              system_changes=all_changes)
         cwd = self.calc.directory
+
         profile = getattr(self.calc, 'profile', None)
-        if profile is not None:
+        if isinstance(self.calc, GenericFileIOCalculator):
+            # New GenericFileIOCalculator:
+            template = getattr(self.calc, 'template')
+
+            self.calc.write_inputfiles(atoms, properties)
             if unixsocket is not None:
-                argv = profile.socketio_argv_unix(socket=unixsocket)
+                argv = template.socketio_argv(
+                    profile, unixsocket=unixsocket, port=None
+                )
             else:
-                argv = profile.socketio_argv_inet(port=port)
-            return Popen(argv, cwd=cwd)
+                argv = template.socketio_argv(
+                    profile, unixsocket=None, port=port
+                )
+            return Popen(argv, cwd=cwd, env=os.environ)
         else:
-            cmd = self.calc.command.replace('PREFIX', self.calc.prefix)
-            cmd = cmd.format(port=port, unixsocket=unixsocket)
+            # Old FileIOCalculator:
+            self.calc.write_input(atoms, properties=properties,
+                                  system_changes=all_changes)
+
+            if isinstance(profile, StandardProfile):
+                return profile.execute_nonblocking(self.calc)
+
+            if profile is None:
+                cmd = self.calc.command.replace('PREFIX', self.calc.prefix)
+                cmd = cmd.format(port=port, unixsocket=unixsocket)
+            elif isinstance(profile, OldShellProfile):
+                cmd = profile.command.replace("PREFIX", self.calc.prefix)
+            else:
+                raise TypeError(
+                    f"Profile type {type(profile)} not supported for socketio")
+
             return Popen(cmd, shell=True, cwd=cwd)
 
 
@@ -285,16 +306,16 @@ class SocketServer(IOContext):
 
         if unixsocket is not None:
             actualsocket = actualunixsocketname(unixsocket)
-            conn_name = 'UNIX-socket {}'.format(actualsocket)
+            conn_name = f'UNIX-socket {actualsocket}'
             socket_context = bind_unixsocket(actualsocket)
         else:
-            conn_name = 'INET port {}'.format(port)
+            conn_name = f'INET port {port}'
             socket_context = bind_inetsocket(port)
 
         self.serversocket = self.closelater(socket_context)
 
         if log:
-            print('Accepting clients on {}'.format(conn_name), file=log)
+            print(f'Accepting clients on {conn_name}', file=log)
 
         self.serversocket.settimeout(timeout)
 
@@ -308,7 +329,7 @@ class SocketServer(IOContext):
         self.clientsocket = None
         self.address = None
 
-        #if launch_client is not None:
+        # if launch_client is not None:
         #    self.proc = launch_client(port=port, unixsocket=unixsocket)
 
     def _accept(self):
@@ -343,7 +364,7 @@ class SocketServer(IOContext):
         if log:
             # For unix sockets, address is b''.
             source = ('client' if self.address == b'' else self.address)
-            print('Accepted connection from {}'.format(source), file=log)
+            print(f'Accepted connection from {source}', file=log)
 
         self.protocol = IPIProtocol(self.clientsocket, txt=log)
 
@@ -366,6 +387,7 @@ class SocketServer(IOContext):
             exitcode = self.proc.wait()
             if exitcode != 0:
                 import warnings
+
                 # Quantum Espresso seems to always exit with status 128,
                 # even if successful.
                 # Should investigate at some point
@@ -389,7 +411,7 @@ class SocketServer(IOContext):
 
 class SocketClient:
     def __init__(self, host='localhost', port=None,
-                 unixsocket=None, timeout=None, log=None, comm=None):
+                 unixsocket=None, timeout=None, log=None, comm=world):
         """Create client and connect to server.
 
         Parameters:
@@ -412,10 +434,6 @@ class SocketClient:
             will then be broadcast on the communicator.  The SocketClient
             must be created on all ranks of world, and will see the same
             Atoms objects."""
-        if comm is None:
-            from ase.parallel import world
-            comm = world
-
         # Only rank0 actually does the socket work.
         # The other ranks only need to follow.
         #
@@ -550,7 +568,7 @@ class SocketIOCalculator(Calculator, IOContext):
 
     def __init__(self, calc=None, port=None,
                  unixsocket=None, timeout=None, log=None, *,
-                 launch_client=None):
+                 launch_client=None, comm=world):
         """Initialize socket I/O calculator.
 
         This calculator launches a server which passes atomic
@@ -597,7 +615,9 @@ class SocketIOCalculator(Calculator, IOContext):
         In order to correctly close the sockets, it is
         recommended to use this class within a with-block:
 
-        >>> with SocketIOCalculator(...) as calc:
+        >>> from ase.calculators.socketio import SocketIOCalculator
+
+        >>> with SocketIOCalculator(...) as calc:  # doctest:+SKIP
         ...    atoms.calc = calc
         ...    atoms.get_forces()
         ...    atoms.rattle()
@@ -613,11 +633,10 @@ class SocketIOCalculator(Calculator, IOContext):
                 raise ValueError('Cannot pass both calc and launch_client')
             launch_client = FileIOSocketClientLauncher(calc)
         self.launch_client = launch_client
-        #self.calc = calc
         self.timeout = timeout
         self.server = None
 
-        self.log = self.openfile(log)
+        self.log = self.openfile(file=log, comm=comm)
 
         # We only hold these so we can pass them on to the server.
         # They may both be None as stored here.
@@ -634,13 +653,13 @@ class SocketIOCalculator(Calculator, IOContext):
     def todict(self):
         d = {'type': 'calculator',
              'name': 'socket-driver'}
-        #if self.calc is not None:
+        # if self.calc is not None:
         #    d['calc'] = self.calc.todict()
         return d
 
     def launch_server(self):
         return self.closelater(SocketServer(
-            #launch_client=launch_client,
+            # launch_client=launch_client,
             port=self._port,
             unixsocket=self._unixsocket,
             timeout=self.timeout, log=self.log,
@@ -686,8 +705,8 @@ class PySocketIOClient:
         self._calculator_factory = calculator_factory
 
     def __call__(self, atoms, properties=None, port=None, unixsocket=None):
-        import sys
         import pickle
+        import sys
 
         # We pickle everything first, so we won't need to bother with the
         # process as long as it succeeds.
@@ -706,8 +725,8 @@ class PySocketIOClient:
 
     @staticmethod
     def main():
-        import sys
         import pickle
+        import sys
 
         socketinfo, atoms, get_calculator = pickle.load(sys.stdin.buffer)
         atoms.calc = get_calculator()

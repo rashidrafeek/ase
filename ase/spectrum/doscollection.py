@@ -1,19 +1,27 @@
 import collections
 from functools import reduce, singledispatch
-from typing import (Any, Dict, Iterable, List, Optional,
-                    overload, Sequence, TypeVar, Union)
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import numpy as np
-from ase.spectrum.dosdata import DOSData, RawDOSData, GridDOSData, Info, Floats
-from ase.utils.plotting import SimplePlottingAxes
+from matplotlib.axes import Axes
 
-# This import is for the benefit of type-checking / mypy
-if False:
-    import matplotlib.axes
+from ase.spectrum.dosdata import DOSData, Floats, GridDOSData, Info, RawDOSData
+from ase.utils.plotting import SimplePlottingAxes
 
 
 class DOSCollection(collections.abc.Sequence):
     """Base class for a collection of DOSData objects"""
+
     def __init__(self, dos_series: Iterable[DOSData]) -> None:
         self._data = list(dos_series)
 
@@ -51,10 +59,10 @@ class DOSCollection(collections.abc.Sequence):
              xmax: float = None,
              width: float = 0.1,
              smearing: str = 'Gauss',
-             ax: 'matplotlib.axes.Axes' = None,
+             ax: Axes = None,
              show: bool = False,
              filename: str = None,
-             mplargs: dict = None) -> 'matplotlib.axes.Axes':
+             mplargs: dict = None) -> Axes:
         """Simple plot of collected DOS data, resampled onto a grid
 
         If the special key 'label' is present in self.info, this will be set
@@ -153,7 +161,7 @@ class DOSCollection(collections.abc.Sequence):
 
     @staticmethod
     def _check_weights_and_info(weights: Sequence[Floats],
-                                info: Union[Sequence[Info], None],
+                                info: Optional[Sequence[Info]],
                                 ) -> Sequence[Info]:
         if info is None:
             info = [{} for _ in range(len(weights))]
@@ -187,10 +195,10 @@ class DOSCollection(collections.abc.Sequence):
         """Compare with another DOSCollection for testing purposes"""
         if not isinstance(other, type(self)):
             return False
-        elif not len(self) == len(other):
+        elif len(self) != len(other):
             return False
         else:
-            return all([a._almost_equals(b) for a, b in zip(self, other)])
+            return all(a._almost_equals(b) for a, b in zip(self, other))
 
     def total(self) -> DOSData:
         """Sum all the DOSData in this Collection and label it as 'Total'"""
@@ -395,7 +403,8 @@ class GridDOSCollection(DOSCollection):
                 raise TypeError("GridDOSCollection can only store "
                                 "GridDOSData objects.")
             if (dos_data.get_energies().shape != self._energies.shape
-                or not np.allclose(dos_data.get_energies(), self._energies)):
+                    or not np.allclose(dos_data.get_energies(),
+                                       self._energies)):
                 raise ValueError("All GridDOSData objects in GridDOSCollection"
                                  " must have the same energy axis.")
             self._weights[i, :] = dos_data.get_weights()
@@ -533,10 +542,10 @@ class GridDOSCollection(DOSCollection):
              xmax: float = None,
              width: float = None,
              smearing: str = 'Gauss',
-             ax: 'matplotlib.axes.Axes' = None,
+             ax: Axes = None,
              show: bool = False,
              filename: str = None,
-             mplargs: dict = None) -> 'matplotlib.axes.Axes':
+             mplargs: dict = None) -> Axes:
         """Simple plot of collected DOS data, resampled onto a grid
 
         If the special key 'label' is present in self.info, this will be set
@@ -586,11 +595,11 @@ class GridDOSCollection(DOSCollection):
         return ax
 
     @staticmethod
-    def _plot_broadened(ax: 'matplotlib.axes.Axes',
+    def _plot_broadened(ax: Axes,
                         energies: Floats,
                         all_y: np.ndarray,
                         all_labels: Sequence[str],
-                        mplargs: Union[Dict, None]):
+                        mplargs: Optional[Dict]):
         """Plot DOS data with labels to axes
 
         This is separated into another function so that subclasses can

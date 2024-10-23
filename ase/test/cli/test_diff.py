@@ -1,13 +1,20 @@
-from ase.build import fcc100, add_adsorbate
-from ase.constraints import FixAtoms, FixedPlane
-from ase.calculators.emt import EMT
-from ase.optimize import QuasiNewton
 import re
+
 import pytest
-from ase.cli.template import prec_round, slice_split, \
-    MapFormatter, sym2num, \
-    Table, TableFormat
+
+from ase.build import add_adsorbate, fcc100
+from ase.calculators.emt import EMT
+from ase.cli.template import (
+    MapFormatter,
+    Table,
+    TableFormat,
+    prec_round,
+    slice_split,
+    sym2num,
+)
+from ase.constraints import FixAtoms, FixedPlane
 from ase.io import read
+from ase.optimize import QuasiNewton
 
 
 @pytest.fixture(scope="module")
@@ -72,7 +79,7 @@ def test_twoFiles_trueCalc_multipleImages(cli, traj):
             break
     dfx_ordered = [float(row[c]) for row in body]
     for i in range(len(dfx_ordered) - 2):
-        assert dfx_ordered[i] <= dfx_ordered[i+1]
+        assert dfx_ordered[i] <= dfx_ordered[i + 1]
 
 
 def test_cli_opt(cli, traj):

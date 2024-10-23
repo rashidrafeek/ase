@@ -1,8 +1,8 @@
 import numpy as np
 
 from ase.build import bulk
-from ase.constraints import FixScaled
 from ase.calculators.emt import EMT
+from ase.constraints import FixScaled
 
 
 def test_fixscaled():
@@ -16,7 +16,7 @@ def test_fixscaled():
 
     assert np.sum(np.abs(a.get_forces()[0])) < 1e-12
     assert np.sum(np.abs(a.get_positions() - pos)[0]) < 1e-12
-    assert np.sum(np.abs(a.get_positions() - pos*1.01)[1:].flatten()) < 1e-12
+    assert np.sum(np.abs(a.get_positions() - pos * 1.01)[1:].flatten()) < 1e-12
 
 
 def test_fixscaled_misc():

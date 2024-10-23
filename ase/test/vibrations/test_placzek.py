@@ -1,16 +1,19 @@
 """
 Test Placzek type resonant Raman implementations
 """
-import pytest
 from pathlib import Path
 
+import pytest
+
+from ase.calculators.h2morse import (
+    H2Morse,
+    H2MorseExcitedStates,
+    H2MorseExcitedStatesCalculator,
+)
 from ase.parallel import parprint, world
-from ase.vibrations.vibrations import Vibrations
-from ase.vibrations.resonant_raman import ResonantRamanCalculator
 from ase.vibrations.placzek import Placzek, Profeta
-from ase.calculators.h2morse import (H2Morse,
-                                     H2MorseExcitedStates,
-                                     H2MorseExcitedStatesCalculator)
+from ase.vibrations.resonant_raman import ResonantRamanCalculator
+from ase.vibrations.vibrations import Vibrations
 
 
 def test_summary(testdir):
@@ -90,8 +93,8 @@ def test_compare_placzek_implementation_intensities(testdir):
     atoms = H2Morse()
     name = 'placzek'
     with ResonantRamanCalculator(atoms, H2MorseExcitedStatesCalculator,
-                                  overlap=lambda x, y: x.overlap(y),
-                                  name=name, txt='-') as rmc:
+                                 overlap=lambda x, y: x.overlap(y),
+                                 name=name, txt='-') as rmc:
         rmc.run()
 
     om = 1

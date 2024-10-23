@@ -1,13 +1,14 @@
 """Operators that work on slabs.
 Allowed compositions are respected.
 Identical indexing of the slabs are assumed for the cut-splice operator."""
-from operator import itemgetter
 from collections import Counter
 from itertools import permutations
+from operator import itemgetter
+
 import numpy as np
 
-from ase.ga.offspring_creator import OffspringCreator
 from ase.ga.element_mutations import get_periodic_table_distance
+from ase.ga.offspring_creator import OffspringCreator
 from ase.utils import atoms_to_spglib_cell
 
 try:
@@ -49,8 +50,8 @@ def minority_element_segregate(atoms, layer_tag=1, rng=np.random):
     """Move the minority alloy element to the layer specified by the layer_tag,
     Atoms object should contain atoms with the corresponding tag."""
     sym = get_minority_element(atoms)
-    layer_indices = set([a.index for a in atoms if a.tag == layer_tag])
-    minority_indices = set([a.index for a in atoms if a.symbol == sym])
+    layer_indices = {a.index for a in atoms if a.tag == layer_tag}
+    minority_indices = {a.index for a in atoms if a.symbol == sym}
     change_indices = minority_indices - layer_indices
     in_layer_not_sym = list(layer_indices - minority_indices)
     rng.shuffle(in_layer_not_sym)
@@ -63,10 +64,10 @@ def minority_element_segregate(atoms, layer_tag=1, rng=np.random):
 def same_layer_comp(atoms, rng=np.random):
     unique_syms, comp = np.unique(sorted(atoms.get_chemical_symbols()),
                                   return_counts=True)
-    l = get_layer_comps(atoms)
-    sym_dict = dict((s, int(np.array(c) / len(l)))
-                    for s, c in zip(unique_syms, comp))
-    for la in l:
+    layer = get_layer_comps(atoms)
+    sym_dict = {s: int(np.array(c) / len(layer))
+                for s, c in zip(unique_syms, comp)}
+    for la in layer:
         correct_by = sym_dict.copy()
         lcomp = dict(
             zip(*np.unique([atoms[i].symbol for i in la], return_counts=True)))
@@ -93,7 +94,7 @@ def get_layer_comps(atoms, eps=1e-2):
 
 def get_ordered_composition(syms, pools=None):
     if pools is None:
-        pool_index = dict((sym, 0) for sym in set(syms))
+        pool_index = {sym: 0 for sym in set(syms)}
     else:
         pool_index = {}
         for i, pool in enumerate(pools):
@@ -174,7 +175,7 @@ class SlabOperator(OffspringCreator):
         # collect elements from individual pools
 
         diff = self.get_closest_composition_diff(stay_comp)
-        add_rem.update(dict((s, c) for s, c in zip(stay_syms, diff)))
+        add_rem.update({s: c for s, c in zip(stay_syms, diff)})
         return get_add_remove_lists(**add_rem)
 
     def get_closest_composition_diff(self, c):
@@ -184,7 +185,7 @@ class SlabOperator(OffspringCreator):
         self.rng.shuffle(allowed_list)
         for ac in allowed_list:
             diff = self.get_composition_diff(comp, ac)
-            numdiff = sum([abs(i) for i in diff])
+            numdiff = sum(abs(i) for i in diff)
             if numdiff < mindiff:
                 mindiff = numdiff
                 ccdiff = diff
@@ -199,8 +200,9 @@ class SlabOperator(OffspringCreator):
     def get_possible_mutations(self, a):
         unique_syms, comp = np.unique(sorted(a.get_chemical_symbols()),
                                       return_counts=True)
-        min_num = min([i for i in np.ravel(list(self.allowed_compositions))
-                       if i > 0])
+        min_num = min(
+            i for i in np.ravel(list(self.allowed_compositions)) if i > 0
+        )
         muts = set()
         for i, n in enumerate(comp):
             if n != 0:
@@ -248,8 +250,8 @@ class CutSpliceSlabCrossover(SlabOperator):
         indi = self.initialize_individual(f, self.operate(f, m))
         indi.info['data']['parents'] = [i.info['confid'] for i in parents]
 
-        parent_message = ': Parents {0} {1}'.format(f.info['confid'],
-                                                    m.info['confid'])
+        parent_message = ': Parents {} {}'.format(f.info['confid'],
+                                                  m.info['confid'])
         return (self.finalize_individual(indi),
                 self.descriptor + parent_message)
 
@@ -304,8 +306,8 @@ class CutSpliceSlabCrossover(SlabOperator):
 
 class RandomCompositionMutation(SlabOperator):
     """Change the current composition to another of the allowed compositions.
-    The allowed compositions should be input in the same order as the element pools,
-    for example:
+    The allowed compositions should be input in the same order as the element
+    pools, for example:
     element_pools = [['Au', 'Cu'], ['In', 'Bi']]
     allowed_compositions = [(6, 2), (5, 3)]
     means that there can be 5 or 6 Au and Cu, and 2 or 3 In and Bi.
@@ -324,7 +326,7 @@ class RandomCompositionMutation(SlabOperator):
 
     def get_new_individual(self, parents):
         f = parents[0]
-        parent_message = ': Parent {0}'.format(f.info['confid'])
+        parent_message = ': Parent {}'.format(f.info['confid'])
 
         if self.allowed_compositions is None:
             if len(set(f.get_chemical_symbols())) == 1:
@@ -397,7 +399,7 @@ class RandomElementMutation(SlabOperator):
         indi = self.initialize_individual(f, self.operate(f))
         indi.info['data']['parents'] = [i.info['confid'] for i in parents]
 
-        parent_message = ': Parent {0}'.format(f.info['confid'])
+        parent_message = ': Parent {}'.format(f.info['confid'])
         return (self.finalize_individual(indi),
                 self.descriptor + parent_message)
 
@@ -429,7 +431,7 @@ class NeighborhoodElementMutation(SlabOperator):
 
         indi = self.operate(indi)
 
-        parent_message = ': Parent {0}'.format(f.info['confid'])
+        parent_message = ': Parent {}'.format(f.info['confid'])
         return (self.finalize_individual(indi),
                 self.descriptor + parent_message)
 
@@ -479,11 +481,12 @@ class SymmetrySlabPermutation(SlabOperator):
         indi = self.initialize_individual(f, self.operate(f))
         indi.info['data']['parents'] = [i.info['confid'] for i in parents]
 
-        parent_message = ': Parent {0}'.format(f.info['confid'])
+        parent_message = ': Parent {}'.format(f.info['confid'])
         return (self.finalize_individual(indi),
                 self.descriptor + parent_message)
 
     def operate(self, atoms):
+        from ase.spacegroup.symmetrize import spglib_get_symmetry_dataset
         # Do the operation
         sym_num = 1
         sg = self.sym_goal
@@ -492,7 +495,7 @@ class SymmetrySlabPermutation(SlabOperator):
                 for _ in range(2):
                     permute2(atoms, rng=self.rng)
                 self.dcf(atoms)
-                sym_num = spglib.get_symmetry_dataset(
+                sym_num = spglib_get_symmetry_dataset(
                     atoms_to_spglib_cell(atoms))['number']
                 if sym_num >= sg:
                     break
@@ -525,7 +528,7 @@ class RandomSlabPermutation(SlabOperator):
 
         indi = self.operate(indi)
 
-        parent_message = ': Parent {0}'.format(f.info['confid'])
+        parent_message = ': Parent {}'.format(f.info['confid'])
         return (self.finalize_individual(indi),
                 self.descriptor + parent_message)
 

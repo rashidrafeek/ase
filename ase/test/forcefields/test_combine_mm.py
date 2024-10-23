@@ -1,22 +1,24 @@
+from math import cos, pi, sin
+
+import numpy as np
+
+from ase import Atoms, units
+from ase.calculators.combine_mm import CombineMM
+from ase.calculators.counterions import AtomicCounterIon as ACI
+from ase.calculators.qmmm import LJInteractionsGeneral
+from ase.calculators.tip3p import TIP3P, angleHOH, rOH
+from ase.calculators.tip3p import epsilon0 as eps3
+from ase.calculators.tip3p import sigma0 as sig3
+from ase.calculators.tip4p import TIP4P
+from ase.calculators.tip4p import epsilon0 as eps4
+from ase.calculators.tip4p import sigma0 as sig4
+
+
 def test_combine_mm():
     """Test CombineMM forces by combining tip3p and tip4p with them selves, and
        by combining tip3p with tip4p and testing against numerical forces.
 
        Also test LJInterationsGeneral with CombineMM """
-
-    from math import cos, sin, pi
-    import numpy as np
-    from ase import Atoms
-    from ase import units
-    from ase.calculators.counterions import AtomicCounterIon as ACI
-    from ase.calculators.combine_mm import CombineMM
-    from ase.calculators.qmmm import LJInteractionsGeneral
-    from ase.calculators.tip3p import TIP3P, rOH, angleHOH
-    from ase.calculators.tip4p import TIP4P
-    from ase.calculators.tip3p import epsilon0 as eps3
-    from ase.calculators.tip3p import sigma0 as sig3
-    from ase.calculators.tip4p import epsilon0 as eps4
-    from ase.calculators.tip4p import sigma0 as sig4
 
     def make_atoms():
         r = rOH
@@ -53,7 +55,7 @@ def test_combine_mm():
                                rc=rc, width=1.0)
 
         F2 = dimer.get_forces()
-        dF = F1-F2
+        dF = F1 - F2
         print(TIPnP)
         print(dF)
         assert abs(dF).max() < 1e-8
@@ -68,7 +70,7 @@ def test_combine_mm():
 
     F2 = dimer.get_forces()
     Fn = dimer.calc.calculate_numerical_forces(dimer, 1e-7)
-    dF = F2-Fn
+    dF = F2 - Fn
     print('TIP3P/TIP4P')
     print(dF)
     assert abs(dF).max() < 1e-8
@@ -86,7 +88,7 @@ def test_combine_mm():
 
     mmatoms = ions + dimer
 
-    sigNa = 1.868 * (1.0/2.0)**(1.0/6.0) * 10
+    sigNa = 1.868 * (1.0 / 2.0)**(1.0 / 6.0) * 10
     epsNa = 0.00277 * units.kcal / units.mol
 
     # ACI for atoms 0 and 1 of the MM subsystem (2 and 3 for the total system)

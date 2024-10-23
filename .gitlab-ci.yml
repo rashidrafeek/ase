@@ -1,16 +1,18 @@
----  # ASE Gitlab CI configuration
-
+--- # ASE Gitlab CI configuration
 
 variables:
   OMP_NUM_THREADS: "1"
-
 
 stages:
   - test
   - paperwork
   - deploy
 
-
+# Test a non-standard port (default is 3306) to prevent bugs like
+# https://gitlab.com/ase/ase/-/merge_requests/2789 from reoccuring
+# UPDATE: MYSQL_TCP_PORT does not work at all with gitlab-runner.
+# No matter what the variable is set to, it errors out.
+# Thus (temporarily?) disabled as of April 2023.
 .database-configuration:
   variables:
     POSTGRES_DB: testase
@@ -18,6 +20,7 @@ stages:
     POSTGRES_PASSWORD: "ase"
     MYSQL_DATABASE: testase_mysql
     MYSQL_ROOT_PASSWORD: ase
+    # MYSQL_TCP_PORT: 3306
 
   services:
     - postgres:latest
@@ -35,19 +38,15 @@ oldlibs:
   script:
     - pip install --no-deps .
     - >
-      ase test --pytest --color=yes
+      ase test -j0 --pytest --color=yes
       -W "ignore:can't resolve package"
       -W ignore::PendingDeprecationWarning
 
+
 # For testing newest versions of libraries against standard images
 # on dockerhub.
-#
-# psycopg2-binary is for testing the postgres backend for ase.db
-# Currently we have trouble with pyhon3.8 where we need to compile some
-# libraries that don't have binary wheels; we don't want to install gcc
-# in this test job.
 pipinstall:
-  image: python:3.8
+  image: python:3.11
   extends: .database-configuration
   script:
     - python --version
@@ -76,23 +75,39 @@ main:
     POSTGRES_PASSWORD: "ase"
     MYSQL_DATABASE: testase_mysql
     MYSQL_ROOT_PASSWORD: ase
+    # MYSQL_TCP_PORT: 3306
+
   services:
     - postgres:latest
     - mysql:latest
     - mariadb:latest
+
+  # We ignore a DeprecationWarning about --rsyncdir from pytest-xdist.
+  # This seems to be internal between pytest libs.
   script:
     - python --version
     - pip install --no-deps --editable .
     - ase info --calculators
     - cd $CI_PROJECT_DIR
-    - ase test --calculators asap,eam,ff,lj,morse,tip3p,tip4p --coverage --pytest --color=yes --durations 20
+    - >
+      ase test
+      --calculators asap,ff,lj,morse,tip3p,tip4p
+      --coverage --pytest --color=yes --durations 20 -v -r s
+      --junit-xml=report.xml
+      -W "ignore:The --rsyncdir command line argument"
+      -W "ignore:NumPy will stop allowing conversion of out-of-bound Python integers"
+    - coverage xml --data-file ase/test/.coverage
     - mv ase/test/coverage-html coverage-main
     - mv ase/test/.coverage coverage-main/coverage.dat
   artifacts:
     paths:
       - coverage-main/
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+      junit: ase/test/report.xml
     expire_in: 1 week
-
 
 # Calculator integration tests which always run.
 # Encompasses those tests marked as @pytest.mark.calculator_lite.
@@ -101,14 +116,25 @@ calculators-lite:
   image: registry.gitlab.com/ase/ase:ase-full-monty
   script:
     - pip install --no-deps --editable .
-    - ase test calculator --calculators=auto --coverage --pytest -m calculator_lite --color=yes --durations=20
+    - export ASE_CONFIG_PATH=/home/ase/aseconfig.ini
+    - sed 's/binary = /command = /' -i /home/ase/aseconfig.ini
+    - >
+      ase test calculator --calculators=auto --coverage
+      --pytest -m calculator_lite --color=yes --durations=20 -v
+      --junit-xml=report.xml -r s
+      -W "ignore:The --rsyncdir command line argument"
+    - coverage xml --data-file ase/test/.coverage
     - mv ase/test/coverage-html coverage-calculators-lite
     - mv ase/test/.coverage coverage-calculators-lite/coverage.dat
   artifacts:
     paths:
       - coverage-calculators-lite/
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+      junit: ase/test/report.xml
     expire_in: 1 week
-
 
 # Plan: Test as many calculators as possible as well as possible.
 # Obviously this is kind of expensive so the job is manually activated.
@@ -120,15 +146,48 @@ calculators:
   image: registry.gitlab.com/ase/ase:ase-full-monty
   script:
     - pip install --no-deps --editable .
+    - export ASE_CONFIG_PATH=/home/ase/aseconfig.ini
+    - sed 's/binary = /command = /' -i /home/ase/aseconfig.ini
     - ase info --calculators
-    - ase test calculator --calculators abinit,asap,cp2k,dftb,espresso,gpaw,kim,lammpslib,lammpsrun,nwchem,octopus,siesta --coverage --pytest --color=yes --durations 20
+    - >
+      ase test calculator --calculators abinit,asap,cp2k,dftb,espresso,gpaw,kim,lammpslib,lammpsrun,mopac,nwchem,octopus,siesta
+      --coverage --pytest --color=yes --durations 20 --junit-xml=report.xml
+      -W "ignore:The --rsyncdir command line argument"
+    - coverage xml --data-file ase/test/.coverage
     - mv ase/test/coverage-html coverage-calculators
     - mv ase/test/.coverage coverage-calculators/coverage.dat
-  when: manual
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "schedule"
   artifacts:
     paths:
       - coverage-calculators/
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+      junit: ase/test/report.xml
     expire_in: 1 week
+
+bleeding-edge:
+  image: python:3.12.4-alpine
+  variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/pip-cache"
+  before_script:
+    - pip install --editable .[test]
+    - pip freeze
+  script:
+    - >
+      ase test -j0 --pytest --color=yes -m 'not slow'
+      --ignore gui/ --ignore test_imports.py
+      --durations 20
+  cache:
+    paths:
+      - $PIP_CACHE_DIR
+    key: $CI_PROJECT_ID
+
 
 doc:
   image: registry.gitlab.com/ase/ase:ase-main
@@ -137,7 +196,7 @@ doc:
     - ase info
     - which sphinx-build
     - cd $CI_PROJECT_DIR/doc
-    - python -m ase.utils.sphinx run  # test scripts
+    - python -m ase.utils.sphinx run # test scripts
     - sphinx-build -W . build
   artifacts:
     paths:
@@ -162,7 +221,6 @@ distribution-package:
     expire_in: 1 week
   when: manual
 
-
 # Publish code coverage data on web.
 #  * The deploy stage is specially recognized by gitlab
 #  * The jobname pages is specially recognized by gitlab
@@ -181,15 +239,14 @@ pages:
   only:
     - master
 
-
 lint:
   image: registry.gitlab.com/ase/ase:ase-paperwork
   script:
     - cd $CI_PROJECT_DIR
+    - mypy --version
     - mypy --color-output -p ase
     - python -We:invalid -m compileall -f -q ase/
-    - flake8 .
-
+    - ruff check
 
 coverage-combine:
   image: registry.gitlab.com/ase/ase:ase-paperwork
@@ -198,7 +255,7 @@ coverage-combine:
     - main
     - calculators-lite
   script:
-    - cd ase/test  # Next to .coveragerc and friends
+    - cd ase/test # Next to .coveragerc and friends
     - coverage combine ../../coverage-main/coverage.dat ../../coverage-calculators-lite/coverage.dat
     - coverage report
     - coverage html
@@ -209,3 +266,30 @@ coverage-combine:
     paths:
       - coverage-html
     expire_in: 1 week
+
+windows_test:
+  tags:
+    - saas-windows-medium-amd64
+  stage: test
+  before_script:
+    # https://stackoverflow.com/questions/61791108/gitlab-ci-shared-windows-runner-for-python
+    # https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/gcp/windows-containers/-/issues/13
+    - Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
+    - choco install python --version=3.9 -y -f
+    - refreshenv
+    - python --version
+    - python -m pip install --upgrade pip
+    - python -m pip install pytest pytest-mock
+    - python -m pip install .
+  script:
+    - >
+      ase test
+      --calculators eam,ff,lj,morse,tip3p,tip4p
+      --pytest --color=yes --durations 20
+      -W "ignore:The --rsyncdir command line argument"
+      -W "ignore:NumPy will stop allowing conversion of out-of-bound Python integers"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "schedule"

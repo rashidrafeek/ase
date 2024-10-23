@@ -1,11 +1,15 @@
 import os
 import subprocess
-from warnings import warn
 from pathlib import Path
+from warnings import warn
 
 import numpy as np
-from ase.calculators.calculator import (BaseCalculator, FileIOCalculator,
-                                        Calculator)
+
+from ase.calculators.calculator import (
+    BaseCalculator,
+    Calculator,
+    FileIOCalculator,
+)
 from ase.io import write
 from ase.io.vasp import write_vasp
 from ase.parallel import world
@@ -130,12 +134,12 @@ class PureDFTD3(FileIOCalculator):
     This class is an implementation detail."""
 
     name = 'puredftd3'
-    command = 'dftd3'
 
     dftd3_properties = {'energy', 'free_energy', 'forces', 'stress'}
     implemented_properties = list(dftd3_properties)
     default_parameters = dftd3_defaults()
     damping_methods = {'zero', 'bj', 'zerom', 'bjm'}
+    _legacy_default_command = 'dftd3'
 
     def __init__(self,
                  *,
@@ -144,10 +148,18 @@ class PureDFTD3(FileIOCalculator):
                  comm=world,
                  **kwargs):
 
+        # FileIOCalculator would default to self.name to get the envvar
+        # which determines the command.
+        # We'll have to overrule that if we want to keep scripts working:
+        command = command or self.cfg.get('ASE_DFTD3_COMMAND')
+
         super().__init__(label=label,
                          command=command,
                          **kwargs)
 
+        # TARP: This is done because the calculator does not call
+        # FileIOCalculator.calculate, but Calculator.calculate and does not
+        # use the profile defined in FileIOCalculator.__init__
         self.comm = comm
 
     def set(self, **kwargs):
@@ -189,7 +201,7 @@ class PureDFTD3(FileIOCalculator):
         # stresses) can be bypassed. This will greatly speed up calculations
         # in dense 3D-periodic systems with three-body corrections. But, we
         # can no longer say that we implement forces and stresses.
-        #if not self.parameters['grad']:
+        # if not self.parameters['grad']:
         #    for val in ['forces', 'stress']:
         #        if val in self.implemented_properties:
         #            self.implemented_properties.remove(val)
@@ -279,7 +291,7 @@ class PureDFTD3(FileIOCalculator):
                 errorcode = subprocess.call(command,
                                             cwd=self.directory, stdout=fd)
 
-        errorcode = self.comm.sum(errorcode)
+        errorcode = self.comm.sum_scalar(errorcode)
 
         if errorcode:
             raise RuntimeError('%s returned an error: %d' %
@@ -316,13 +328,13 @@ class PureDFTD3(FileIOCalculator):
     def _actually_write_input(self, directory, prefix, atoms, properties,
                               damppars, pbc):
         if pbc:
-            fname = directory / '{}.POSCAR'.format(prefix)
+            fname = directory / f'{prefix}.POSCAR'
             # We sort the atoms so that the atomtypes list becomes as
             # short as possible.  The dftd3 program can only handle 10
             # atomtypes
             write_vasp(fname, atoms, sort=True)
         else:
-            fname = directory / '{}.xyz'.format(prefix)
+            fname = directory / f'{prefix}.xyz'
             write(fname, atoms, format='xyz', parallel=False)
 
         # Generate custom damping parameters file. This is kind of ugly, but

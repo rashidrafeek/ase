@@ -1,13 +1,13 @@
 import pytest
 
 from ase.build import molecule
-from ase.vibrations import Infrared
 from ase.test.utils import RandomCalculator
+from ase.vibrations import Infrared
 
 
 def test_folding(testdir):
     """Test that folding is consitent with intensities"""
-    
+
     atoms = molecule('C2H6')
     atoms.calc = RandomCalculator()
     ir = Infrared(atoms)

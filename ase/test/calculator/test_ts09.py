@@ -1,9 +1,9 @@
 import pytest
+
 from ase import io
-from ase.calculators.vdwcorrection import (vdWTkatchenko09prl,
-                                           TS09Polarizability)
-from ase.calculators.emt import EMT
 from ase.build import bulk, molecule
+from ase.calculators.emt import EMT
+from ase.calculators.vdwcorrection import TS09Polarizability, vdWTkatchenko09prl
 
 
 # fake objects for the test
@@ -34,7 +34,7 @@ def test_ts09(testdir):
     a = 4.05  # Angstrom lattice spacing
     al = bulk('Al', 'fcc', a=a)
     al = al.repeat([2, 2, 1])
-    
+
     cc = FakeDFTcalculator()
     hp = FakeHirshfeldPartitioning(cc)
     c = vdWTkatchenko09prl(hp, [3] * len(al))
@@ -43,7 +43,7 @@ def test_ts09(testdir):
 
     assert (al.get_potential_energy(force_consistent=False)
             == al.get_potential_energy(force_consistent=True))
-    
+
     fname = 'out.traj'
     al.write(fname)
 

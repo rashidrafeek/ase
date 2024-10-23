@@ -9,11 +9,9 @@ University of Minnesota
 """
 import numpy as np
 
-from ase.calculators.calculator import Calculator
-from ase.calculators.calculator import compare_atoms
+from ase.calculators.calculator import Calculator, compare_atoms
 
-from . import kimpy_wrappers
-from . import neighborlist
+from . import kimpy_wrappers, neighborlist
 
 
 class KIMModelData:
@@ -55,12 +53,12 @@ class KIMModelData:
         object
         """
         if self.kim_initialized:
-            return
+            return None
 
         kim_model = kimpy_wrappers.PortableModel(self.model_name, self.debug)
 
-        # KIM API model object is what actually creates/destroys the ComputeArguments
-        # object, so we must pass it as a parameter
+        # KIM API model object is what actually creates/destroys the
+        # ComputeArguments object, so we must pass it as a parameter
         compute_args = kim_model.compute_arguments_create()
 
         return kim_model, compute_args
@@ -121,12 +119,13 @@ class KIMModelData:
                 species integer code (e.g. 1)
         """
         supported_species, codes = self._get_model_supported_species_and_codes()
-        species_map = dict()
+        species_map = {}
         for i, spec in enumerate(supported_species):
             species_map[spec] = codes[i]
             if self.debug:
                 print(
-                    "Species {} is supported and its code is: {}".format(spec, codes[i])
+                    "Species {} is supported and its code is: {}".format(
+                        spec, codes[i])
                 )
 
         return species_map
@@ -225,9 +224,10 @@ class KIMModelCalculator(Calculator):
         self.energy = None
         self.forces = None
 
-        # Create KIMModelData object. This will take care of creating and storing the KIM
-        # API Portable Model object, KIM API ComputeArguments object, and the neighbor
-        # list object that our calculator needs
+        # Create KIMModelData object. This will take care of creating
+        # and storing the KIM API Portable Model object, KIM API
+        # ComputeArguments object, and the neighbor list object that
+        # our calculator needs
         self._kimmodeldata = KIMModelData(
             self.model_name, ase_neigh, self.neigh_skin_ratio, self.debug
         )
@@ -241,7 +241,7 @@ class KIMModelCalculator(Calculator):
         pass
 
     def __repr__(self):
-        return "KIMModelCalculator(model_name={})".format(self.model_name)
+        return f"KIMModelCalculator(model_name={self.model_name})"
 
     def calculate(
         self,
@@ -300,7 +300,8 @@ class KIMModelCalculator(Calculator):
 
         try:
             volume = atoms.get_volume()
-            stress = self._compute_virial_stress(self.forces, self._coords, volume)
+            stress = self._compute_virial_stress(
+                self.forces, self._coords, volume)
         except ValueError:  # Volume cannot be computed
             stress = None
 

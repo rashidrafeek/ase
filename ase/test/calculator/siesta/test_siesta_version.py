@@ -1,5 +1,7 @@
+from ase.calculators.siesta.siesta import parse_siesta_version
+
+
 def test_siesta_version():
-    from ase.calculators.siesta.siesta import parse_siesta_version
 
     def test(txt, reference):
         buf = txt.encode('ascii')
@@ -16,8 +18,10 @@ def test_siesta_version():
     test('Siesta Version: siesta-3.0-rc2', 'siesta-3.0-rc2')
     test('Siesta Version:                                        siesta-3.1',
          'siesta-3.1')
-    test('Siesta Version:                                        siesta-3.2-pl-5',
+    test('Siesta Version:                                        '
+         'siesta-3.2-pl-5',
          'siesta-3.2-pl-5')
     test('Siesta Version: siesta-4.0--500', 'siesta-4.0--500')
     test('Siesta Version  : v4.0.2', 'v4.0.2')
     test('Siesta Version: siesta-4.1--736', 'siesta-4.1--736')
+    test('  Version         : 5.0.0', '5.0.0')

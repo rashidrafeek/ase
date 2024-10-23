@@ -1,8 +1,9 @@
+# flake8: noqa
+import numpy as np
 import pytest
 
-import numpy as np
-from ase.io import ParseError
 import ase.io.vasp_parsers.vasp_outcar_parsers as vop
+from ase.io import ParseError
 
 
 def compare_result_to_expected(result, exp):
@@ -69,13 +70,20 @@ def test_convert_stress(stress, expected):
     assert np.allclose(vop.convert_vasp_outcar_stress(stress), expected)
 
 
-@pytest.mark.parametrize('line, expected', [
-    ("  in kB      -4.29429    -4.58894    -4.50342     0.50047    -0.94049     0.36481",
-     [-4.29429, -4.58894, -4.50342, 0.50047, -0.94049, 0.36481]),
-    ("  in kB     -47.95544   -39.91706   -34.79627     9.20266   -15.74132    -1.85167",
-     [-47.95544, -39.91706, -34.79627, 9.20266, -15.74132, -1.85167]),
-],
-                         ids=['stress1', 'stress2'])
+L1 = ("  in kB      -4.29429    -4.58894    -4.50342 "
+      "    0.50047    -0.94049     0.36481")
+L2 = ("  in kB     -47.95544   -39.91706   -34.79627  "
+      "   9.20266   -15.74132    -1.85167")
+
+
+@pytest.mark.parametrize(
+    'line, expected',
+    [
+        (L1,
+         [-4.29429, -4.58894, -4.50342, 0.50047, -0.94049, 0.36481]),
+        (L2,
+         [-47.95544, -39.91706, -34.79627, 9.20266, -15.74132, -1.85167])],
+    ids=['stress1', 'stress2'])
 def test_stress(line, expected, do_test_stress):
     """Test reading a particular line for parsing stress"""
     do_test_stress(line, vop.convert_vasp_outcar_stress(expected))
@@ -161,6 +169,19 @@ def test_magmom(do_test_parser):
     do_test_parser(header, cursor, lines, parser, expected)
 
 
+def test_non_collinear_magmom(do_test_parser):
+    lines = """
+     number of electron      31.9999969 magnetization       6.0504868     -0.0017494     -0.0024904
+     """
+    lines = lines.splitlines()
+    cursor = 1
+    header = {}
+    expected = {'magmom': [6.0504868, -0.0017494, -0.0024904]}
+
+    parser = vop.Magmom()
+    do_test_parser(header, cursor, lines, parser, expected)
+
+
 def test_magmom_wrong_line():
     """Test a line which we test should not be read as magmom"""
     lines = ['   NELECT =     180.0000    total number of electrons']
@@ -189,6 +210,47 @@ def test_magmoms(do_test_parser):
     header = {'natoms': 6}
     expected = {'magmoms': [-0.038, -0.038, -0.038, -0.038, -0.053, 3.231]}
 
+    parser = vop.Magmoms()
+    do_test_parser(header, cursor, lines, parser, expected)
+
+
+def test_non_collinearmagmoms(do_test_parser):
+    lines = """
+     magnetization (x)
+
+    # of ion       s       p       d       tot
+    ------------------------------------------
+        1        0.143   0.564   4.442   5.149
+        2        0.143   0.564   4.441   5.148
+    --------------------------------------------------
+    tot          0.285   1.129   8.883  10.297
+
+
+
+     magnetization (y)
+
+    # of ion       s       p       d       tot
+    ------------------------------------------
+        1       -0.000  -0.000  -0.005  -0.005
+        2        0.000   0.000   0.002   0.002
+    --------------------------------------------------
+    tot         -0.000   0.000  -0.003  -0.003
+
+
+
+     magnetization (z)
+
+    # of ion       s       p       d       tot
+    ------------------------------------------
+        1       -0.000   0.000  -0.004  -0.004
+        2        0.000   0.000   0.001   0.001
+    --------------------------------------------------
+    tot         -0.000   0.001  -0.004  -0.003
+    """
+    lines = lines.splitlines()
+    cursor = 1
+    header = {'natoms': 2}
+    expected = {'magmoms': [[5.149, -0.005, -0.004], [5.148, 0.002, 0.001]]}
     parser = vop.Magmoms()
     do_test_parser(header, cursor, lines, parser, expected)
 

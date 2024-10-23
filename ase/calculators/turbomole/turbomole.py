@@ -11,17 +11,22 @@ Contact: Ivan Kondov <ivan.kondov@kit.edu>
 import os
 import re
 import warnings
-from math import log10, floor
+from math import floor, log10
+
 import numpy as np
-from ase.units import Ha, Bohr
-from ase.io import read, write
-from ase.calculators.calculator import FileIOCalculator
-from ase.calculators.calculator import PropertyNotImplementedError, ReadError
-from ase.calculators.turbomole.executor import execute, get_output_filename
-from ase.calculators.turbomole.writer import add_data_group, delete_data_group
+
+from ase.calculators.calculator import (
+    Calculator,
+    PropertyNotImplementedError,
+    ReadError,
+)
 from ase.calculators.turbomole import reader
-from ase.calculators.turbomole.reader import read_data_group, read_convergence
+from ase.calculators.turbomole.executor import execute, get_output_filename
 from ase.calculators.turbomole.parameters import TurbomoleParameters
+from ase.calculators.turbomole.reader import read_convergence, read_data_group
+from ase.calculators.turbomole.writer import add_data_group, delete_data_group
+from ase.io import read, write
+from ase.units import Bohr, Ha
 
 
 class TurbomoleOptimizer:
@@ -46,7 +51,7 @@ class TurbomoleOptimizer:
         self.calc.parameters['task'] = 'energy'
 
 
-class Turbomole(FileIOCalculator):
+class Turbomole(Calculator):
 
     """constants"""
     name = 'Turbomole'
@@ -65,7 +70,7 @@ class Turbomole(FileIOCalculator):
     tm_tmp_files = [
         'errvec', 'fock', 'oldfock', 'dens', 'ddens', 'diff_densmat',
         'diff_dft_density', 'diff_dft_oper', 'diff_fockmat', 'diis_errvec',
-        'diis_oldfock'
+        'diis_oldfock', 'dh'
     ]
 
     # initialize attributes
@@ -177,7 +182,9 @@ class Turbomole(FileIOCalculator):
         self.atoms = None
         self.results = {}
         self.results['calculation parameters'] = {}
-        ase_files = [f for f in os.listdir(self.directory) if f.startswith('ASE.TM.')]
+        ase_files = [
+            f for f in os.listdir(
+                self.directory) if f.startswith('ASE.TM.')]
         for f in self.tm_files + self.tm_tmp_files + ase_files:
             if os.path.exists(f):
                 os.remove(f)
@@ -226,7 +233,7 @@ class Turbomole(FileIOCalculator):
         if not self.atoms:
             raise RuntimeError('atoms missing during initialization')
         if not os.path.isfile('coord'):
-            raise IOError('file coord not found')
+            raise OSError('file coord not found')
 
         # run define
         define_str = self.parameters.get_define_str(len(self.atoms))
@@ -290,6 +297,8 @@ class Turbomole(FileIOCalculator):
             return
         self.initialize()
         jobex_command = ['jobex']
+        if self.parameters['transition vector']:
+            jobex_command.append('-trans')
         if self.parameters['use resolution of identity']:
             jobex_command.append('-ri')
         if self.parameters['force convergence']:
@@ -360,6 +369,8 @@ class Turbomole(FileIOCalculator):
                     nforce_cmd.append('-central')
                 if 'delta' in pdict.keys():
                     nforce_cmd.extend(['-d', str(pdict['delta'] / Bohr)])
+                if self.update_forces:
+                    self.get_forces(atoms)
                 execute(nforce_cmd)
             self.update_hessian = False
 
@@ -649,6 +660,7 @@ class Turbomole(FileIOCalculator):
 
 class PointChargePotential:
     """Point-charge potential for Turbomole"""
+
     def __init__(self, mmcharges, mmpositions=None):
         self.mmcharges = mmcharges
         self.mmpositions = mmpositions

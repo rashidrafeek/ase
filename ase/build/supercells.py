@@ -1,6 +1,9 @@
 """Helper functions for creating supercells."""
 
+import warnings
+
 import numpy as np
+
 from ase import Atoms
 
 
@@ -9,7 +12,8 @@ class SupercellError(Exception):
 
 
 def get_deviation_from_optimal_cell_shape(cell, target_shape="sc", norm=None):
-    r"""
+    r"""Calculate the deviation from the target cell shape.
+
     Calculates the deviation of the given cell metric from the ideal
     cell metric defining a certain shape. Specifically, the function
     evaluates the expression `\Delta = || Q \mathbf{h} -
@@ -18,6 +22,10 @@ def get_deviation_from_optimal_cell_shape(cell, target_shape="sc", norm=None):
     while the target metric `\mathbf{h}_{target}` (via
     *target_shape*) represent simple cubic ('sc') or face-centered
     cubic ('fcc') cell shapes.
+
+    Replaced with code from the `doped` defect simulation package
+    (https://doped.readthedocs.io) to be rotationally invariant,
+    boosting performance.
 
     Parameters:
 
@@ -31,15 +39,34 @@ def get_deviation_from_optimal_cell_shape(cell, target_shape="sc", norm=None):
         recomputing the normalization factor when computing the
         deviation for a series of P matrices.
 
-    """
+    Returns:
+        float: Cell metric (0 is perfect score)
 
-    if target_shape in ["sc", "simple-cubic"]:
-        target_metric = np.eye(3)
-    elif target_shape in ["fcc", "face-centered cubic"]:
-        target_metric = 0.5 * np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]])
-    if not norm:
-        norm = (np.linalg.det(cell) / np.linalg.det(target_metric))**(-1.0 / 3)
-    return np.linalg.norm(norm * cell - target_metric)
+    .. deprecated:: 3.24.0
+        `norm` is unused in ASE 3.24.0 and removed in ASE 3.25.0.
+
+    """
+    if norm is not None:
+        warnings.warn(
+            '`norm` is unused in ASE 3.24.0 and removed in ASE 3.25.0',
+            FutureWarning,
+        )
+
+    cell_lengths = np.linalg.norm(cell, axis=1)
+    eff_cubic_length = float(abs(np.linalg.det(cell)) ** (1 / 3))  # 'a_0'
+
+    if target_shape == 'sc':
+        target_length = eff_cubic_length
+
+    elif target_shape == 'fcc':
+        # FCC is characterised by 60 degree angles & lattice vectors = 2**(1/6)
+        # times the eff cubic length:
+        target_length = eff_cubic_length * 2 ** (1 / 6)
+
+    inv_target_length = 1.0 / target_length
+
+    # rms difference to eff cubic/FCC length:
+    return np.sqrt(np.sum((cell_lengths * inv_target_length - 1.0) ** 2))
 
 
 def find_optimal_cell_shape(
@@ -50,16 +77,24 @@ def find_optimal_cell_shape(
     upper_limit=2,
     verbose=False,
 ):
-    """Returns the transformation matrix that produces a supercell
+    """Obtain the optimal transformation matrix for a supercell of target size
+    and shape.
+
+    Returns the transformation matrix that produces a supercell
     corresponding to *target_size* unit cells with metric *cell* that
     most closely approximates the shape defined by *target_shape*.
+
+    Updated with code from the `doped` defect simulation package
+    (https://doped.readthedocs.io) to be rotationally invariant and
+    allow transformation matrices with negative determinants, boosting
+    performance.
 
     Parameters:
 
     cell: 2D array of floats
         Metric given as a (3x3 matrix) of the input structure.
     target_size: integer
-        Size of desired super cell in number of unit cells.
+        Size of desired supercell in number of unit cells.
     target_shape: str
         Desired supercell shape. Can be 'sc' for simple cubic or
         'fcc' for face-centered cubic.
@@ -71,12 +106,16 @@ def find_optimal_cell_shape(
         Set to True to obtain additional information regarding
         construction of transformation matrix.
 
+    Returns:
+        2D array of integers: Transformation matrix that produces the
+        optimal supercell.
     """
+    cell = np.asarray(cell)
 
     # Set up target metric
-    if target_shape in ["sc", "simple-cubic"]:
+    if target_shape == 'sc':
         target_metric = np.eye(3)
-    elif target_shape in ["fcc", "face-centered cubic"]:
+    elif target_shape == 'fcc':
         target_metric = 0.5 * np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]],
                                        dtype=float)
     if verbose:
@@ -84,8 +123,8 @@ def find_optimal_cell_shape(
         print(target_metric)
 
     # Normalize cell metric to reduce computation time during looping
-    norm = (target_size * np.linalg.det(cell) /
-            np.linalg.det(target_metric))**(-1.0 / 3)
+    norm = (target_size * abs(np.linalg.det(cell)) /
+            np.linalg.det(target_metric)) ** (-1.0 / 3)
     norm_cell = norm * cell
     if verbose:
         print("normalization factor (Q): %g" % norm)
@@ -105,13 +144,20 @@ def find_optimal_cell_shape(
 
     best_score = 1e6
     optimal_P = None
-    for dP in product(range(lower_limit, upper_limit + 1), repeat=9):
-        dP = np.array(dP, dtype=int).reshape(3, 3)
-        P = starting_P + dP
-        if int(np.around(np.linalg.det(P), 0)) != target_size:
-            continue
-        score = get_deviation_from_optimal_cell_shape(
-            np.dot(P, norm_cell), target_shape=target_shape, norm=1.0)
+
+    # Build a big matrix of all admissible integer matrix operations.
+    # (If this takes too much memory we could do blocking but there are
+    # too many for looping one by one.)
+    operations = np.array([
+        *product(range(lower_limit, upper_limit + 1), repeat=9)
+    ]).reshape(-1, 3, 3) + starting_P
+    determinants = np.linalg.det(operations)
+
+    good_indices = np.where(abs(determinants - target_size) < 1e-12)[0]
+
+    for i in good_indices:
+        P = operations[i]
+        score = get_deviation_from_optimal_cell_shape(P @ cell, target_shape)
         if score < best_score:
             best_score = score
             optimal_P = P
@@ -119,6 +165,9 @@ def find_optimal_cell_shape(
     if optimal_P is None:
         print("Failed to find a transformation matrix.")
         return None
+
+    if np.linalg.det(optimal_P) <= 0:
+        optimal_P *= -1  # flip signs if negative determinant
 
     # Finalize.
     if verbose:
@@ -132,7 +181,7 @@ def find_optimal_cell_shape(
     return optimal_P
 
 
-def make_supercell(prim, P, wrap=True, tol=1e-5):
+def make_supercell(prim, P, *, wrap=True, order="cell-major", tol=1e-5):
     r"""Generate a supercell by applying a general transformation (*P*) to
     the input configuration (*prim*).
 
@@ -150,6 +199,18 @@ def make_supercell(prim, P, wrap=True, tol=1e-5):
         Transformation matrix `\mathbf{P}`.
     wrap: bool
         wrap in the end
+    order: str (default: "cell-major")
+        how to order the atoms in the supercell
+
+        "cell-major":
+        [atom1_shift1, atom2_shift1, ..., atom1_shift2, atom2_shift2, ...]
+        i.e. run first over all the atoms in cell1 and then move to cell2.
+
+        "atom-major":
+        [atom1_shift1, atom1_shift2, ..., atom2_shift1, atom2_shift2, ...]
+        i.e. run first over atom1 in all the cells and then move to atom2.
+        This may be the order preferred by most VASP users.
+
     tol: float
         tolerance for wrapping
     """
@@ -160,14 +221,15 @@ def make_supercell(prim, P, wrap=True, tol=1e-5):
     # cartesian lattice points
     lattice_points_frac = lattice_points_in_supercell(supercell_matrix)
     lattice_points = np.dot(lattice_points_frac, supercell)
-
-    shifted = prim.positions[:, None] + lattice_points
     N = len(lattice_points)
 
-    # Reshape such that the order is [atom1_shift1, atom2_shift1, atom1_shift2, atom2_shift2, ...]
-    # i.e. alternating between atom 1 and atom 2
-    # This preserves the order from older implementations.
-    shifted_reshaped = np.reshape(shifted, (len(prim) * N, 3), order="F")
+    if order == "cell-major":
+        shifted = prim.positions[None, :, :] + lattice_points[:, None, :]
+    elif order == "atom-major":
+        shifted = prim.positions[:, None, :] + lattice_points[None, :, :]
+    else:
+        raise ValueError(f"invalid order: {order}")
+    shifted_reshaped = shifted.reshape(-1, 3)
 
     superatoms = Atoms(positions=shifted_reshaped,
                        cell=supercell,
@@ -178,8 +240,11 @@ def make_supercell(prim, P, wrap=True, tol=1e-5):
         if name == "positions":
             # This was added during construction of the super cell
             continue
-        # Shape borrowed from atoms.__imul__
-        new_arr = np.tile(arr, (N, ) + (1, ) * (len(arr.shape) - 1))
+        shape = (N * arr.shape[0], *arr.shape[1:])
+        if order == "cell-major":
+            new_arr = np.repeat(arr[None, :], N, axis=0).reshape(shape)
+        elif order == "atom-major":
+            new_arr = np.repeat(arr[:, None], N, axis=1).reshape(shape)
         superatoms.set_array(name, new_arr)
 
     # check number of atoms is correct

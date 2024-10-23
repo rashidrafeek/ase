@@ -1,11 +1,14 @@
-"""Test suit for the CP2K ASE calulator.
+# flake8: noqa
+
+"""Test the CP2K ASE calulator.
 
 http://www.cp2k.org
 Author: Ole Schuett <ole.schuett@mat.ethz.ch>
 """
 
-import pytest
 from io import StringIO
+
+import pytest
 
 from ase.io.cp2k import read_cp2k_restart
 
@@ -13,7 +16,7 @@ from ase.io.cp2k import read_cp2k_restart
 @pytest.fixture
 def inp():
     return StringIO("""\
- # Version information for this restart file 
+ # Version information for this restart file
  &MOTION
    &CELL_OPT
      MAX_ITER  800

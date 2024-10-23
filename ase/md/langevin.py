@@ -1,10 +1,11 @@
 """Langevin dynamics class."""
+from typing import IO, Optional, Union
 
 import numpy as np
 
+from ase import Atoms, units
 from ase.md.md import MolecularDynamics
-from ase.parallel import world, DummyMPI
-from ase import units
+from ase.parallel import DummyMPI, world
 
 
 class Langevin(MolecularDynamics):
@@ -13,10 +14,22 @@ class Langevin(MolecularDynamics):
     # Helps Asap doing the right thing.  Increment when changing stuff:
     _lgv_version = 5
 
-    def __init__(self, atoms, timestep, temperature=None, friction=None,
-                 fixcm=True, *, temperature_K=None, trajectory=None,
-                 logfile=None, loginterval=1, communicator=world,
-                 rng=None, append_trajectory=False):
+    def __init__(
+        self,
+        atoms: Atoms,
+        timestep: float,
+        temperature: Optional[float] = None,
+        friction: Optional[float] = None,
+        fixcm: bool = True,
+        *,
+        temperature_K: Optional[float] = None,
+        trajectory: Optional[str] = None,
+        logfile: Optional[Union[IO, str]] = None,
+        loginterval: int = 1,
+        communicator=world,
+        rng=None,
+        append_trajectory: bool = False,
+    ):
         """
         Parameters:
 
@@ -33,7 +46,9 @@ class Langevin(MolecularDynamics):
             The desired temperature, in Kelvin.
 
         friction: float
-            A friction coefficient, typically 1e-4 to 1e-2.
+            A friction coefficient in inverse ASE time units.
+            For example, set ``0.01 / ase.units.fs`` to provide
+            0.01 fs\\ :sup:`−1` (10 ps\\ :sup:`−1`).
 
         fixcm: bool (optional)
             If True, the position and momentum of the center of mass is
@@ -132,9 +147,9 @@ class Langevin(MolecularDynamics):
         if forces is None:
             forces = atoms.get_forces(md=True)
 
-        # This velocity as well as rnd_pos, rnd_mom and a few other variables are stored
-        # as attributes, so Asap can do its magic when atoms migrate between
-        # processors.
+        # This velocity as well as rnd_pos, rnd_mom and a few other
+        # variables are stored as attributes, so Asap can do its magic
+        # when atoms migrate between processors.
         self.v = atoms.get_velocities()
 
         xi = self.rng.standard_normal(size=(natoms, 3))
@@ -152,14 +167,15 @@ class Langevin(MolecularDynamics):
         self.communicator.broadcast(xi, 0)
         self.communicator.broadcast(eta, 0)
 
-        # To keep the center of mass stationary, we have to calculate the random
-        # perturbations to the positions and the momenta, and make sure that they
-        # sum to zero.
+        # To keep the center of mass stationary, we have to calculate
+        # the random perturbations to the positions and the momenta,
+        # and make sure that they sum to zero.
         self.rnd_pos = self.c5 * eta
         self.rnd_vel = self.c3 * xi - self.c4 * eta
         if self.fix_com:
             self.rnd_pos -= self.rnd_pos.sum(axis=0) / natoms
-            self.rnd_vel -= (self.rnd_vel * self.masses).sum(axis=0) / (self.masses * natoms)
+            self.rnd_vel -= (self.rnd_vel *
+                             self.masses).sum(axis=0) / (self.masses * natoms)
 
         # First halfstep in the velocity.
         self.v += (self.c1 * forces / self.masses - self.c2 * self.v +

@@ -1,21 +1,23 @@
 import datetime
-import sys
 
 import sphinx_rtd_theme
 
-sys.path.append('.')
-assert sys.version_info >= (3, 6)
-
-extensions = ['ext',
+extensions = ['ase.utils.sphinx',
               'sphinx.ext.autodoc',
               'sphinx.ext.doctest',
               'sphinx.ext.extlinks',
               'sphinx.ext.mathjax',
               'sphinx.ext.viewcode',
               'sphinx.ext.napoleon',
-              'sphinx.ext.intersphinx']
-extlinks = {'doi': ('https://doi.org/%s', 'doi: %s'),
-            'arxiv': ('https://arxiv.org/abs/%s', 'arXiv: %s')}
+              'sphinx.ext.intersphinx',
+              'sphinx.ext.imgconverter']
+
+extlinks = {
+    'doi': ('https://doi.org/%s', 'doi: %s'),
+    'arxiv': ('https://arxiv.org/abs/%s', 'arXiv: %s'),
+    'mr': ('https://gitlab.com/ase/ase/-/merge_requests/%s', 'MR: !%s'),
+    'issue': ('https://gitlab.com/ase/ase/-/issues/%s', 'issue: #%s'),
+}
 source_suffix = '.rst'
 master_doc = 'index'
 project = 'ASE'
@@ -28,8 +30,6 @@ autoclass_content = 'both'
 modindex_common_prefix = ['ase.']
 nitpick_ignore = [('envvar', 'VASP_PP_PATH'),
                   ('envvar', 'ASE_ABC_COMMAND'),
-                  ('envvar', 'FLEUR_INPGEN'),
-                  ('envvar', 'FLEUR'),
                   ('envvar', 'LAMMPS_COMMAND'),
                   ('envvar', 'ASE_NWCHEM_COMMAND'),
                   ('envvar', 'SIESTA_COMMAND'),
@@ -46,10 +46,11 @@ html_last_updated_fmt = '%a, %d %b %Y %H:%M:%S'
 latex_elements = {'papersize': 'a4paper'}
 latex_show_urls = 'inline'
 latex_show_pagerefs = True
+latex_engine = 'xelatex'
 latex_documents = [
     ('index', 'ASE.tex', 'ASE', 'ASE-developers', 'howto', not True)]
 
-intersphinx_mapping = {'gpaw': ('https://wiki.fysik.dtu.dk/gpaw', None),
+intersphinx_mapping = {'gpaw': ('https://gpaw.readthedocs.io', None),
                        'python': ('https://docs.python.org/3.10', None)}
 
 # Avoid GUI windows during doctest:
