@@ -1,7 +1,5 @@
 import datetime
 
-import sphinx_rtd_theme
-
 extensions = ['ase.utils.sphinx',
               'sphinx.ext.autodoc',
               'sphinx.ext.doctest',
