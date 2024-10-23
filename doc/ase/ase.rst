@@ -87,4 +87,3 @@ Modules
    parallel
    atom
    transport/transport
-   calculators/qmmm
