@@ -960,21 +960,11 @@ class PrimitiveNeighborList:
         if natoms == 0:
             return
 
-        N = []
-        ircell = np.linalg.pinv(rcell)
-        for i in range(3):
-            if self.pbc[i]:
-                v = ircell[:, i]
-                h = 1 / np.linalg.norm(v)
-                n = int(2 * rcmax / h) + 1
-            else:
-                n = 0
-            N.append(n)
-
         tree = cKDTree(positions, copy_data=True)
         offsets = cell.scaled_positions(positions - positions0)
         offsets = offsets.round().astype(int)
 
+        N = _calc_expansion(rcell, pbc, rcmax)
         for n1, n2, n3 in itertools.product(range(N[0] + 1),
                                             range(-N[1], N[1] + 1),
                                             range(-N[2], N[2] + 1)):
@@ -1061,6 +1051,21 @@ class PrimitiveNeighborList:
         bothways=True was used."""
 
         return self.neighbors[a], self.displacements[a]
+
+
+def _calc_expansion(rcell, pbc, rcmax):
+    r"""Calculate expansion to contain a sphere of radius `2.0 * rcmax`.
+
+    This function determines the minimum supercell (parallelepiped) that
+    contains a sphere of radius `2.0 * rcmax`. For this, `a_1` is projected
+    onto the unit vector perpendicular to `a_2 \times a_3` (i.e. the unit
+    vector along the direction `b_1`) to know how many `a_1`'s the supercell
+    takes to contain the sphere.
+    """
+    ircell = np.linalg.pinv(rcell)
+    vs = np.sqrt(np.add.reduce(ircell**2, axis=0))
+    ns = np.where(pbc, np.ceil(2.0 * rcmax * vs), 0.0)
+    return ns.astype(int)
 
 
 class NeighborList:
