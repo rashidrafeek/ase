@@ -972,6 +972,7 @@ class PrimitiveNeighborList:
                 continue
 
             displacement = (n1, n2, n3) @ rcell
+            shift0 = (n1, n2, n3) @ op
             for a in range(natoms):
 
                 indices = tree.query_ball_point(positions[a] - displacement,
@@ -991,7 +992,7 @@ class PrimitiveNeighborList:
 
                 self.neighbors[a] = np.concatenate((self.neighbors[a], i))
 
-                disp = (n1, n2, n3) @ op + offsets[i] - offsets[a]
+                disp = shift0 + offsets[i] - offsets[a]
                 self.displacements[a] = np.concatenate((self.displacements[a],
                                                         disp))
 
