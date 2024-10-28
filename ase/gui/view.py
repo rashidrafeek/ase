@@ -55,11 +55,20 @@ def get_cell_coordinates(cell, shifted=False):
 
 
 def get_bonds(atoms, covalent_radii):
-    from ase.neighborlist import NeighborList
-    nl = NeighborList(covalent_radii * 1.5,
-                      skin=0, self_interaction=False)
-    nl.update(atoms)
-    nbonds = nl.nneighbors + nl.npbcneighbors
+    from ase.neighborlist import PrimitiveNeighborList
+
+    nl = PrimitiveNeighborList(
+        covalent_radii * 1.5,
+        skin=0.0,
+        self_interaction=False,
+        bothways=False,
+    )
+    nl.update(atoms.pbc, atoms.get_cell(complete=True), atoms.positions)
+    number_of_neighbors = sum(indices.size for indices in nl.neighbors)
+    number_of_pbc_neighbors = sum(
+        offsets.any(axis=1).sum() for offsets in nl.displacements
+    )  # sum up all neighbors that have non-zero supercell offsets
+    nbonds = number_of_neighbors + number_of_pbc_neighbors
 
     bonds = np.empty((nbonds, 5), int)
     if nbonds == 0:
