@@ -1014,17 +1014,7 @@ class PrimitiveNeighborList:
                 self.displacements[a] = disp.astype(int).reshape((-1, 3))
 
         if self.sorted:
-            for a in range(natoms):
-                # sort first by neighbors and then offsets
-                keys = (
-                    self.displacements[a][:, 2],
-                    self.displacements[a][:, 1],
-                    self.displacements[a][:, 0],
-                    self.neighbors[a],
-                )
-                mask = np.lexsort(keys)
-                self.neighbors[a] = self.neighbors[a][mask]
-                self.displacements[a] = self.displacements[a][mask]
+            _sort_neighbors(self.neighbors, self.displacements)
 
     def get_neighbors(self, a):
         """Return neighbors of atom number a.
@@ -1067,6 +1057,21 @@ def _calc_expansion(rcell, pbc, rcmax):
     vs = np.sqrt(np.add.reduce(ircell**2, axis=0))
     ns = np.where(pbc, np.ceil(2.0 * rcmax * vs), 0.0)
     return ns.astype(int)
+
+
+def _sort_neighbors(neighbors, offsets):
+    """Sort neighbors first by indices and then offsets."""
+    natoms = len(neighbors)
+    for a in range(natoms):
+        keys = (
+            offsets[a][:, 2],
+            offsets[a][:, 1],
+            offsets[a][:, 0],
+            neighbors[a]
+        )
+        mask = np.lexsort(keys)
+        neighbors[a] = neighbors[a][mask]
+        offsets[a] = offsets[a][mask]
 
 
 class NeighborList:
