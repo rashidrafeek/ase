@@ -982,8 +982,9 @@ class PrimitiveNeighborList:
 
                 indices = np.array(indices)
                 delta = positions[indices] + displacement - positions[a]
+                distances = np.sqrt(np.add.reduce(delta**2, axis=1))
                 cutoffs = self.cutoffs[indices] + self.cutoffs[a]
-                i = indices[np.linalg.norm(delta, axis=1) < cutoffs]
+                i = indices[distances < cutoffs]
                 if n1 == 0 and n2 == 0 and n3 == 0:
                     if self.self_interaction:
                         i = i[i >= a]
