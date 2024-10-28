@@ -943,10 +943,7 @@ class PrimitiveNeighborList:
             raise ValueError('Wrong number of cutoff radii: {} != {}'
                              .format(len(self.cutoffs), len(coordinates)))
 
-        if len(self.cutoffs) > 0:
-            rcmax = self.cutoffs.max()
-        else:
-            rcmax = 0.0
+        rcmax = self.cutoffs.max() if len(self.cutoffs) > 0 else 0.0
 
         if self.use_scaled_positions:
             positions0 = cell.cartesian_positions(coordinates)
@@ -989,7 +986,7 @@ class PrimitiveNeighborList:
 
                 indices = tree.query_ball_point(positions[a] - displacement,
                                                 r=self.cutoffs[a] + rcmax)
-                if not len(indices):
+                if not indices:
                     continue
 
                 indices = np.array(indices)
