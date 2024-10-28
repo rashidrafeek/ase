@@ -973,10 +973,14 @@ class PrimitiveNeighborList:
 
             displacement = (n1, n2, n3) @ rcell
             shift0 = (n1, n2, n3) @ op
+            indices_all = tree.query_ball_point(
+                positions - displacement,
+                r=self.cutoffs + rcmax,
+            )
             for a in range(natoms):
 
-                indices = tree.query_ball_point(positions[a] - displacement,
-                                                r=self.cutoffs[a] + rcmax)
+                indices = indices_all[a]
+
                 if not indices:
                     continue
 
