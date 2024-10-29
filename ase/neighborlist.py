@@ -13,6 +13,7 @@ from ase.geometry import (
     minkowski_reduce,
     wrap_positions,
 )
+from ase.utils import deprecated
 
 
 def natural_cutoffs(atoms, mult=1, **kwargs):
@@ -797,8 +798,6 @@ class NewPrimitiveNeighborList:
         self.bothways = bothways
         self.nupdates = 0
         self.use_scaled_positions = use_scaled_positions
-        self.nneighbors = 0
-        self.npbcneighbors = 0
 
     def update(self, pbc, cell, positions, numbers=None):
         """Make sure the list is up to date."""
@@ -908,8 +907,6 @@ class PrimitiveNeighborList:
         self.bothways = bothways
         self.nupdates = 0
         self.use_scaled_positions = use_scaled_positions
-        self.nneighbors = 0
-        self.npbcneighbors = 0
 
     def update(self, pbc, cell, coordinates):
         """Make sure the list is up to date.
@@ -960,8 +957,6 @@ class PrimitiveNeighborList:
         positions = wrap_positions(positions0, rcell, pbc=pbc, eps=0)
 
         natoms = len(positions)
-        self.nneighbors = 0
-        self.npbcneighbors = 0
         self.neighbors = [np.empty(0, int) for _ in range(natoms)]
         self.displacements = [np.empty((0, 3), int) for _ in range(natoms)]
         self.nupdates += 1
@@ -1007,11 +1002,9 @@ class PrimitiveNeighborList:
                     else:
                         i = i[i > a]
 
-                self.nneighbors += len(i)
                 self.neighbors[a] = np.concatenate((self.neighbors[a], i))
 
                 disp = (n1, n2, n3) @ op + offsets[i] - offsets[a]
-                self.npbcneighbors += disp.any(1).sum()
                 self.displacements[a] = np.concatenate((self.displacements[a],
                                                         disp))
 
@@ -1150,11 +1143,31 @@ class NeighborList:
         return self.nl.nupdates
 
     @property
+    @deprecated(
+        'Use, e.g., `sum(_.size for _ in nl.neighbors)` '
+        'for `bothways=False` and `self_interaction=False`.'
+    )
     def nneighbors(self):
-        """Get number of neighbors."""
-        return self.nl.nneighbors
+        """Get number of neighbors.
+
+        .. deprecated:: 3.24.0
+        """
+        nneighbors = sum(indices.size for indices in self.nl.neighbors)
+        if self.nl.self_interaction:
+            nneighbors -= len(self.nl.neighbors)
+        return nneighbors // 2 if self.nl.bothways else nneighbors
 
     @property
+    @deprecated(
+        'Use, e.g., `sum(_.any(1).sum() for _ in nl.displacements)` '
+        'for `bothways=False` and `self_interaction=False`.'
+    )
     def npbcneighbors(self):
-        """Get number of pbc neighbors."""
-        return self.nl.npbcneighbors
+        """Get number of pbc neighbors.
+
+        .. deprecated:: 3.24.0
+        """
+        nneighbors = sum(
+            offsets.any(axis=1).sum() for offsets in self.nl.displacements
+        )  # sum up all neighbors that have non-zero supercell offsets
+        return nneighbors // 2 if self.nl.bothways else nneighbors
