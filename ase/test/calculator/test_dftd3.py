@@ -3,7 +3,7 @@ import pytest
 
 from ase.build import bulk
 from ase.calculators.emt import EMT
-from ase.calculators.test import numeric_forces, numeric_stress
+from ase.calculators.fd import numeric_forces, numeric_stress
 from ase.data.s22 import create_s22_system
 
 releps = 1e-6

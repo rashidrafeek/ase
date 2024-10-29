@@ -3,8 +3,8 @@ from scipy.optimize import check_grad
 
 from ase import Atoms
 from ase.build import bulk
+from ase.calculators.fd import numeric_forces, numeric_stress
 from ase.calculators.morse import MorsePotential, fcut, fcut_d
-from ase.calculators.test import numeric_forces, numeric_stress
 from ase.vibrations import Vibrations
 
 De = 5.

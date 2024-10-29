@@ -898,13 +898,13 @@ class Calculator(BaseCalculator):
         """Calculate numerical forces using finite difference.
 
         All atoms will be displaced by +d and -d in all directions."""
-        from ase.calculators.test import numeric_forces
+        from ase.calculators.fd import numeric_forces
 
         return numeric_forces(atoms, d=d)
 
     def calculate_numerical_stress(self, atoms, d=1e-6, voigt=True):
         """Calculate numerical stress using finite difference."""
-        from ase.calculators.test import numeric_stress
+        from ase.calculators.fd import numeric_stress
 
         return numeric_stress(atoms, d=d, voigt=voigt)
 
