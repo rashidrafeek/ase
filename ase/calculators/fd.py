@@ -17,7 +17,7 @@ class FiniteDifferenceCalculator(BaseCalculator):
     def __init__(
         self,
         calc: BaseCalculator,
-        dforces: float = 1e-3,
+        dforces: float = 1e-6,
         dstress: float = 1e-6,
     ) -> None:
         """
@@ -26,7 +26,7 @@ class FiniteDifferenceCalculator(BaseCalculator):
         ----------
         calc : :class:`~ase.calculators.calculator.BaseCalculator`
             ASE Calculator object to be wrapped.
-        dforces : float, default 1e-3
+        dforces : float, default 1e-6
             Step size used for computing forces.
         dstress : float, default 1e-6
             Step size used for computing stress.
@@ -48,7 +48,7 @@ class FiniteDifferenceCalculator(BaseCalculator):
         self.results['free_energy'] = self.results['energy']
 
 
-def _numeric_force(atoms: Atoms, a: int, i: int, d: float = 0.001) -> float:
+def _numeric_force(atoms: Atoms, a: int, i: int, d: float = 1e-6) -> float:
     """Calculate numerical force on a specific atom along a specific direction.
 
     Parameters
@@ -59,7 +59,7 @@ def _numeric_force(atoms: Atoms, a: int, i: int, d: float = 0.001) -> float:
         Index of atoms.
     i : {0, 1, 2}
         Index of Cartesian component.
-    d : float, default 0.001
+    d : float, default 1e-6
         Step size.
 
     """
@@ -77,7 +77,7 @@ def _numeric_force(atoms: Atoms, a: int, i: int, d: float = 0.001) -> float:
 
 def calc_numerical_forces(
     atoms: Atoms,
-    d: float = 0.001,
+    d: float = 1e-6,
 ) -> np.ndarray:
     """Calculate forces numerically based on the finite-difference method.
 
