@@ -2,7 +2,7 @@ import numpy as np
 
 from ase import Atoms, units
 from ase.calculators.counterions import AtomicCounterIon as ACI
-from ase.calculators.fd import calc_numerical_forces
+from ase.calculators.fd import calculate_numerical_forces
 
 
 def test_counterions():
@@ -21,6 +21,6 @@ def test_counterions():
 
     for _ in points:
         f = atoms.get_forces()
-        fn = calc_numerical_forces(atoms, 1e-5)
+        fn = calculate_numerical_forces(atoms, 1e-5)
         df = (f - fn)
         assert abs(df).max() < 1e-8

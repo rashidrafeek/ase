@@ -42,8 +42,8 @@ class FiniteDifferenceCalculator(BaseCalculator):
         atoms.calc = self.calc
         self.results = {
             'energy': atoms.get_potential_energy(),
-            'forces': calc_numerical_forces(atoms, d=self.dforces),
-            'stress': calc_numerical_stress(atoms, d=self.dstress),
+            'forces': calculate_numerical_forces(atoms, d=self.dforces),
+            'stress': calculate_numerical_stress(atoms, d=self.dstress),
         }
         self.results['free_energy'] = self.results['energy']
 
@@ -75,7 +75,7 @@ def _numeric_force(atoms: Atoms, a: int, i: int, d: float = 1e-6) -> float:
     return (eminus - eplus) / (2 * d)
 
 
-def calc_numerical_forces(
+def calculate_numerical_forces(
     atoms: Atoms,
     d: float = 1e-6,
 ) -> np.ndarray:
@@ -98,7 +98,7 @@ def calc_numerical_forces(
                       for i in range(3)] for a in range(len(atoms))])
 
 
-def calc_numerical_stress(
+def calculate_numerical_stress(
     atoms: Atoms,
     d: float = 1e-6,
     voigt: bool = True,

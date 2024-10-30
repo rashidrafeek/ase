@@ -5,7 +5,7 @@ import numpy as np
 from ase import Atoms, units
 from ase.calculators.combine_mm import CombineMM
 from ase.calculators.counterions import AtomicCounterIon as ACI
-from ase.calculators.fd import calc_numerical_forces
+from ase.calculators.fd import calculate_numerical_forces
 from ase.calculators.qmmm import LJInteractionsGeneral
 from ase.calculators.tip3p import TIP3P, angleHOH, rOH
 from ase.calculators.tip3p import epsilon0 as eps3
@@ -70,7 +70,7 @@ def test_combine_mm():
                            sig1, eps1, sig2, eps2, rc, 1.0)
 
     F2 = dimer.get_forces()
-    Fn = calc_numerical_forces(dimer, 1e-7)
+    Fn = calculate_numerical_forces(dimer, 1e-7)
     dF = F2 - Fn
     print('TIP3P/TIP4P')
     print(dF)
