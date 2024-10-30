@@ -15,7 +15,7 @@ from ase.calculators.abc import GetPropertiesMixin
 from ase.cell import Cell
 from ase.config import cfg as _cfg
 from ase.outputs import Properties, all_outputs
-from ase.utils import jsonable
+from ase.utils import deprecated, jsonable
 
 from .names import names
 
@@ -894,16 +894,24 @@ class Calculator(BaseCalculator):
                 )
                 raise RuntimeError(msg) from e
 
+    @deprecated('Please use `ase.calculators.fd.FiniteDifferenceCalculator`.')
     def calculate_numerical_forces(self, atoms, d=0.001):
         """Calculate numerical forces using finite difference.
 
-        All atoms will be displaced by +d and -d in all directions."""
+        All atoms will be displaced by +d and -d in all directions.
+
+        .. deprecated:: 3.24.0
+        """
         from ase.calculators.fd import calc_numerical_forces
 
         return calc_numerical_forces(atoms, d=d)
 
+    @deprecated('Please use `ase.calculators.fd.FiniteDifferenceCalculator`.')
     def calculate_numerical_stress(self, atoms, d=1e-6, voigt=True):
-        """Calculate numerical stress using finite difference."""
+        """Calculate numerical stress using finite difference.
+
+        .. deprecated:: 3.24.0
+        """
         from ase.calculators.fd import calc_numerical_stress
 
         return calc_numerical_stress(atoms, d=d, voigt=voigt)
