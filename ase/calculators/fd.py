@@ -49,15 +49,26 @@ class FiniteDifferenceCalculator(BaseCalculator):
 
 
 def numeric_force(atoms: Atoms, a: int, i: int, d: float = 0.001) -> float:
-    """Compute numeric force on atom with index a, Cartesian component i,
-    with finite step of size d
+    """Calculate numerical force on a specific atom along a specific direction.
+
+    Parameters
+    ----------
+    atoms : :class:`~ase.Atoms`
+        ASE :class:`~ase.Atoms` object.
+    a : int
+        Index of atoms.
+    i : {0, 1, 2}
+        Index of Cartesian component.
+    d : float, default 0.001
+        Step size.
+
     """
     p0 = atoms.get_positions()
     p = p0.copy()
-    p[a, i] += d
+    p[a, i] = p0[a, i] + d
     atoms.set_positions(p, apply_constraint=False)
     eplus = atoms.get_potential_energy()
-    p[a, i] -= 2 * d
+    p[a, i] = p0[a, i] - d
     atoms.set_positions(p, apply_constraint=False)
     eminus = atoms.get_potential_energy()
     atoms.set_positions(p0, apply_constraint=False)
@@ -72,8 +83,8 @@ def numeric_forces(
 
     Parameters
     ----------
-    atoms : :class:~`ase.Atoms`
-        ASE :class:~`ase.Atoms` object.
+    atoms : :class:`~ase.Atoms`
+        ASE :class:`~ase.Atoms` object.
     d : float, default 1e-6
         Displacement.
 
@@ -96,8 +107,8 @@ def numeric_stress(
 
     Parameters
     ----------
-    atoms : :class:~`ase.Atoms`
-        ASE :class:~`ase.Atoms` object.
+    atoms : :class:`~ase.Atoms`
+        ASE :class:`~ase.Atoms` object.
     d : float, default 1e-6
         Strain in the Voigt notation.
     voigt : bool, default True
