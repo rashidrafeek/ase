@@ -9,6 +9,7 @@ Git master branch
 
 :git:`master <>`.
 
+* Added :class:`ase.calculators.fd.FiniteDifferenceCalculator` (:mr:`3509`)
 * Improved :func:`~ase.build.find_optimal_cell_shape` to be rotationally
   invariant (:mr:`3404`)
 * Added :class:`ase.md.bussi.Bussi` (:mr:`3350`)
