@@ -943,10 +943,7 @@ class PrimitiveNeighborList:
             raise ValueError('Wrong number of cutoff radii: {} != {}'
                              .format(len(self.cutoffs), len(coordinates)))
 
-        if len(self.cutoffs) > 0:
-            rcmax = self.cutoffs.max()
-        else:
-            rcmax = 0.0
+        rcmax = self.cutoffs.max() if len(self.cutoffs) > 0 else 0.0
 
         if self.use_scaled_positions:
             positions0 = cell.cartesian_positions(coordinates)
@@ -963,21 +960,11 @@ class PrimitiveNeighborList:
         if natoms == 0:
             return
 
-        N = []
-        ircell = np.linalg.pinv(rcell)
-        for i in range(3):
-            if self.pbc[i]:
-                v = ircell[:, i]
-                h = 1 / np.linalg.norm(v)
-                n = int(2 * rcmax / h) + 1
-            else:
-                n = 0
-            N.append(n)
-
         tree = cKDTree(positions, copy_data=True)
         offsets = cell.scaled_positions(positions - positions0)
         offsets = offsets.round().astype(int)
 
+        N = _calc_expansion(rcell, pbc, rcmax)
         for n1, n2, n3 in itertools.product(range(N[0] + 1),
                                             range(-N[1], N[1] + 1),
                                             range(-N[2], N[2] + 1)):
@@ -985,17 +972,23 @@ class PrimitiveNeighborList:
                 continue
 
             displacement = (n1, n2, n3) @ rcell
+            shift0 = (n1, n2, n3) @ op
+            indices_all = tree.query_ball_point(
+                positions - displacement,
+                r=self.cutoffs + rcmax,
+            )
             for a in range(natoms):
 
-                indices = tree.query_ball_point(positions[a] - displacement,
-                                                r=self.cutoffs[a] + rcmax)
-                if not len(indices):
+                indices = indices_all[a]
+
+                if not indices:
                     continue
 
                 indices = np.array(indices)
                 delta = positions[indices] + displacement - positions[a]
+                distances = np.sqrt(np.add.reduce(delta**2, axis=1))
                 cutoffs = self.cutoffs[indices] + self.cutoffs[a]
-                i = indices[np.linalg.norm(delta, axis=1) < cutoffs]
+                i = indices[distances < cutoffs]
                 if n1 == 0 and n2 == 0 and n3 == 0:
                     if self.self_interaction:
                         i = i[i >= a]
@@ -1004,7 +997,7 @@ class PrimitiveNeighborList:
 
                 self.neighbors[a] = np.concatenate((self.neighbors[a], i))
 
-                disp = (n1, n2, n3) @ op + offsets[i] - offsets[a]
+                disp = shift0 + offsets[i] - offsets[a]
                 self.displacements[a] = np.concatenate((self.displacements[a],
                                                         disp))
 
@@ -1026,17 +1019,7 @@ class PrimitiveNeighborList:
                 self.displacements[a] = disp.astype(int).reshape((-1, 3))
 
         if self.sorted:
-            for a in range(natoms):
-                # sort first by neighbors and then offsets
-                keys = (
-                    self.displacements[a][:, 2],
-                    self.displacements[a][:, 1],
-                    self.displacements[a][:, 0],
-                    self.neighbors[a],
-                )
-                mask = np.lexsort(keys)
-                self.neighbors[a] = self.neighbors[a][mask]
-                self.displacements[a] = self.displacements[a][mask]
+            _sort_neighbors(self.neighbors, self.displacements)
 
     def get_neighbors(self, a):
         """Return neighbors of atom number a.
@@ -1064,6 +1047,36 @@ class PrimitiveNeighborList:
         bothways=True was used."""
 
         return self.neighbors[a], self.displacements[a]
+
+
+def _calc_expansion(rcell, pbc, rcmax):
+    r"""Calculate expansion to contain a sphere of radius `2.0 * rcmax`.
+
+    This function determines the minimum supercell (parallelepiped) that
+    contains a sphere of radius `2.0 * rcmax`. For this, `a_1` is projected
+    onto the unit vector perpendicular to `a_2 \times a_3` (i.e. the unit
+    vector along the direction `b_1`) to know how many `a_1`'s the supercell
+    takes to contain the sphere.
+    """
+    ircell = np.linalg.pinv(rcell)
+    vs = np.sqrt(np.add.reduce(ircell**2, axis=0))
+    ns = np.where(pbc, np.ceil(2.0 * rcmax * vs), 0.0)
+    return ns.astype(int)
+
+
+def _sort_neighbors(neighbors, offsets):
+    """Sort neighbors first by indices and then offsets."""
+    natoms = len(neighbors)
+    for a in range(natoms):
+        keys = (
+            offsets[a][:, 2],
+            offsets[a][:, 1],
+            offsets[a][:, 0],
+            neighbors[a]
+        )
+        mask = np.lexsort(keys)
+        neighbors[a] = neighbors[a][mask]
+        offsets[a] = offsets[a][mask]
 
 
 class NeighborList:
