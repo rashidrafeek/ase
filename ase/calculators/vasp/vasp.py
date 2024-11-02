@@ -332,14 +332,15 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
         self.write_input(self.atoms, properties, system_changes)
 
         with self._txt_outstream() as out:
-            errorcode = self._run(command=command,
-                                  out=out,
-                                  directory=self.directory)
+            errorcode, stderr = self._run(command=command,
+                                          out=out,
+                                          directory=self.directory)
 
         if errorcode:
             raise calculator.CalculationFailed(
-                '{} in {} returned an error: {:d}'.format(
-                    self.name, Path(self.directory).resolve(), errorcode))
+                '{} in {} returned an error: {:d} stderr {}'.format(
+                    self.name, Path(self.directory).resolve(), errorcode,
+                    stderr))
 
         # Read results from calculation
         self.update_atoms(atoms)
@@ -351,11 +352,8 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
             command = self.command
         if directory is None:
             directory = self.directory
-        errorcode = subprocess.call(command,
-                                    shell=True,
-                                    stdout=out,
-                                    cwd=directory)
-        return errorcode
+        result = subprocess.run(command, shell=True, cwd=directory, capture_output=True)
+        return result.returncode, result.stderr
 
     def check_state(self, atoms, tol=1e-15):
         """Check for system changes since last calculation."""
