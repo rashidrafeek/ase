@@ -355,7 +355,8 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
         result = subprocess.run(command,
                                 shell=True,
                                 cwd=directory,
-                                capture_output=True)
+                                capture_output=True,
+                                text=True)
         if out is not None:
             out.write(result.stdout)
         return result.returncode, result.stderr
