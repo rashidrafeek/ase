@@ -352,7 +352,10 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
             command = self.command
         if directory is None:
             directory = self.directory
-        result = subprocess.run(command, shell=True, cwd=directory, capture_output=True)
+        result = subprocess.run(command,
+                                shell=True,
+                                cwd=directory,
+                                capture_output=True)
         if out is not None:
             out.write(result.stdout)
         return result.returncode, result.stderr
