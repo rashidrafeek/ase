@@ -1,3 +1,6 @@
+from collections.abc import Iterable
+from typing import Optional
+
 import numpy as np
 
 from ase import Atoms
@@ -78,6 +81,8 @@ def _numeric_force(atoms: Atoms, a: int, i: int, d: float = 1e-6) -> float:
 def calculate_numerical_forces(
     atoms: Atoms,
     d: float = 1e-6,
+    indices: Optional[Iterable[int]] = None,
+    icoords: Optional[Iterable[int]] = None,
 ) -> np.ndarray:
     """Calculate forces numerically based on the finite-difference method.
 
@@ -87,6 +92,12 @@ def calculate_numerical_forces(
         ASE :class:`~ase.Atoms` object.
     d : float, default 1e-6
         Displacement.
+    indices : Optional[Iterable[int]]
+        Indices of atoms for which forces are computed.
+        By default, all atoms are considered.
+    icoords : Optional[Iterable[int]]
+        Indices of Cartesian coordinates for which forces are computed.
+        By default, all three coordinates are considered.
 
     Returns
     -------
@@ -94,8 +105,13 @@ def calculate_numerical_forces(
         Forces computed numerically based on the finite-difference method.
 
     """
-    return np.array([[_numeric_force(atoms, a, i, d)
-                      for i in range(3)] for a in range(len(atoms))])
+    if indices is None:
+        indices = range(len(atoms))
+    if icoords is None:
+        icoords = [0, 1, 2]
+    return np.array(
+        [[_numeric_force(atoms, a, i, d) for i in icoords] for a in indices]
+    )
 
 
 def calculate_numerical_stress(

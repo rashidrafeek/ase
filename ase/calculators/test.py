@@ -4,7 +4,7 @@ import numpy as np
 
 from ase.atoms import Atoms
 from ase.calculators.calculator import Calculator, kpts2ndarray
-from ase.calculators.fd import _numeric_force
+from ase.calculators.fd import calculate_numerical_forces
 from ase.units import Bohr, Ha
 
 
@@ -179,9 +179,6 @@ def gradient_test(atoms, indices=None):
     f = atoms.get_forces()[indices]
     print('{:>16} {:>20}'.format('eps', 'max(abs(df))'))
     for eps in np.logspace(-1, -8, 8):
-        fn = np.zeros((len(indices), 3))
-        for idx, i in enumerate(indices):
-            for j in range(3):
-                fn[idx, j] = _numeric_force(atoms, i, j, eps)
+        fn = calculate_numerical_forces(atoms, eps, indices)
         print(f'{eps:16.12f} {abs(fn - f).max():20.12f}')
     return f, fn
