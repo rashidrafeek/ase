@@ -1863,10 +1863,12 @@ class GenerateVaspInput:
                     else:
                         self.int_params[key] = int(data[2])
                 elif key in bool_keys:
-                    if 'true' in data[2].lower():
+                    if data[2].lower().replace('.', '', 1).startswith('t'):
                         self.bool_params[key] = True
-                    elif 'false' in data[2].lower():
+                    elif data[2].lower().replace('.', '', 1).startswith('f'):
                         self.bool_params[key] = False
+                    else:
+                        raise ValueError(f'Invalid value "{data[2]}" for bool key "{key}"')
 
                 elif key in list_bool_keys:
                     self.list_bool_params[key] = [
@@ -1906,17 +1908,17 @@ class GenerateVaspInput:
                         ]
                 elif key in special_keys:
                     if key == 'lreal':
-                        if 'true' in data[2].lower():
-                            self.special_params[key] = True
-                        elif 'false' in data[2].lower():
-                            self.special_params[key] = False
+                        if data[2].lower().replace('.', '', 1).startswith('t'):
+                            self.bool_params[key] = True
+                        elif data[2].lower().replace('.', '', 1).startswith('f'):
+                            self.bool_params[key] = False
                         else:
                             self.special_params[key] = data[2]
 
                 # non-registered keys
-                elif 'true' in data[2].lower():
+                elif data[2].lower() in ('t', 'true', '.true.'):
                     self.bool_params[key] = True
-                elif 'false' in data[2].lower():
+                elif data[2].lower() in ('f', 'false', '.false.'):
                     self.bool_params[key] = False
                 elif data[2].isdigit():
                     self.int_params[key] = int(data[2])
