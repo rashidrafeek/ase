@@ -16,12 +16,12 @@ from io import StringIO, UnsupportedOperation
 import numpy as np
 
 from ase.atoms import Atoms
+from ase.calculators.calculator import all_properties
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.constraints import FixAtoms, FixCartesian
 from ase.io.formats import index2range
 from ase.io.utils import ImageIterator
 from ase.outputs import ArrayProperty, all_outputs
-from ase.calculators.calculator import all_properties
 from ase.spacegroup.spacegroup import Spacegroup
 from ase.stress import voigt_6_to_full_3x3_stress
 from ase.utils import reader, writer
