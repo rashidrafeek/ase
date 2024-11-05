@@ -34,6 +34,14 @@ class NoseHooverChainNVT(MolecularDynamics):
           https://doi.org/10.1088/0305-4470/39/19/S18
     - [3] M. E. Tuckerman, Statistical Mechanics: Theory and Molecular
           Simulation, Oxford University Press (2010).
+
+    While the algorithm and notation for the thermostat are largely adapted
+    from Ref. [4], the core equations are detailed in the implementation
+    note available at
+    https://github.com/lan496/lan496.github.io/blob/main/notes/nose_hoover_chain/main.pdf.
+
+    - [4] M. E. Tuckerman, Statistical Mechanics: Theory and Molecular
+          Simulation, 2nd ed. (Oxford University Press, 2009).
     """
 
     def __init__(
