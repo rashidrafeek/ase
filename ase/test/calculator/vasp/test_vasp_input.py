@@ -292,3 +292,33 @@ def test_non_registered_keys(vaspinput_factory) -> None:
 
     assert calc.string_params['libxc1'] == 'MGGA_X_SCAN'
     assert calc.int_params['libxc2'] == 267
+
+
+def test_bool(tmp_path, vaspinput_factory):
+    """Test that INCAR parser behaves similarly to Vasp, which uses
+    default fortran 'read' parsing
+    """
+
+    for bool_str in ['t', 'T', 'true', 'TRUE', 'TrUe', '.true.', '.T', 'tbob']:
+        with open(tmp_path / "INCAR", "w") as fout:
+            fout.write(f"ENCUT = 100\n")
+            fout.write(f"LCHARG = {bool_str}\n")
+        calc = vaspinput_factory(encut=100)
+        calc.read_incar(tmp_path / "INCAR")
+        assert calc.bool_params['lcharg'] == True
+
+    for bool_str in ['f', 'F', 'false', 'FALSE', 'FaLSe', '.false.', '.F', 'fbob']:
+        with open(tmp_path / "INCAR", "w") as fout:
+            fout.write(f"ENCUT = 100\n")
+            fout.write(f"LCHARG = {bool_str}\n")
+        calc = vaspinput_factory(encut=100)
+        calc.read_incar(tmp_path / "INCAR")
+        assert calc.bool_params['lcharg'] == False
+
+    for bool_str in ['x', '..true.', '1']:
+        with open(tmp_path / "INCAR", "w") as fout:
+            fout.write(f"ENCUT = 100\n")
+            fout.write(f"LCHARG = {bool_str}\n")
+        calc = vaspinput_factory(encut=100)
+        with pytest.raises(ValueError):
+            calc.read_incar(tmp_path / "INCAR")
