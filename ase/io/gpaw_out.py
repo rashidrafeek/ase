@@ -202,7 +202,11 @@ def read_gpaw_out(fileobj, index):  # -> Union[Atoms, List[Atoms]]:
         else:
             magmoms = []
             for j in range(ii + 1, ii + 1 + len(atoms)):
-                magmom = lines[j].split()[-1].rstrip(')')
+                line = lines[j]
+                if '#' in line:  # new GPAW format
+                    magmom = line.split()[-4].split(']')[0]
+                else:
+                    magmom = line.split()[-1].rstrip(')')
                 magmoms.append(float(magmom))
 
         try:
