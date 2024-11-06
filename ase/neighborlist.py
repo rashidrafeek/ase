@@ -954,10 +954,10 @@ class PrimitiveNeighborList:
         positions = wrap_positions(positions0, rcell, pbc=pbc, eps=0)
 
         natoms = len(positions)
-        self.neighbors = [np.empty(0, int) for _ in range(natoms)]
-        self.displacements = [np.empty((0, 3), int) for _ in range(natoms)]
         self.nupdates += 1
         if natoms == 0:
+            self.neighbors = []
+            self.displacements = []
             return
 
         tree = cKDTree(positions, copy_data=True)
@@ -965,6 +965,10 @@ class PrimitiveNeighborList:
         offsets = offsets.round().astype(int)
 
         N = _calc_expansion(rcell, pbc, rcmax)
+
+        neighbor_indices_a = [[] for _ in range(natoms)]
+        displacements_a = [[] for _ in range(natoms)]
+
         for n1, n2, n3 in itertools.product(range(N[0] + 1),
                                             range(-N[1], N[1] + 1),
                                             range(-N[2], N[2] + 1)):
@@ -977,8 +981,8 @@ class PrimitiveNeighborList:
                 positions - displacement,
                 r=self.cutoffs + rcmax,
             )
-            for a in range(natoms):
 
+            for a in range(natoms):
                 indices = indices_all[a]
 
                 if not indices:
@@ -995,11 +999,13 @@ class PrimitiveNeighborList:
                     else:
                         i = i[i > a]
 
-                self.neighbors[a] = np.concatenate((self.neighbors[a], i))
+                neighbor_indices_a[a].append(i)
 
                 disp = shift0 + offsets[i] - offsets[a]
-                self.displacements[a] = np.concatenate((self.displacements[a],
-                                                        disp))
+                displacements_a[a].append(disp)
+
+        self.neighbors = [np.concatenate(i) for i in neighbor_indices_a]
+        self.displacements = [np.concatenate(d) for d in displacements_a]
 
         if self.bothways:
             neighbors2 = [[] for a in range(natoms)]
