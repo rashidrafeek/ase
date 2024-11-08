@@ -1,16 +1,19 @@
+from typing import Optional
+
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
 
 class SimplePlottingAxes:
     def __init__(self,
-                 ax: Axes = None,
+                 ax: Optional[Axes] = None,
                  show: bool = False,
                  filename: str = None) -> None:
         self.ax = ax
         self.show = show
         self.filename = filename
-        self.figure = None
+        self.figure: Optional[Figure] = None
 
     def __enter__(self) -> Axes:
         if self.ax is None:
