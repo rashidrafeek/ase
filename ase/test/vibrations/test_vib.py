@@ -9,7 +9,7 @@ from numpy.testing import assert_array_almost_equal, assert_array_equal
 try:
     from numpy.exceptions import ComplexWarning  # NumPy 2.0.0
 except ImportError:
-    from numpy import ComplexWarning
+    from numpy import ComplexWarning  # type: ignore[attr-defined,no-redef]
 
 import ase.io
 from ase import Atoms, units
