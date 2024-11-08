@@ -51,16 +51,21 @@ class FiniteDifferenceCalculator(BaseCalculator):
         self.results['free_energy'] = self.results['energy']
 
 
-def _numeric_force(atoms: Atoms, a: int, i: int, eps: float = 1e-6) -> float:
+def _numeric_force(
+    atoms: Atoms,
+    iatom: int,
+    icart: int,
+    eps: float = 1e-6,
+) -> float:
     """Calculate numerical force on a specific atom along a specific direction.
 
     Parameters
     ----------
     atoms : :class:`~ase.Atoms`
         ASE :class:`~ase.Atoms` object.
-    a : int
+    iatom : int
         Index of atoms.
-    i : {0, 1, 2}
+    icart : {0, 1, 2}
         Index of Cartesian component.
     eps : float, default 1e-6
         Displacement.
@@ -68,10 +73,10 @@ def _numeric_force(atoms: Atoms, a: int, i: int, eps: float = 1e-6) -> float:
     """
     p0 = atoms.get_positions()
     p = p0.copy()
-    p[a, i] = p0[a, i] + eps
+    p[iatom, icart] = p0[iatom, icart] + eps
     atoms.set_positions(p, apply_constraint=False)
     eplus = atoms.get_potential_energy()
-    p[a, i] = p0[a, i] - eps
+    p[iatom, icart] = p0[iatom, icart] - eps
     atoms.set_positions(p, apply_constraint=False)
     eminus = atoms.get_potential_energy()
     atoms.set_positions(p0, apply_constraint=False)
@@ -81,8 +86,8 @@ def _numeric_force(atoms: Atoms, a: int, i: int, eps: float = 1e-6) -> float:
 def calculate_numerical_forces(
     atoms: Atoms,
     eps: float = 1e-6,
-    indices: Optional[Iterable[int]] = None,
-    icoords: Optional[Iterable[int]] = None,
+    iatoms: Optional[Iterable[int]] = None,
+    icarts: Optional[Iterable[int]] = None,
 ) -> np.ndarray:
     """Calculate forces numerically based on the finite-difference method.
 
@@ -92,10 +97,10 @@ def calculate_numerical_forces(
         ASE :class:`~ase.Atoms` object.
     eps : float, default 1e-6
         Displacement.
-    indices : Optional[Iterable[int]]
+    iatoms : Optional[Iterable[int]]
         Indices of atoms for which forces are computed.
         By default, all atoms are considered.
-    icoords : Optional[Iterable[int]]
+    icarts : Optional[Iterable[int]]
         Indices of Cartesian coordinates for which forces are computed.
         By default, all three coordinates are considered.
 
@@ -105,12 +110,15 @@ def calculate_numerical_forces(
         Forces computed numerically based on the finite-difference method.
 
     """
-    if indices is None:
-        indices = range(len(atoms))
-    if icoords is None:
-        icoords = [0, 1, 2]
+    if iatoms is None:
+        iatoms = range(len(atoms))
+    if icarts is None:
+        icarts = [0, 1, 2]
     return np.array(
-        [[_numeric_force(atoms, a, i, eps) for i in icoords] for a in indices]
+        [
+            [_numeric_force(atoms, iatom, icart, eps) for icart in icarts]
+            for iatom in iatoms
+        ]
     )
 
 
