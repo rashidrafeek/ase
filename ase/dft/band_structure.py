@@ -3,7 +3,9 @@ import warnings
 try:
     from numpy.exceptions import VisibleDeprecationWarning  # NumPy 2.0.0
 except ImportError:
-    from numpy import VisibleDeprecationWarning  # type: ignore[attr-defined,no-redef]
+    from numpy import (  # type: ignore[attr-defined,no-redef]
+        VisibleDeprecationWarning,
+    )
 
 from ase.spectrum.band_structure import *  # noqa: F401,F403
 
