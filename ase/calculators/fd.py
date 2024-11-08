@@ -20,8 +20,8 @@ class FiniteDifferenceCalculator(BaseCalculator):
     def __init__(
         self,
         calc: BaseCalculator,
-        dforces: float = 1e-6,
-        dstress: float = 1e-6,
+        eps_disp: float = 1e-6,
+        eps_strain: float = 1e-6,
     ) -> None:
         """
 
@@ -29,29 +29,29 @@ class FiniteDifferenceCalculator(BaseCalculator):
         ----------
         calc : :class:`~ase.calculators.calculator.BaseCalculator`
             ASE Calculator object to be wrapped.
-        dforces : float, default 1e-6
-            Step size used for computing forces.
-        dstress : float, default 1e-6
-            Step size used for computing stress.
+        eps_disp : float, default 1e-6
+            Displacement used for computing forces.
+        eps_strain : float, default 1e-6
+            Strain used for computing stress.
 
         """
         super().__init__()
         self.calc = calc
-        self.dforces = dforces
-        self.dstress = dstress
+        self.eps_disp = eps_disp
+        self.eps_strain = eps_strain
 
     def calculate(self, atoms: Atoms, properties, system_changes) -> None:
         atoms = atoms.copy()  # copy to not mess up original `atoms`
         atoms.calc = self.calc
         self.results = {
             'energy': atoms.get_potential_energy(),
-            'forces': calculate_numerical_forces(atoms, d=self.dforces),
-            'stress': calculate_numerical_stress(atoms, d=self.dstress),
+            'forces': calculate_numerical_forces(atoms, eps=self.eps_disp),
+            'stress': calculate_numerical_stress(atoms, eps=self.eps_strain),
         }
         self.results['free_energy'] = self.results['energy']
 
 
-def _numeric_force(atoms: Atoms, a: int, i: int, d: float = 1e-6) -> float:
+def _numeric_force(atoms: Atoms, a: int, i: int, eps: float = 1e-6) -> float:
     """Calculate numerical force on a specific atom along a specific direction.
 
     Parameters
@@ -62,25 +62,25 @@ def _numeric_force(atoms: Atoms, a: int, i: int, d: float = 1e-6) -> float:
         Index of atoms.
     i : {0, 1, 2}
         Index of Cartesian component.
-    d : float, default 1e-6
-        Step size.
+    eps : float, default 1e-6
+        Displacement.
 
     """
     p0 = atoms.get_positions()
     p = p0.copy()
-    p[a, i] = p0[a, i] + d
+    p[a, i] = p0[a, i] + eps
     atoms.set_positions(p, apply_constraint=False)
     eplus = atoms.get_potential_energy()
-    p[a, i] = p0[a, i] - d
+    p[a, i] = p0[a, i] - eps
     atoms.set_positions(p, apply_constraint=False)
     eminus = atoms.get_potential_energy()
     atoms.set_positions(p0, apply_constraint=False)
-    return (eminus - eplus) / (2 * d)
+    return (eminus - eplus) / (2 * eps)
 
 
 def calculate_numerical_forces(
     atoms: Atoms,
-    d: float = 1e-6,
+    eps: float = 1e-6,
     indices: Optional[Iterable[int]] = None,
     icoords: Optional[Iterable[int]] = None,
 ) -> np.ndarray:
@@ -90,7 +90,7 @@ def calculate_numerical_forces(
     ----------
     atoms : :class:`~ase.Atoms`
         ASE :class:`~ase.Atoms` object.
-    d : float, default 1e-6
+    eps : float, default 1e-6
         Displacement.
     indices : Optional[Iterable[int]]
         Indices of atoms for which forces are computed.
@@ -110,13 +110,13 @@ def calculate_numerical_forces(
     if icoords is None:
         icoords = [0, 1, 2]
     return np.array(
-        [[_numeric_force(atoms, a, i, d) for i in icoords] for a in indices]
+        [[_numeric_force(atoms, a, i, eps) for i in icoords] for a in indices]
     )
 
 
 def calculate_numerical_stress(
     atoms: Atoms,
-    d: float = 1e-6,
+    eps: float = 1e-6,
     voigt: bool = True,
 ) -> np.ndarray:
     """Calculate stress numerically based on the finite-difference method.
@@ -125,7 +125,7 @@ def calculate_numerical_stress(
     ----------
     atoms : :class:`~ase.Atoms`
         ASE :class:`~ase.Atoms` object.
-    d : float, default 1e-6
+    eps : float, default 1e-6
         Strain in the Voigt notation.
     voigt : bool, default True
         If True, the stress is returned in the Voigt notation.
@@ -142,27 +142,27 @@ def calculate_numerical_stress(
     volume = atoms.get_volume()
     for i in range(3):
         x = np.eye(3)
-        x[i, i] = 1.0 + d
+        x[i, i] = 1.0 + eps
         atoms.set_cell(cell @ x, scale_atoms=True)
         eplus = atoms.get_potential_energy(force_consistent=True)
 
-        x[i, i] = 1.0 - d
+        x[i, i] = 1.0 - eps
         atoms.set_cell(cell @ x, scale_atoms=True)
         eminus = atoms.get_potential_energy(force_consistent=True)
 
-        stress[i, i] = (eplus - eminus) / (2 * d * volume)
+        stress[i, i] = (eplus - eminus) / (2 * eps * volume)
         x[i, i] = 1.0
 
         j = i - 2
-        x[i, j] = x[j, i] = +0.5 * d
+        x[i, j] = x[j, i] = +0.5 * eps
         atoms.set_cell(cell @ x, scale_atoms=True)
         eplus = atoms.get_potential_energy(force_consistent=True)
 
-        x[i, j] = x[j, i] = -0.5 * d
+        x[i, j] = x[j, i] = -0.5 * eps
         atoms.set_cell(cell @ x, scale_atoms=True)
         eminus = atoms.get_potential_energy(force_consistent=True)
 
-        stress[i, j] = stress[j, i] = (eplus - eminus) / (2 * d * volume)
+        stress[i, j] = stress[j, i] = (eplus - eminus) / (2 * eps * volume)
 
     atoms.set_cell(cell, scale_atoms=True)
 

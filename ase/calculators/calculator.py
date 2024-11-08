@@ -904,7 +904,7 @@ class Calculator(BaseCalculator):
         """
         from ase.calculators.fd import calculate_numerical_forces
 
-        return calculate_numerical_forces(atoms, d=d)
+        return calculate_numerical_forces(atoms, eps=d)
 
     @deprecated('Please use `ase.calculators.fd.FiniteDifferenceCalculator`.')
     def calculate_numerical_stress(self, atoms, d=1e-6, voigt=True):
@@ -914,7 +914,7 @@ class Calculator(BaseCalculator):
         """
         from ase.calculators.fd import calculate_numerical_stress
 
-        return calculate_numerical_stress(atoms, d=d, voigt=voigt)
+        return calculate_numerical_stress(atoms, eps=d, voigt=voigt)
 
     def _deprecated_get_spin_polarized(self):
         msg = (

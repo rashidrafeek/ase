@@ -62,7 +62,7 @@ def test_h2o(demon_factory):
     assert error < tol
 
     # numerical forces
-    forces_num = calculate_numerical_forces(atoms, d=0.001)
+    forces_num = calculate_numerical_forces(atoms, eps=0.001)
 
     ref = np.array([[-1.26056746e-01, 4.10007559e-01, 2.85719551e-04],
                     [4.28062314e-01, 2.56059142e-02, 2.17691110e-04],

@@ -44,9 +44,9 @@ def test_forces_and_stress():
     atoms.rattle(0.1)
 
     forces = atoms.get_forces()
-    numerical_forces = calculate_numerical_forces(atoms, d=1e-5)
+    numerical_forces = calculate_numerical_forces(atoms, eps=1e-5)
     np.testing.assert_allclose(forces, numerical_forces, atol=1e-5)
 
     stress = atoms.get_stress()
-    numerical_stress = calculate_numerical_stress(atoms, d=1e-5)
+    numerical_stress = calculate_numerical_stress(atoms, eps=1e-5)
     np.testing.assert_allclose(stress, numerical_stress, atol=1e-5)

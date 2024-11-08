@@ -78,7 +78,7 @@ def test_forces(factory, system):
 
     # calculate numerical forces, but use very loose comparison criteria!
     # dftd3 doesn't print enough digits to stdout to get good convergence
-    f_numer = calculate_numerical_forces(system, d=1e-4)
+    f_numer = calculate_numerical_forces(system, eps=1e-4)
     array_close(f_numer, f_ref, releps=1e-2, abseps=1e-3)
 
 
@@ -158,7 +158,7 @@ def test_diamond_stress(factory, system):
     # As with numerical forces, numerical stresses will not be very well
     # converged due to the limited number of digits printed to stdout
     # by dftd3. So, use very loose comparison criteria.
-    s_numer = calculate_numerical_stress(system, d=1e-4)
+    s_numer = calculate_numerical_stress(system, eps=1e-4)
     array_close(s_numer, s_ref, releps=1e-2, abseps=1e-3)
 
 

@@ -38,8 +38,8 @@ def test_multi_neighlist(KIM, testdir):
     energy_ref = 34.69963483186903  # eV
 
     # Compute forces and virial stress numerically
-    forces_numer = calculate_numerical_forces(atoms, d=0.0001)
-    stress_numer = calculate_numerical_stress(atoms, d=0.0001, voigt=True)
+    forces_numer = calculate_numerical_forces(atoms, eps=0.0001)
+    stress_numer = calculate_numerical_stress(atoms, eps=0.0001, voigt=True)
 
     tol = 1e-6
     assert np.isclose(energy, energy_ref, tol)
