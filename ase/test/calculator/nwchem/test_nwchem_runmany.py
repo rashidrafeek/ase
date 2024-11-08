@@ -2,6 +2,7 @@ import pytest
 from numpy.testing import assert_allclose
 
 from ase.build import molecule
+from ase.calculators.fd import calculate_numerical_forces
 
 
 @pytest.fixture()
@@ -62,5 +63,5 @@ def test_nwchem(factory, atoms, theory, eref, forces, pbc, kwargs):
     assert_allclose(atoms.get_potential_energy(), eref, atol=1e-4, rtol=1e-4)
     if forces:
         assert_allclose(atoms.get_forces(),
-                        calc.calculate_numerical_forces(atoms),
+                        calculate_numerical_forces(atoms),
                         atol=1e-4, rtol=1e-4)

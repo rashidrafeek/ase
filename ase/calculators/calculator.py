@@ -15,7 +15,7 @@ from ase.calculators.abc import GetPropertiesMixin
 from ase.cell import Cell
 from ase.config import cfg as _cfg
 from ase.outputs import Properties, all_outputs
-from ase.utils import jsonable
+from ase.utils import deprecated, jsonable
 
 from .names import names
 
@@ -894,19 +894,27 @@ class Calculator(BaseCalculator):
                 )
                 raise RuntimeError(msg) from e
 
+    @deprecated('Please use `ase.calculators.fd.FiniteDifferenceCalculator`.')
     def calculate_numerical_forces(self, atoms, d=0.001):
         """Calculate numerical forces using finite difference.
 
-        All atoms will be displaced by +d and -d in all directions."""
-        from ase.calculators.test import numeric_forces
+        All atoms will be displaced by +d and -d in all directions.
 
-        return numeric_forces(atoms, d=d)
+        .. deprecated:: 3.24.0
+        """
+        from ase.calculators.fd import calculate_numerical_forces
 
+        return calculate_numerical_forces(atoms, eps=d)
+
+    @deprecated('Please use `ase.calculators.fd.FiniteDifferenceCalculator`.')
     def calculate_numerical_stress(self, atoms, d=1e-6, voigt=True):
-        """Calculate numerical stress using finite difference."""
-        from ase.calculators.test import numeric_stress
+        """Calculate numerical stress using finite difference.
 
-        return numeric_stress(atoms, d=d, voigt=voigt)
+        .. deprecated:: 3.24.0
+        """
+        from ase.calculators.fd import calculate_numerical_stress
+
+        return calculate_numerical_stress(atoms, eps=d, voigt=voigt)
 
     def _deprecated_get_spin_polarized(self):
         msg = (
