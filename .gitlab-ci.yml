@@ -243,7 +243,7 @@ lint:
   image: registry.gitlab.com/ase/ase:ase-paperwork
   script:
     - cd $CI_PROJECT_DIR
-    - python -m pip install numpy
+    - python -m pip install .
     - mypy --version
     - mypy --color-output -p ase
     - python -We:invalid -m compileall -f -q ase/
