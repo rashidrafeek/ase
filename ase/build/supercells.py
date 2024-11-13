@@ -27,20 +27,23 @@ def get_deviation_from_optimal_cell_shape(cell, target_shape="sc", norm=None):
     (https://doped.readthedocs.io) to be rotationally invariant,
     boosting performance.
 
-    Parameters:
-
-    cell: 2D array of floats
-        Metric given as a (3x3 matrix) of the input structure.
-    target_shape: str
+    Parameters
+    ----------
+    cell : (..., 3, 3) array_like
+        Metric given as a 3x3 matrix of the input structure.
+        Multiple cells can also be given as a higher-dimensional array.
+    target_shape : {'sc', 'fcc'}
         Desired supercell shape. Can be 'sc' for simple cubic or
         'fcc' for face-centered cubic.
-    norm: float
+    norm : float
         Specify the normalization factor. This is useful to avoid
         recomputing the normalization factor when computing the
         deviation for a series of P matrices.
 
-    Returns:
-        float: Cell metric (0 is perfect score)
+    Returns
+    -------
+    float or ndarray
+        Cell metric(s) (0 is perfect score)
 
     .. deprecated:: 3.24.0
         `norm` is unused in ASE 3.24.0 and removed in ASE 3.25.0.
@@ -52,8 +55,8 @@ def get_deviation_from_optimal_cell_shape(cell, target_shape="sc", norm=None):
             FutureWarning,
         )
 
-    cell_lengths = np.linalg.norm(cell, axis=1)
-    eff_cubic_length = float(abs(np.linalg.det(cell)) ** (1 / 3))  # 'a_0'
+    cell_lengths = np.linalg.norm(cell, axis=-1)
+    eff_cubic_length = np.abs(np.linalg.det(cell)) ** (1 / 3)  # 'a_0'
 
     if target_shape == 'sc':
         target_length = eff_cubic_length
@@ -69,7 +72,8 @@ def get_deviation_from_optimal_cell_shape(cell, target_shape="sc", norm=None):
     inv_target_length = 1.0 / target_length
 
     # rms difference to eff cubic/FCC length:
-    return np.sqrt(np.sum((cell_lengths * inv_target_length - 1.0) ** 2))
+    diffs = cell_lengths * inv_target_length[..., None] - 1.0
+    return np.sqrt(np.sum(diffs**2, axis=-1))
 
 
 def find_optimal_cell_shape(
