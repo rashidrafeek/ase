@@ -145,18 +145,19 @@ def find_optimal_cell_shape(
         print("closest integer transformation matrix (P_0):")
         print(starting_P)
 
-    # Prepare run.
-    from itertools import product
-
     best_score = 1e6
     optimal_P = None
 
     # Build a big matrix of all admissible integer matrix operations.
     # (If this takes too much memory we could do blocking but there are
     # too many for looping one by one.)
-    operations = np.array([
-        *product(range(lower_limit, upper_limit + 1), repeat=9)
-    ]).reshape(-1, 3, 3) + starting_P
+    operations = np.stack(
+        np.meshgrid(
+            *[np.arange(lower_limit, upper_limit + 1)] * 9,
+            indexing='ij',
+        ),
+        axis=-1,
+    ).reshape(-1, 3, 3) + starting_P
     determinants = np.linalg.det(operations)
 
     good_indices = np.where(abs(determinants - target_size) < 1e-12)[0]
