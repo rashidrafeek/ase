@@ -54,6 +54,14 @@ def read_gpaw_out(fileobj, index):  # -> Union[Atoms, List[Atoms]]:
     """Read text output from GPAW calculation."""
     lines = [line.lower() for line in fileobj.readlines()]
 
+    # read charge
+    try:
+        ii = index_startswith(lines, '  total charge:')
+    except ValueError:
+        q = None
+    else:
+        q = float(lines[ii].split()[2])
+
     blocks = []
     i1 = 0
     for i2, line in enumerate(lines):
@@ -177,13 +185,6 @@ def read_gpaw_out(fileobj, index):  # -> Union[Atoms, List[Atoms]]:
                 kpts.append(SinglePointKPoint(1, 1, 0))
                 kpts[1].eps_n = vals[3]
                 kpts[1].f_n = vals[4]
-        # read charge
-        try:
-            ii = index_startswith(lines, 'total charge:')
-        except ValueError:
-            q = None
-        else:
-            q = float(lines[ii].split()[2])
         # read dipole moment
         try:
             ii = index_startswith(lines, 'dipole moment:')
