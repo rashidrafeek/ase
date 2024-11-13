@@ -149,9 +149,6 @@ def find_optimal_cell_shape(
         print("closest integer transformation matrix (P_0):")
         print(starting_P)
 
-    best_score = 1e6
-    optimal_P = None
-
     # Build a big matrix of all admissible integer matrix operations.
     # (If this takes too much memory we could do blocking but there are
     # too many for looping one by one.)
@@ -164,18 +161,21 @@ def find_optimal_cell_shape(
     ).reshape(-1, 3, 3) + starting_P
     determinants = np.linalg.det(operations)
 
+    # screen supercells with the target size
     good_indices = np.where(abs(determinants - target_size) < 1e-12)[0]
-
-    for i in good_indices:
-        P = operations[i]
-        score = get_deviation_from_optimal_cell_shape(P @ cell, target_shape)
-        if score < best_score:
-            best_score = score
-            optimal_P = P
-
-    if optimal_P is None:
+    if not good_indices.size:
         print("Failed to find a transformation matrix.")
         return None
+    operations = operations[good_indices]
+
+    # evaluate derivations of the screened supercells
+    scores = get_deviation_from_optimal_cell_shape(
+        operations @ cell,
+        target_shape,
+    )
+    imin = np.argmin(scores)
+    best_score = scores[imin]
+    optimal_P = operations[imin]
 
     if np.linalg.det(optimal_P) <= 0:
         optimal_P *= -1  # flip signs if negative determinant
