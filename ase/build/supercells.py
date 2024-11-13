@@ -63,6 +63,9 @@ def get_deviation_from_optimal_cell_shape(cell, target_shape="sc", norm=None):
         # times the eff cubic length:
         target_length = eff_cubic_length * 2 ** (1 / 6)
 
+    else:
+        raise ValueError(target_shape)
+
     inv_target_length = 1.0 / target_length
 
     # rms difference to eff cubic/FCC length:
@@ -118,6 +121,9 @@ def find_optimal_cell_shape(
     elif target_shape == 'fcc':
         target_metric = 0.5 * np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]],
                                        dtype=float)
+    else:
+        raise ValueError(target_shape)
+
     if verbose:
         print("target metric (h_target):")
         print(target_metric)
