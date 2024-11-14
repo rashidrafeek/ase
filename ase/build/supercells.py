@@ -138,7 +138,7 @@ def find_optimal_cell_shape(
             np.linalg.det(target_metric)) ** (-1.0 / 3)
     norm_cell = norm * cell
     if verbose:
-        print("normalization factor (Q): %g" % norm)
+        print(f"normalization factor (Q): {norm:g}")
 
     # Approximate initial P matrix
     ideal_P = np.dot(target_metric, np.linalg.inv(norm_cell))
@@ -183,13 +183,13 @@ def find_optimal_cell_shape(
 
     # Finalize.
     if verbose:
-        print("smallest score (|Q P h_p - h_target|_2): %f" % best_score)
+        print(f"smallest score (|Q P h_p - h_target|_2): {best_score:f}")
         print("optimal transformation matrix (P_opt):")
         print(optimal_P)
         print("supercell metric:")
         print(np.round(np.dot(optimal_P, cell), 4))
-        print("determinant of optimal transformation matrix: %g" %
-              np.linalg.det(optimal_P))
+        det = np.linalg.det(optimal_P)
+        print(f"determinant of optimal transformation matrix: {det:g}")
     return optimal_P
 
 
