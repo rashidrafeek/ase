@@ -55,7 +55,8 @@ def get_deviation_from_optimal_cell_shape(cell, target_shape="sc", norm=None):
             FutureWarning,
         )
 
-    cell_lengths = np.linalg.norm(cell, axis=-1)
+    cell = np.asarray(cell)
+    cell_lengths = np.sqrt(np.add.reduce(cell**2, axis=-1))
     eff_cubic_length = np.abs(np.linalg.det(cell)) ** (1 / 3)  # 'a_0'
 
     if target_shape == 'sc':
@@ -73,7 +74,7 @@ def get_deviation_from_optimal_cell_shape(cell, target_shape="sc", norm=None):
 
     # rms difference to eff cubic/FCC length:
     diffs = cell_lengths * inv_target_length[..., None] - 1.0
-    return np.sqrt(np.sum(diffs**2, axis=-1))
+    return np.sqrt(np.add.reduce(diffs**2, axis=-1))
 
 
 def find_optimal_cell_shape(
