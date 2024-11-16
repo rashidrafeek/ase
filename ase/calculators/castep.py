@@ -1206,9 +1206,13 @@ End CASTEP Interface Documentation
         self._castep_file = self._abs_path(f'{self._seed}.castep')
 
         # write out the input file
+        magnetic_moments = ('initial' if
+                            self.param.spin_polarized.value == 'TRUE'
+                            else None)
         self._write_cell(self._abs_path(f'{self._seed}.cell'),
                          self.atoms, castep_cell=self.cell,
-                         force_write=force_write)
+                         force_write=force_write,
+                         magnetic_moments=magnetic_moments)
 
         if self._export_settings:
             interface_options = self._opt
