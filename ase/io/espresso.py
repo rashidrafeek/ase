@@ -192,6 +192,7 @@ def read_espresso_out(fileobj, index=slice(None), results_required=True):
         # Get the structure
         # Use this for any missing data
         prev_structure = pwscf_start_info[prev_start_index]['atoms']
+        cell_alat = pwscf_start_info[prev_start_index]['alat']
         if image_index in indexes[_PW_START]:
             structure = prev_structure.copy()  # parsed from start info
         else:
@@ -308,10 +309,7 @@ def read_espresso_out(fileobj, index=slice(None), results_required=True):
                 continue
 
             # QE prints the k-points in units of 2*pi/alat
-            # with alat defined as the length of the first
-            # cell vector
             cell = structure.get_cell()
-            alat = np.linalg.norm(cell[0])
             ibzkpts = []
             weights = []
             for i in range(nkpts):
@@ -319,7 +317,7 @@ def read_espresso_out(fileobj, index=slice(None), results_required=True):
                 weights.append(float(L[-1]))
                 coord = np.array([L[-6], L[-5], L[-4].strip('),')],
                                  dtype=float)
-                coord *= 2 * np.pi / alat
+                coord *= 2 * np.pi / cell_alat
                 coord = kpoint_convert(cell, ckpts_kv=coord)
                 ibzkpts.append(coord)
             ibzkpts = np.array(ibzkpts)
