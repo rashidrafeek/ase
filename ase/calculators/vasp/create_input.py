@@ -1919,9 +1919,9 @@ class GenerateVaspInput:
                             self.special_params[key] = data[2]
 
                 # non-registered keys
-                elif data[2].lower() in ('t', 'true', '.true.'):
+                elif data[2].lower() in {'t', 'true', '.true.'}:
                     self.bool_params[key] = True
-                elif data[2].lower() in ('f', 'false', '.false.'):
+                elif data[2].lower() in {'f', 'false', '.false.'}:
                     self.bool_params[key] = False
                 elif data[2].isdigit():
                     self.int_params[key] = int(data[2])

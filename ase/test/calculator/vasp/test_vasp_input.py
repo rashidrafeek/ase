@@ -300,26 +300,26 @@ def test_bool(tmp_path, vaspinput_factory):
     """
 
     for bool_str in ['t', 'T', 'true', 'TRUE', 'TrUe', '.true.', '.T', 'tbob']:
-        with open(tmp_path / "INCAR", "w") as fout:
-            fout.write("ENCUT = 100\n")
-            fout.write(f"LCHARG = {bool_str}\n")
+        with open(tmp_path / 'INCAR', 'w') as fout:
+            fout.write('ENCUT = 100\n')
+            fout.write(f'LCHARG = {bool_str}\n')
         calc = vaspinput_factory(encut=100)
-        calc.read_incar(tmp_path / "INCAR")
+        calc.read_incar(tmp_path / 'INCAR')
         assert calc.bool_params['lcharg']
 
     for bool_str in ['f', 'F', 'false', 'FALSE', 'FaLSe', '.false.', '.F',
                      'fbob']:
-        with open(tmp_path / "INCAR", "w") as fout:
-            fout.write("ENCUT = 100\n")
-            fout.write(f"LCHARG = {bool_str}\n")
+        with open(tmp_path / 'INCAR', 'w') as fout:
+            fout.write('ENCUT = 100\n')
+            fout.write(f'LCHARG = {bool_str}\n')
         calc = vaspinput_factory(encut=100)
-        calc.read_incar(tmp_path / "INCAR")
+        calc.read_incar(tmp_path / 'INCAR')
         assert not calc.bool_params['lcharg']
 
     for bool_str in ['x', '..true.', '1']:
-        with open(tmp_path / "INCAR", "w") as fout:
-            fout.write("ENCUT = 100\n")
-            fout.write(f"LCHARG = {bool_str}\n")
+        with open(tmp_path / 'INCAR', 'w') as fout:
+            fout.write('ENCUT = 100\n')
+            fout.write(f'LCHARG = {bool_str}\n')
         calc = vaspinput_factory(encut=100)
         with pytest.raises(ValueError):
-            calc.read_incar(tmp_path / "INCAR")
+            calc.read_incar(tmp_path / 'INCAR')
