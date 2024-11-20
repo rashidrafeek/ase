@@ -880,6 +880,9 @@ def read_bundletrajectory(filename, index=-1):
         frame).
     """
     traj = BundleTrajectory(filename, mode='r')
+    if isinstance(index, int):
+        yield traj[index]
+
     for i in range(*index.indices(len(traj))):
         yield traj[i]
 
