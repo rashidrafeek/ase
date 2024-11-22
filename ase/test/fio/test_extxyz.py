@@ -506,5 +506,5 @@ def test_linear_combination_calculator():
 def test_outputs_not_properties(tmp_path):
     atoms = Atoms('Cu2', cell=[4, 2, 2], positions=[[0, 0, 0], [2.05, 0, 0]],
                   pbc=[True] * 3, info={'nbands': 1})
-    ase.io.write(tmp_path / "nbands.extxyz", atoms)
-    _ = ase.io.read(tmp_path / "nbands.extxyz")
+    ase.io.write(tmp_path / 'nbands.extxyz', atoms)
+    _ = ase.io.read(tmp_path / 'nbands.extxyz')
