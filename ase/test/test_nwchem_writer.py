@@ -64,3 +64,34 @@ def test_params(atomic_configuration, calculator_parameters, tmpdir):
         elif isinstance(value, (int, float)):
             assert len(flds[1:]) == 1
             assert np.isclose(value, float(flds[1]))
+
+
+def test_write_nwchem_in_set_params(
+    atomic_configuration, calculator_parameters, tmpdir
+):
+    """
+    Tests writing NWChem input file with a dictionary in the 'set' parameter, ensuring correct section order.
+    Closes #1578
+    """
+    atoms = Atoms("C2H6")
+    fd = tmpdir.mkdir("sub").join("nwchem.in")
+    cparams = calculator_parameters
+    cparams["set"] = {"geom:dont_verify": True}
+    write_nwchem_in(fd, atomic_configuration, echo=False, **cparams)
+    content = [line.rstrip("\n") for line in fd.readlines()]
+    # 'set geom:dont_verify .true.' must appear before 'geometry'
+    set_line_index = next(
+        (
+            i
+            for i, line in enumerate(content)
+            if line.strip() == "set geom:dont_verify .true."
+        ),
+        None,
+    )
+    geometry_line_index = next(
+        (i for i, line in enumerate(content) if line.strip().startswith("geometry")),
+        None,
+    )
+
+    assert set_line_index is not None and geometry_line_index is not None
+    assert set_line_index < geometry_line_index
