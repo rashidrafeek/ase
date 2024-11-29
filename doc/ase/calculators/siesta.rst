@@ -11,7 +11,7 @@ SIESTA_ is a density-functional theory code for very large systems
 based on atomic orbital (LCAO) basis sets.
 
 
-.. _SIESTA: https://departments.icmab.es/leem/siesta/
+.. _SIESTA: https://siesta-project.org/siesta/About/overview.html
 
 
 
@@ -26,7 +26,7 @@ execution of SIESTA.
 Examples: ``siesta < PREFIX.fdf > PREFIX.out`` and
 ``mpirun -np 4 /bin/siesta4.0 < PREFIX.fdf > PREFIX.out``.
 
-A default directory holding pseudopotential files :file:`.vps/.psf` can be
+A default directory holding pseudopotential files :file:`.psml/.psf` can be
 defined to avoid defining this every time the calculator is used.
 This directory can be set by the environment variable
 :envvar:`SIESTA_PP_PATH`.
@@ -54,8 +54,8 @@ keyword               type      default value description
 ``pseudo_qualifier``  ``str``   ``None``      String for picking out specific type
                                               type of pseudopotentials. Giving
                                               ``example`` means that
-                                              ``H.example.psf`` or
-                                              ``H.example.vps`` will be used. None
+                                              ``H.example.psml`` or
+                                              ``H.example.psf`` will be used. None
                                               means that the XC.functional keyword
                                               is used, e.g. ``H.lda.psf``
 ``symlink_pseudos``   ``bool``  ``---``       Whether psedos will be sym-linked 
@@ -194,7 +194,7 @@ to an atom, the general calculator keywords are used.
 Pseudopotentials
 ================
 
-Pseudopotential files in the ``.psf`` or ``.vps`` formats are needed.
+Pseudopotential files in the ``.psml`` or ``.psf`` formats are needed.
 Pseudopotentials generated from the ABINIT code and converted to
 the SIESTA format are available in the `SIESTA`_ website.
 A database of user contributed pseudopotentials is also available there.
@@ -212,7 +212,7 @@ OCTOPUS code.
 
 Species can also be used to specify pseudopotentials:
 
->>> specie = Specie(symbol='H', tag=1, pseudopotential='H.example.psf')
+>>> specie = Specie(symbol='H', tag=1, pseudopotential='H.example.psml')
 
 When specifying the pseudopotential in this manner, both absolute
 and relative paths can be given.
