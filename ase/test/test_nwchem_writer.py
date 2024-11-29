@@ -70,7 +70,8 @@ def test_write_nwchem_in_set_params(
     atomic_configuration, calculator_parameters, tmpdir
 ):
     """
-    Tests writing NWChem input file with a dictionary in the 'set' parameter, ensuring correct section order.
+    Tests writing NWChem input file with a dictionary
+    in the 'set' parameter, ensuring correct section order.
     Closes #1578
     """
     atoms = Atoms("C2H6")
@@ -89,7 +90,10 @@ def test_write_nwchem_in_set_params(
         None,
     )
     geometry_line_index = next(
-        (i for i, line in enumerate(content) if line.strip().startswith("geometry")),
+        (
+            i
+            for i, line in enumerate(content)
+            if line.strip().startswith("geometry")),
         None,
     )
 
