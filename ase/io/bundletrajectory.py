@@ -97,7 +97,7 @@ class BundleTrajectory:
         elif mode == 'w':
             self._open_write(atoms, backup, backend)
         elif mode == 'a':
-            self._open_append(atoms)
+            self._open_append(atoms, backend)
         else:
             raise ValueError('Unknown mode: ' + str(mode))
 
@@ -503,11 +503,11 @@ class BundleTrajectory:
         self.backend.readpy2 = (self.pythonmajor == 2)
         self.state = 'read'
 
-    def _open_append(self, atoms):
+    def _open_append(self, atoms, backend):
         if not os.path.exists(self.filename):
             # OK, no old bundle.  Open as for write instead.
             barrier()
-            self._open_write(atoms, False)
+            self._open_write(atoms, False, backend)
             return
         if not self.is_bundle(self.filename):
             raise OSError('Not a BundleTrajectory: ' + self.filename)
@@ -880,6 +880,9 @@ def read_bundletrajectory(filename, index=-1):
         frame).
     """
     traj = BundleTrajectory(filename, mode='r')
+    if isinstance(index, int):
+        yield traj[index]
+
     for i in range(*index.indices(len(traj))):
         yield traj[i]
 
