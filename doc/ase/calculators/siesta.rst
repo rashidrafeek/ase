@@ -198,9 +198,9 @@ Siesta requires for pseudopotential files in the ``.psml`` or ``.psf`` formats.
 Up-to-date information on Siesta compatible pseudopotential formats and databases 
 can be accessed on the `pseudopotentials section`_ of the siesta-project website.
 
-* Curated pseudopotential databases in ``.psml`` format are available at `PseudoDojo`_. These are supported by SIESTA 5.0 and later versions.
+* Curated pseudopotential databases in ``.psml`` format are available at PseudoDojo_. These are supported by SIESTA 5.0 and later versions.
 * Optimized GGA–PBE pseudos in ``.psf`` format and DZP basis sets for some common elements are also available from the `SIMUNE`_ website.
-* You can also find an on-line pseudopotential generator_ from the OCTOPUS code.
+* PSML pseudopotentials can be generated with the `ONCVPSP generator`_.
 
 .. _pseudopotentials section: https://siesta-project.org/siesta/Documentation/Pseudopotentials/
 
@@ -208,7 +208,7 @@ can be accessed on the `pseudopotentials section`_ of the siesta-project website
 
 .. _SIMUNE:  https://www.simuneatomistics.com/siesta-toolkit/siesta-pseudos-and-basis-database/
 
-.. _generator: http://www.tddft.org/programs/octopus/wiki/index.php/Pseudopotentials
+.. _ONCVPSP generator: https://github.com/oncvpsp/oncvpsp
 
 
 Species can also be used to specify pseudopotentials:
