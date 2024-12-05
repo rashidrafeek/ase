@@ -144,11 +144,12 @@ class BundleTrajectory:
         if atoms is None:
             atoms = self.atoms
 
+        # Handle NEB etc.  If atoms is just a normal Atoms object, it is used as-is.
         for image in atoms.iterimages():
             self._write_atoms(image)
 
     def _write_atoms(self, atoms):
-        # OK, it is a real atoms object.  Write it.
+        "Write a single atoms object to file."
         self._call_observers(self.pre_observers)
         self.log('Beginning to write frame ' + str(self.nframes))
         framedir = self._make_framedir(self.nframes)
@@ -412,6 +413,7 @@ class BundleTrajectory:
         return self.nframes
 
     def _open_log(self):
+        "Open the log file."
         if not (self.master or self.slavelog):
             return
         if self.master:
@@ -427,7 +429,15 @@ class BundleTrajectory:
             del self.logdata
 
     def _open_write(self, atoms, backup, backend):
-        "Open a bundle trajectory for writing."
+        """Open a bundle trajectory for writing.
+        
+        Parameters:
+        atoms: Object to be written.
+        backup: (bool) Whether a backup is kept if file already exists.
+        backend: Which type of backend to use.
+
+        Note that the file name of the bundle is already stored as an attribute.
+        """
         self._set_backend(backend)
         self.logfile = None  # enable delayed logging
         self.atoms = atoms
@@ -504,6 +514,17 @@ class BundleTrajectory:
         self.state = 'read'
 
     def _open_append(self, atoms, backend):
+        """Open a trajectory for writing in append mode.
+
+        If there is no pre-existing bundle, it is just opened in write mode instead.
+
+        Parameters:
+        atoms:  Object to be written.
+        backend:  The backend to be used if a new bundle is opened.  Ignored
+                  if we append to existing bundle, as the backend cannot be changed.
+
+        The filename is already stored as an attribute.
+        """
         if not os.path.exists(self.filename):
             # OK, no old bundle.  Open as for write instead.
             barrier()
@@ -983,11 +1004,6 @@ def print_bundletrajectory_info(filename):
                 infoline += f'{k} = {v!s}, '
             infoline = infoline[:-2] + '.'  # Fix punctuation.
             print(infoline)
-
-
-class PickleBundleBackend:
-    # Leave placeholder class so importing asap3 won't crash.
-    pass
 
 
 def main():
