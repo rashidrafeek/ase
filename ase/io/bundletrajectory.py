@@ -144,7 +144,8 @@ class BundleTrajectory:
         if atoms is None:
             atoms = self.atoms
 
-        # Handle NEB etc.  If atoms is just a normal Atoms object, it is used as-is.
+        # Handle NEB etc.  If atoms is just a normal Atoms object, it is used
+        # as-is.
         for image in atoms.iterimages():
             self._write_atoms(image)
 
@@ -430,7 +431,7 @@ class BundleTrajectory:
 
     def _open_write(self, atoms, backup, backend):
         """Open a bundle trajectory for writing.
-        
+
         Parameters:
         atoms: Object to be written.
         backup: (bool) Whether a backup is kept if file already exists.
@@ -516,12 +517,14 @@ class BundleTrajectory:
     def _open_append(self, atoms, backend):
         """Open a trajectory for writing in append mode.
 
-        If there is no pre-existing bundle, it is just opened in write mode instead.
+        If there is no pre-existing bundle, it is just opened in write mode
+        instead.
 
         Parameters:
         atoms:  Object to be written.
         backend:  The backend to be used if a new bundle is opened.  Ignored
-                  if we append to existing bundle, as the backend cannot be changed.
+                  if we append to existing bundle, as the backend cannot be
+                  changed.
 
         The filename is already stored as an attribute.
         """
