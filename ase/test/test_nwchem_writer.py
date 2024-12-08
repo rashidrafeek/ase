@@ -67,7 +67,7 @@ def test_params(atomic_configuration, calculator_parameters, tmpdir):
 
 
 def test_write_nwchem_in_set_params(
-    atomic_configuration, calculator_parameters, tmpdir
+    atomic_configuration, calculator_parameters, tmp_path
 ):
     """
     Tests writing NWChem input file with a dictionary
@@ -75,11 +75,11 @@ def test_write_nwchem_in_set_params(
     Closes #1578
     """
     atoms = Atoms("C2H6")
-    fd = tmpdir.mkdir("sub").join("nwchem.in")
     cparams = calculator_parameters
     cparams["set"] = {"geom:dont_verify": True}
-    write_nwchem_in(fd, atomic_configuration, echo=False, **cparams)
-    content = [line.rstrip("\n") for line in fd.readlines()]
+    with (tmp_path / "nwchem.in").open("w") as fd:
+        write_nwchem_in(fd, atomic_configuration, echo=False, **cparams)
+    content = (tmp_path / "nwchem.in").read_text().splitlines()
     # 'set geom:dont_verify .true.' must appear before 'geometry'
     set_line_index = next(
         (
@@ -90,10 +90,7 @@ def test_write_nwchem_in_set_params(
         None,
     )
     geometry_line_index = next(
-        (
-            i
-            for i, line in enumerate(content)
-            if line.strip().startswith("geometry")),
+        (i for i, line in enumerate(content) if line.strip().startswith("geometry")),
         None,
     )
 
