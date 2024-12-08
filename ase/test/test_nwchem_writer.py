@@ -23,29 +23,30 @@ def calculator_parameters():
     return params
 
 
-def test_echo(atomic_configuration, calculator_parameters, tmpdir):
-    fd = tmpdir.mkdir('sub').join('nwchem.in')
-    write_nwchem_in(
-        fd,
-        atomic_configuration,
-        echo=False,
-        **calculator_parameters)
-    content = [line.rstrip('\n') for line in fd.readlines()]
+def test_echo(atomic_configuration, calculator_parameters, tmp_path):
+    with (tmp_path / "nwchem.in").open("w") as fd:
+        write_nwchem_in(
+            fd,
+            atomic_configuration,
+            echo=False,
+            **calculator_parameters)
+    content = (tmp_path / "nwchem.in").read_text().splitlines()
     assert 'echo' not in content
 
-    write_nwchem_in(
-        fd,
-        atomic_configuration,
-        echo=True,
-        **calculator_parameters)
-    content = [line.rstrip('\n') for line in fd.readlines()]
+    with (tmp_path / "nwchem.in").open("w") as fd:
+        write_nwchem_in(
+            fd,
+            atomic_configuration,
+            echo=True,
+            **calculator_parameters)
+    content = (tmp_path / "nwchem.in").read_text().splitlines()
     assert 'echo' in content
 
 
-def test_params(atomic_configuration, calculator_parameters, tmpdir):
-    fd = tmpdir.mkdir('sub').join('nwchem.in')
-    write_nwchem_in(fd, atomic_configuration, **calculator_parameters)
-    content = [line.rstrip('\n') for line in fd.readlines()]
+def test_params(atomic_configuration, calculator_parameters, tmp_path):
+    with (tmp_path / "nwchem.in").open("w") as fd:
+        write_nwchem_in(fd, atomic_configuration, **calculator_parameters)
+    content = (tmp_path / "nwchem.in").read_text().splitlines()
 
     for key, value in calculator_parameters.items():
         for line in content:
