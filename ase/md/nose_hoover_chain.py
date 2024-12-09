@@ -211,14 +211,13 @@ class NoseHooverChainThermostat:
         def _integrate_eta() -> None:
             self._eta += delta * self._p_eta / self._Q
 
-        def _integrate_nhc_p(p: np.ndarray) -> np.ndarray:
+        def _integrate_nhc_p(p: np.ndarray) -> None:
             p *= np.exp(-delta * self._p_eta[0] / self._Q[0])
-            return p
 
         for j in range(self._tchain):
             _integrate_p_eta_j(p, self._tchain - j - 1)
         _integrate_eta()
-        p = _integrate_nhc_p(p)
+        _integrate_nhc_p(p)
         for j in range(self._tchain):
             _integrate_p_eta_j(p, j)
 
