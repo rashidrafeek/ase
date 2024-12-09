@@ -1,19 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import numpy as np
 
 import ase.units
 from ase import Atoms
 from ase.md.md import MolecularDynamics
 
-if TYPE_CHECKING:
-    from typing import IO
-
 
 # Coefficients for the fourth-order Suzuki-Yoshida integration scheme
-# Ref: H. Yoshida, Phys. Lett. A 150, 5-7, 262-268 (1990). https://doi.org/10.1016/0375-9601(90)90092-3
+# Ref: H. Yoshida, Phys. Lett. A 150, 5-7, 262-268 (1990).
+#      https://doi.org/10.1016/0375-9601(90)90092-3
 FOURTH_ORDER_COEFFS = [
     1 / (2 - 2 ** (1 / 3)),
     -(2 ** (1 / 3)) / (2 - 2 ** (1 / 3)),
@@ -52,9 +48,7 @@ class NoseHooverChainNVT(MolecularDynamics):
         tdamp: float,
         tchain: int = 3,
         tloop: int = 1,
-        trajectory: str | None = None,
-        logfile: IO | str | None = None,
-        loginterval: int = 1,
+        **kwargs,
     ):
         """
         Parameters
@@ -80,13 +74,14 @@ class NoseHooverChainNVT(MolecularDynamics):
             Set `-` to output into stdout.
         loginterval: int
             Write a log line for every `loginterval` time steps.
+        **kwargs : dict, optional
+            Additional arguments passed to :class:~ase.md.md.MolecularDynamics
+            base class.
         """
         super().__init__(
             atoms=atoms,
             timestep=timestep,
-            trajectory=trajectory,
-            logfile=logfile,
-            loginterval=loginterval,
+            **kwargs,
         )
         assert self.masses.shape == (len(self.atoms), 1)
 
