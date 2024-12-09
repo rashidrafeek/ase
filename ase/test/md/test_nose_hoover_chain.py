@@ -20,7 +20,6 @@ def test_thermostat(tchain: int):
 
     timestep = 1.0 * ase.units.fs
     thermostat = NoseHooverChainThermostat(
-        num_atoms=len(atoms),
         masses=atoms.get_masses()[:, None],
         temperature_K=1000,
         tdamp=100 * timestep,

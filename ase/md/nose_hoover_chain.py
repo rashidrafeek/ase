@@ -86,7 +86,6 @@ class NoseHooverChainNVT(MolecularDynamics):
         assert self.masses.shape == (len(self.atoms), 1)
 
         self._thermostat = NoseHooverChainThermostat(
-            num_atoms=len(self.atoms),
             masses=self.masses,
             temperature_K=temperature_K,
             tdamp=tdamp,
@@ -144,7 +143,6 @@ class NoseHooverChainThermostat:
     """
     def __init__(
         self,
-        num_atoms: int,
         masses: np.ndarray,
         temperature_K: float,
         tdamp: float,
@@ -152,7 +150,7 @@ class NoseHooverChainThermostat:
         tloop: int = 1,
     ):
         """See `NoseHooverChainNVT` for the parameters."""
-        self._num_atoms = num_atoms
+        self._num_atoms = masses.shape[0]
         self._masses = masses  # (num_atoms, 1)
         self._tdamp = tdamp
         self._tchain = tchain
@@ -162,7 +160,7 @@ class NoseHooverChainThermostat:
 
         assert tchain >= 1
         self._Q = np.zeros(tchain)
-        self._Q[0] = 3 * num_atoms * self._kT * tdamp**2
+        self._Q[0] = 3 * self._num_atoms * self._kT * tdamp**2
         self._Q[1:] = self._kT * tdamp**2
 
         # The following variables are updated during self.step()
