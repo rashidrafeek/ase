@@ -5,7 +5,6 @@ import pytest
 
 import ase.build
 import ase.units
-from ase.calculators.emt import EMT
 from ase.md.nose_hoover_chain import (
     NoseHooverChainNVT,
     NoseHooverChainThermostat,
@@ -28,8 +27,8 @@ def test_thermostat(tchain: int):
         tchain=tchain,
     )
 
-    np.random.seed(0)
-    p = np.random.randn(len(atoms), 3)
+    rng = np.random.default_rng(0)
+    p = rng.standard_normal(size=(len(atoms), 3))
 
     n = 1000
     p_start = p.copy()
@@ -46,9 +45,9 @@ def test_thermostat(tchain: int):
 
 
 @pytest.mark.parametrize("tchain", [1, 3])
-def test_nose_hoover_chain_nvt(tchain: int):
-    atoms = ase.build.bulk("Cu").repeat((4, 4, 4))
-    atoms.calc = EMT()
+def test_nose_hoover_chain_nvt(asap3, tchain: int):
+    atoms = ase.build.bulk("Cu").repeat((2, 2, 2))
+    atoms.calc = asap3.EMT()
 
     temperature_K = 300
     rng = np.random.default_rng(0)
