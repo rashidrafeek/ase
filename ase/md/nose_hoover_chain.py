@@ -6,7 +6,6 @@ import ase.units
 from ase import Atoms
 from ase.md.md import MolecularDynamics
 
-
 # Coefficients for the fourth-order Suzuki-Yoshida integration scheme
 # Ref: H. Yoshida, Phys. Lett. A 150, 5-7, 262-268 (1990).
 #      https://doi.org/10.1016/0375-9601(90)90092-3
@@ -113,7 +112,8 @@ class NoseHooverChainNVT(MolecularDynamics):
         This method is mainly used for testing.
         """
         conserved_energy = (
-            self.atoms.get_total_energy()
+            self.atoms.get_potential_energy(force_consistent=True)
+            + self.atoms.get_kinetic_energy()
             + self._thermostat.get_thermostat_energy()
         )
         return float(conserved_energy)
