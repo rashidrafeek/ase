@@ -13,6 +13,11 @@ from ase.calculators.calculator import (
 )
 from ase.config import cfg as _cfg
 
+link_calculator_docs = (
+    "https://wiki.fysik.dtu.dk/ase/ase/calculators/"
+    "calculators.html#calculator-configuration"
+)
+
 
 class BaseProfile(ABC):
     configvars: Set[str] = set()
@@ -274,7 +279,10 @@ class GenericFileIOCalculator(BaseCalculator, GetOutputsMixin):
         self.template = template
         if profile is None:
             if template.name not in self.cfg.parser:
-                raise BadConfiguration(f'No configuration of {template.name}')
+                raise BadConfiguration(
+                    f"No configuration of '{template.name}'. "
+                    f"See '{link_calculator_docs}'"
+                )
             try:
                 profile = template.load_profile(self.cfg)
             except Exception as err:

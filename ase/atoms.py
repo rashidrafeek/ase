@@ -277,7 +277,7 @@ class Atoms:
         new_symbols = Symbols.fromsymbols(obj)
         self.numbers[:] = new_symbols.numbers
 
-    @deprecated("Please use atoms.calc = calc", DeprecationWarning)
+    @deprecated("Please use atoms.calc = calc", FutureWarning)
     def set_calculator(self, calc=None):
         """Attach calculator object.
 
@@ -288,7 +288,7 @@ class Atoms:
 
         self.calc = calc
 
-    @deprecated("Please use atoms.calc", DeprecationWarning)
+    @deprecated("Please use atoms.calc", FutureWarning)
     def get_calculator(self):
         """Get currently attached calculator object.
 
@@ -311,7 +311,7 @@ class Atoms:
             calc.set_atoms(self)
 
     @calc.deleter
-    @deprecated('Please use atoms.calc = None', DeprecationWarning)
+    @deprecated('Please use atoms.calc = None', FutureWarning)
     def calc(self):
         """Delete calculator
 
