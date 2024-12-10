@@ -67,6 +67,9 @@ def main():
                    help='delete release branch and tag')
     args = p.parse_args()
 
+    assert versionfile.name == '__init__.py'
+    assert ase_toplevel == Path.cwd()
+
     try:
         current_version = get_version()
     except Exception as err:
@@ -242,8 +245,6 @@ News
 
 
 if __name__ == '__main__':
-    assert versionfile.name == '__init__.py'
-    assert ase_toplevel == Path.cwd()
     os.environ['LANGUAGE'] = 'C'
 
     main()
