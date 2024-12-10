@@ -399,7 +399,7 @@ def read_lammps_dump_binary(
                 # TODO: Use the endianness of the dump file in subsequent
                 #       read_variables rather than just assuming it will match
                 #       that of the host
-                endian, = read_variables("=i")
+                read_variables("=i")
 
                 # Read revision number (integer)
                 revision, = read_variables("=i")
@@ -432,7 +432,7 @@ def read_lammps_dump_binary(
                 flag, = read_variables("=c")
                 if flag != b'\x00':
                     # Flag was non-empty string
-                    time, = read_variables("=d")
+                    read_variables("=d")
 
                 # Length of column string
                 columns_str_len, = read_variables("=i")
