@@ -5,8 +5,6 @@ from ase import Atoms
 from ase.db import connect
 from ase.db.sqlite import all_tables
 
-dbtypes = ['db', 'postgresql', 'mysql', 'mariadb']
-
 
 def test_create_and_delete_ext_tab(testdir, get_db_name, dbtype):
     ext_tab = ["tab1", "tab2", "tab3"]
