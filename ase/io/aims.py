@@ -1345,8 +1345,6 @@ class AimsOutCalcChunk(AimsOutChunk):
         then set it to np.nan
         """
 
-        atoms = self._atoms
-
         line_start = self.reverse_search_for(["Writing Kohn-Sham eigenvalues."])
         if line_start == LINE_NOT_FOUND:
             return {"eigenvalues": None, "occupancies": None}
