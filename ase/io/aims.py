@@ -1269,7 +1269,7 @@ class AimsOutCalcChunk(AimsOutChunk):
         """Parse the dielectric tensor from the aims.out file"""
         line_start = self.reverse_search_for(
             ["DFPT for dielectric_constant:--->",
-            "PARSE DFPT_dielectric_tensor"],
+             "PARSE DFPT_dielectric_tensor"],
         )
         if line_start == LINE_NOT_FOUND:
             return None
