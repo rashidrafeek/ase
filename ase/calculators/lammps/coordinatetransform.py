@@ -38,7 +38,7 @@ def calc_rotated_cell(cell: np.ndarray) -> np.ndarray:
     return np.array(((ax, 0.0, 0.0), (bx, by, 0.0), (cx, cy, cz)))
 
 
-def calc_reduced_cell(cell: np.ndarray, pbc: Sequence[bool]) -> np.ndarray:
+def calc_reduced_cell(cell: np.ndarray, pbc: np.ndarray | Sequence[bool]) -> np.ndarray:
     """Calculate LAMMPS cell with short lattice basis vectors
 
     The lengths of the second and the third lattice basis vectors, b and c, are
@@ -137,7 +137,7 @@ class Prism:
     def __init__(
         self,
         cell: np.ndarray,
-        pbc: bool = True,
+        pbc: bool | np.ndarray = True,
         reduce_cell: bool = False,
         tolerance: float = 1.0e-8,
     ):
