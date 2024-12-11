@@ -57,7 +57,7 @@ def get_deviation_from_optimal_cell_shape(cell, target_shape="sc", norm=None):
 
     cell = np.asarray(cell)
     cell_lengths = np.sqrt(np.add.reduce(cell**2, axis=-1))
-    eff_cubic_length = np.abs(np.linalg.det(cell)) ** (1 / 3)  # 'a_0'
+    eff_cubic_length = np.cbrt(np.abs(np.linalg.det(cell)))  # 'a_0'
 
     if target_shape == 'sc':
         target_length = eff_cubic_length
