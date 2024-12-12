@@ -153,13 +153,10 @@ def find_optimal_cell_shape(
     # Build a big matrix of all admissible integer matrix operations.
     # (If this takes too much memory we could do blocking but there are
     # too many for looping one by one.)
-    operations = np.stack(
-        np.meshgrid(
-            *[np.arange(lower_limit, upper_limit + 1)] * 9,
-            indexing='ij',
-        ),
-        axis=-1,
-    ).reshape(-1, 3, 3) + starting_P
+    dimensions = [(upper_limit + 1) - lower_limit] * 9
+    operations = np.moveaxis(np.indices(dimensions), 0, -1).reshape(-1, 3, 3)
+    operations += lower_limit
+    operations += starting_P
     determinants = np.linalg.det(operations)
 
     # screen supercells with the target size
