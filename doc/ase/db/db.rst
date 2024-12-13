@@ -24,9 +24,9 @@ MariaDB_:
 The JSON and SQLite3 back-ends work "out of the box", whereas PostgreSQL, MySQL
 and MariaDB requires a server (See :ref:`server` or :ref:`MySQL_server`).
 
-.. info::
+.. note::
 
-   Install the back-ends for PostgreSQL, MySQL and MariaDB with::
+   You need to install the back-ends for PostgreSQL, MySQL and MariaDB with::
 
       pip install git@gitlab.com:ase/ase-db-backends
 
