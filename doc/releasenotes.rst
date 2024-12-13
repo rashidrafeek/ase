@@ -13,6 +13,8 @@ Git master branch
 * Improved :func:`~ase.build.find_optimal_cell_shape` to be rotationally
   invariant (:mr:`3404`)
 * Added :class:`ase.md.bussi.Bussi` (:mr:`3350`)
+* Moved Postgres, MariaDB and MySQL backends to separare project:
+  https://gitlav.com/ase/ase-db-backends.
 
 
 Version 3.23.0
@@ -261,10 +263,10 @@ Optimizers:
   (:mr:`2299`)
 
 * :func:`ase.optimize.optimize.Optimizers.irun` and
-  :func:`ase.optimize.optimize.Optimizers.run` now respect ``steps=0`` (:issue:`1183`; 
+  :func:`ase.optimize.optimize.Optimizers.run` now respect ``steps=0`` (:issue:`1183`;
   :issue:`1258`; :mr:`2922`).
 
-* Added the ``.trajectory`` attribute to :class:`ase.optimize.optimize.Dynamics` 
+* Added the ``.trajectory`` attribute to :class:`ase.optimize.optimize.Dynamics`
   (:mr:`2901`).
 
 * Fixed a bug when :class:`ase.optimize.precon.precon.PreconImages` is initialized with

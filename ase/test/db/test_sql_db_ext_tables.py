@@ -5,7 +5,7 @@ from ase import Atoms
 from ase.db import connect
 from ase.db.sqlite import all_tables
 
-dbtypes = ['db', 'postgresql', 'mysql', 'mariadb']
+dbtypes = ['db']
 
 
 @pytest.mark.parametrize('dbtype', dbtypes)

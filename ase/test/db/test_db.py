@@ -13,7 +13,7 @@ ase -T db -v testase.json natoms=1,Cu=1 --delete --yes &&
 ase -T db -v testase.json "H>0" -k hydro=1,abc=42,foo=bar &&
 ase -T db -v testase.json "H>0" --delete-keys foo"""
 
-dbtypes = ['json', 'db', 'postgresql', 'mysql', 'mariadb']
+dbtypes = ['json', 'db']
 
 
 @pytest.mark.slow()

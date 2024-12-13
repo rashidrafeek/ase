@@ -8,7 +8,7 @@ from ase.constraints import FixAtoms, FixBondLength
 from ase.db import connect
 from ase.io import read
 
-dbtypes = ['json', 'db', 'postgresql', 'mysql', 'mariadb']
+dbtypes = ['json', 'db']
 
 
 @pytest.mark.parametrize('dbtype', dbtypes)
