@@ -633,7 +633,7 @@ End CASTEP Interface Documentation
         if not os.path.exists(bandfile):
             raise ValueError(f'Cannot find band file "{bandfile}".')
 
-        kpts, weights, eigenvalues, efermi = read_bands(bandfile)
+        kpts, _weights, eigenvalues, efermi = read_bands(bandfile)
 
         # Get definitions of high-symmetry points
         special_points = self.atoms.cell.bandpath(npoints=0).special_points

@@ -97,7 +97,6 @@ select = [
     "I"   # isort
 ]
 ignore = [
-    "F841",  # unused-variable
     "E741",  # ambiguous-variable-name
     "W505",  # doc-line-too-long
 ]
