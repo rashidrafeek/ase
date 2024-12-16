@@ -9,44 +9,77 @@ Git master branch
 
 :git:`master <>`.
 
+Breaking changes
+----------------
+* The ``master`` parameter to each Optimizer is now passed via ``**kwargs`` and so becomes keyword-only. (:mr:`3424`)
+* Removed legacy ``read_cell`` and ``write_cell`` functions from ase.io.castep. (:mr:`3435`)
+* Removed deprecated ``force_consistent`` option from Optimizer (:mr:`3424`)
 
 Requirements
 ------------
 
 * Support numpy 2 (:mr:`3398`, :mr:`3400`, :mr:`3402`)
 
+Atoms
+-----
+* New method :func:`Atoms.get_number_of_degrees_of_freedom()` (:mr:`3380`)
+* New methods :func:`Atoms.get_kinetic_stress()`, func:`Atoms.get_kinetic_stresses()` (:mr:`3362`)
+
 Structure tools
 ---------------
 
 * Add atom tagging to ``ase.build.general_surface`` (:mr:`2773`)
-* New method ``Atoms.get_number_of_degrees_of_freedom()`` (:mr:`3380`)
 * Fix bug where code could return the wrong lattice when trying to fix the handedness of a 2D lattice  (:mr:`3387`)
-* Improved :func:`~ase.build.find_optimal_cell_shape` to be rotationally invariant (:mr:`3404`)
+* Major improvements to :func:`~ase.build.find_optimal_cell_shape`: improve target metric, ensure rotationally invariant results and avoid negative determinants (:mr:`3404`)
+* Speed improvements to :class:`ase.spacegroup.spacegroup.Spacegroup` using caching (:mr:`3434`, :mr:`3439`)
+  
 
 Calculators / IO
 ----------------
 
+* CASTEP **BREAKING** Removed legacy ``read_cell`` and ``write_cell`` functions from ase.io.castep. (:mr:`3435`)
 * CASTEP .castep file reader bugfix for Windows (:mr:`3379`), testing improved (:mr:`3375`)
+* CASTEP fix read from Castep geometry optimisation with stress only (:mr:`3445`)
 * Prevent truncation when printing Atoms objects with 1000 or more atoms (:mr:`2518`)
 * Fix interaction between GenericFileIOCalculator and SocketIO (:mr:`3381`)
 * ONETEP calculator: allow ``pseudo_path`` to be set in config (:mr:`3385`)
 * Added :class:`ase.calculators.fd.FiniteDifferenceCalculator` (:mr:`3509`)
-
+* FHI-aims: make free_energy the default energy (:mr:`3406`)
+* VASP/VTST: fixed a bug handling the ICHAIN tag from VTST (:mr:`3415`)
+* VASP: fix bug in CHG file writing (:mr:`3428`)
+* Turbomole: fixed formatting of "density convergence" parameter (:mr:`3412`)
+* Quantum Espresso: allow arbitrary k-point lists (:mr:`3339`)
+* Quantum Espresso: support keys from EPW (:mr:`3421`)  
+* NWChem: fixed reading files from other directories (:mr:`3418`)
+* LAMMPS: fixed a bug reading dump file with only one atom (:mr:`3423`)
+* LAMMPS: support initial charges (:mr:`2846`, :mr:`3431`)
+* Orca: Only parse dipoles if COM is found. (:mr:`3426`)
+* EAM: Fix calculations with self.form = "eam" (:mr:`3399`)
+* Amber: Fix scaling of velocities in restart files (:mr:`3427`)
+* Amber: Raise an error if cell is orthorhombic (:mr:`3443`)
+  
 Molecular Dynamics
 ------------------
 
 * Added Bussi thermostat :class:`ase.md.bussi.Bussi` (:mr:`3350`)
 * Improve ``force_temperature`` to work with constraints (:mr:`3393`)
+* Add ``**kwargs`` to MolecularDynamics, passed to parent Dynamics (:mr:`3403`)
+
+Phonons
+-------
+
+* Fix scaling of phonon amplitudes (:mr:`3438`)
 
 Optimizers
 ----------
-
+* **BREAKING** The ``master`` parameter to each Optimizer is now passed via ``**kwargs`` and so becomes keyword-only. (:mr:`3424`)
 * Pass ``comm`` to BFGS and CellAwareBFGS as a step towards cleaner parallelism (:mr:`3397`)
+* **BREAKING** Removed deprecated ``force_consistent`` option from Optimizer (:mr:`3424`)
 
 Documentation
 -------------
 * The "legacy functionality" section has been removed (:mr:`3386`)
-* Other minor improvements and additions (:mr:`3377`, :mr:`3389`, :mr:`3394`, :mr:`3395`, :mr:`3407`)
+* Other minor improvements and additions (:mr:`2520`, :mr:`3377`, :mr:`3388`, :mr:`3389`, :mr:`3394`, :mr:`3395`, :mr:`3407`, :mr:`3413`, :mr:`3416`, :mr:`3446`)
 
 Testing
 -------
@@ -54,8 +87,11 @@ Testing
 
 Maintenance and dev-ops
 -----------------------
-* Set up ruff linter (:mr:`3392`)
-* Linting (:mr:`3396`)
+* Set up ruff linter (:mr:`3392`, :mr:`3420`)
+* Further linting (:mr:`3396`, :mr:`3425`, :mr:`3430`, :mr:`3433`, :mr:`3520`)
+* Refactoring of ``ase.build.bulk`` (:mr:`3390`), ``ase.spacegroup.spacegroup`` (:mr:`3429`)
+* Dynamic version numbering in pyproject.toml (:mr:`3436`)
+* Refactoring of :class:`ase.gui.view.View` to improve API for external projects (:mr:`3419`)
 
 Version 3.23.0
 ==============
