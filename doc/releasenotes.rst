@@ -9,11 +9,53 @@ Git master branch
 
 :git:`master <>`.
 
-* Added :class:`ase.calculators.fd.FiniteDifferenceCalculator` (:mr:`3509`)
-* Improved :func:`~ase.build.find_optimal_cell_shape` to be rotationally
-  invariant (:mr:`3404`)
-* Added :class:`ase.md.bussi.Bussi` (:mr:`3350`)
 
+Requirements
+------------
+
+* Support numpy 2 (:mr:`3398`, :mr:`3400`, :mr:`3402`)
+
+Structure tools
+---------------
+
+* Add atom tagging to ``ase.build.general_surface`` (:mr:`2773`)
+* New method ``Atoms.get_number_of_degrees_of_freedom()`` (:mr:`3380`)
+* Fix bug where code could return the wrong lattice when trying to fix the handedness of a 2D lattice  (:mr:`3387`)
+* Improved :func:`~ase.build.find_optimal_cell_shape` to be rotationally invariant (:mr:`3404`)
+
+Calculators / IO
+----------------
+
+* CASTEP .castep file reader bugfix for Windows (:mr:`3379`), testing improved (:mr:`3375`)
+* Prevent truncation when printing Atoms objects with 1000 or more atoms (:mr:`2518`)
+* Fix interaction between GenericFileIOCalculator and SocketIO (:mr:`3381`)
+* ONETEP calculator: allow ``pseudo_path`` to be set in config (:mr:`3385`)
+* Added :class:`ase.calculators.fd.FiniteDifferenceCalculator` (:mr:`3509`)
+
+Molecular Dynamics
+------------------
+
+* Added Bussi thermostat :class:`ase.md.bussi.Bussi` (:mr:`3350`)
+* Improve ``force_temperature`` to work with constraints (:mr:`3393`)
+
+Optimizers
+----------
+
+* Pass ``comm`` to BFGS and CellAwareBFGS as a step towards cleaner parallelism (:mr:`3397`)
+
+Documentation
+-------------
+* The "legacy functionality" section has been removed (:mr:`3386`)
+* Other minor improvements and additions (:mr:`3377`, :mr:`3389`, :mr:`3394`, :mr:`3395`, :mr:`3407`)
+
+Testing
+-------
+* Remove some dangling open files (:mr:`3384`)
+
+Maintenance and dev-ops
+-----------------------
+* Set up ruff linter (:mr:`3392`)
+* Linting (:mr:`3396`)
 
 Version 3.23.0
 ==============
