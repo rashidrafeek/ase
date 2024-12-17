@@ -5,11 +5,11 @@ import math
 import numpy as np
 
 from ase import units
-from ase.md.md import MolecularDynamics
+from ase.md.verlet import VelocityVerlet
 from ase.parallel import world
 
 
-class Bussi(MolecularDynamics):
+class Bussi(VelocityVerlet):
     """Bussi stochastic velocity rescaling (NVT) molecular dynamics.
     Based on the paper from Bussi et al. (https://arxiv.org/abs/0803.4060)
 
@@ -104,23 +104,5 @@ class Bussi(MolecularDynamics):
 
     def step(self, forces=None):
         """Move one timestep forward using Bussi NVT molecular dynamics."""
-        if forces is None:
-            forces = self.atoms.get_forces(md=True)
-
         self.scale_velocities()
-
-        # calculate half-step momenta
-        # In the RATTLE constraint algorithm,
-        # constraints are not yet applied to the momenta at this step.
-        momenta = self.atoms.get_momenta() + 0.5 * self.dt * forces
-
-        self.atoms.set_positions(
-            self.atoms.positions + self.dt * momenta / self._masses
-        )
-
-        forces = self.atoms.get_forces(md=True)
-
-        # set full-step momenta with applying constraints
-        self.atoms.set_momenta(momenta + 0.5 * self.dt * forces)
-
-        return forces
+        return super().step(forces)
