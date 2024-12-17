@@ -155,7 +155,7 @@ def find_optimal_cell_shape(
     # too many for looping one by one.)
     dimensions = [(upper_limit + 1) - lower_limit] * 9
     operations = np.moveaxis(np.indices(dimensions), 0, -1).reshape(-1, 3, 3)
-    operations += lower_limit
+    operations += lower_limit  # Each element runs from lower to upper limits.
     operations += starting_P
     determinants = np.linalg.det(operations)
 
