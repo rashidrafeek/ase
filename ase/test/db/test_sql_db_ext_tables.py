@@ -5,10 +5,7 @@ from ase import Atoms
 from ase.db import connect
 from ase.db.sqlite import all_tables
 
-dbtypes = ['db', 'postgresql', 'mysql', 'mariadb']
 
-
-@pytest.mark.parametrize('dbtype', dbtypes)
 def test_create_and_delete_ext_tab(testdir, get_db_name, dbtype):
     ext_tab = ["tab1", "tab2", "tab3"]
     atoms = Atoms()
@@ -27,7 +24,6 @@ def test_create_and_delete_ext_tab(testdir, get_db_name, dbtype):
     assert "tab1" not in db._get_external_table_names()
 
 
-@pytest.mark.parametrize('dbtype', dbtypes)
 def test_insert_in_external_tables(testdir, get_db_name, dbtype):
     atoms = Atoms()
 
@@ -122,7 +118,6 @@ def test_insert_in_external_tables(testdir, get_db_name, dbtype):
             db.write(atoms, external_tables={tab_name: {"value": 1}})
 
 
-@pytest.mark.parametrize('dbtype', dbtypes)
 def test_extract_from_table(testdir, get_db_name, dbtype):
     atoms = Atoms()
 
@@ -141,7 +136,6 @@ def test_extract_from_table(testdir, get_db_name, dbtype):
     assert abs(row["insert_tab"]["rate1"] + 10.0) < 1E-8
 
 
-@pytest.mark.parametrize('dbtype', dbtypes)
 def test_write_atoms_row(testdir, get_db_name, dbtype):
     atoms = Atoms()
 
@@ -158,7 +152,6 @@ def test_write_atoms_row(testdir, get_db_name, dbtype):
     db.write(row)
 
 
-@pytest.mark.parametrize('dbtype', dbtypes)
 def test_external_table_upon_update(testdir, get_db_name, dbtype):
     name = get_db_name(dbtype)
     db = connect(name)
@@ -169,7 +162,6 @@ def test_external_table_upon_update(testdir, get_db_name, dbtype):
     db.update(uid, external_tables={'sys': ext_table})
 
 
-@pytest.mark.parametrize('dbtype', dbtypes)
 def test_external_table_upon_update_with_float(testdir, get_db_name, dbtype):
     name = get_db_name(dbtype)
     db = connect(name)
