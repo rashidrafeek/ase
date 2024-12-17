@@ -147,16 +147,16 @@ def test_cell_metric_twice_larger_lattice_vector(cell, target_shape):
 @pytest.mark.parametrize('target_shape', ['sc', 'fcc'])
 def test_multiple_cells(target_shape: str) -> None:
     """Test if multiple cells can be evaluated at one time."""
-    f = get_deviation_from_optimal_cell_shape
+    func = get_deviation_from_optimal_cell_shape
     cells = np.array([
         [[1, 0, 0], [0, 1, 0], [0, 0, 2]],
         [[0, 1, 1], [1, 0, 1], [2, 2, 0]],
     ])
     metrics_separate = []
     for i in range(cells.shape[0]):
-        metric = f(cells[i], target_shape)
+        metric = func(cells[i], target_shape)
         metrics_separate.append(metric)
-    metrics_together = f(cells, target_shape)
+    metrics_together = func(cells, target_shape)
     np.testing.assert_allclose(metrics_separate, metrics_together)
 
 
