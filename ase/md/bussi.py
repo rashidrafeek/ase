@@ -109,10 +109,10 @@ class Bussi(MolecularDynamics):
 
         self.scale_velocities()
 
-        self.atoms.set_momenta(
-            self.atoms.get_momenta() + 0.5 * self.dt * forces
-        )
-        momenta = self.atoms.get_momenta()
+        # calculate half-step momenta
+        # In the RATTLE constraint algorithm,
+        # constraints are not yet applied to the momenta at this step.
+        momenta = self.atoms.get_momenta() + 0.5 * self.dt * forces
 
         self.atoms.set_positions(
             self.atoms.positions + self.dt * momenta / self._masses
@@ -120,6 +120,7 @@ class Bussi(MolecularDynamics):
 
         forces = self.atoms.get_forces(md=True)
 
+        # set full-step momenta with applying constraints
         self.atoms.set_momenta(momenta + 0.5 * self.dt * forces)
 
         return forces
