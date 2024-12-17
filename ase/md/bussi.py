@@ -6,7 +6,6 @@ import numpy as np
 
 from ase import units
 from ase.md.verlet import VelocityVerlet
-from ase.parallel import world
 
 
 class Bussi(VelocityVerlet):
@@ -43,7 +42,6 @@ class Bussi(VelocityVerlet):
 
         self.temp = temperature_K * units.kB
         self.taut = taut
-        self.communicator = world
         self.rng = rng
 
         self.ndof = self.atoms.get_number_of_degrees_of_freedom()
