@@ -39,11 +39,7 @@ class Bussi(VelocityVerlet):
         rng=np.random,
         **md_kwargs,
     ):
-        super().__init__(
-            atoms,
-            timestep,
-            **md_kwargs,
-        )
+        super().__init__(atoms, timestep, **md_kwargs)
 
         self.temp = temperature_K * units.kB
         self.taut = taut
