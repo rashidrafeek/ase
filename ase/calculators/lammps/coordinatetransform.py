@@ -150,7 +150,7 @@ class Prism:
         self.rot_mat = np.linalg.solve(self.lammps_tilt, cell).T
         self.ase_cell = cell
         self.tolerance = tolerance
-        self.pbc = np.zeros(3, bool) + pbc
+        self.pbc = tuple(np.zeros(3, bool) + pbc)
         self.lammps_cell = calc_reduced_cell(self.lammps_tilt, self.pbc)
         self.is_reduced = reduce_cell
 

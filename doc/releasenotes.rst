@@ -9,6 +9,7 @@ Git master branch
 
 :git:`master <>`.
 
+* Added :class:`ase.calculators.fd.FiniteDifferenceCalculator` (:mr:`3509`)
 * Improved :func:`~ase.build.find_optimal_cell_shape` to be rotationally
   invariant (:mr:`3404`)
 * Added :class:`ase.md.bussi.Bussi` (:mr:`3350`)
@@ -118,6 +119,13 @@ Version 3.23.0
 
 * Fix bug in :class:`ase.vibrations.Vibrations` causing property
   calculations to always use the default method (:mr:`3012`)
+
+* Replaced :class:`ase.phasediagram.Pourbaix` class (to be deprecated)
+  with the :mod:`ase.pourbaix` module. The latter includes a
+  `~ase.pourbaix.Pourbaix` class able to plot a complete diagram given a
+  set of references. The decomposition energy is now shown on a colormap
+  and the phase boundaries are determined with a plane intersection method.
+  (:mr:`3280`)
 
 Calculators:
 

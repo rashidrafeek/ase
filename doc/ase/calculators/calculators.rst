@@ -52,15 +52,22 @@ The calculators can be divided in four groups:
    Lennard-Jones, Morse and HarmonicCalculator.
 
 4) Calculators that wrap others, included in the ASE package:
-   :class:`ase.calculators.checkpoint.CheckpointCalculator`,
-   the :class:`ase.calculators.loggingcalc.LoggingCalculator`,
-   the :class:`ase.calculators.mixing.LinearCombinationCalculator`,
-   the :class:`ase.calculators.mixing.MixedCalculator`,
-   the :class:`ase.calculators.mixing.SumCalculator`,
-   the :class:`ase.calculators.mixing.AverageCalculator`,
-   the :class:`ase.calculators.socketio.SocketIOCalculator`,
-   the :ref:`Grimme-D3 <grimme>` potential, and the qmmm calculators
-   :class:`~ase.calculators.qmmm.EIQMMM`,  and :class:`~ase.calculators.qmmm.SimpleQMMM`.
+
+   - :class:`ase.calculators.checkpoint.CheckpointCalculator`
+   - :class:`ase.calculators.fd.FiniteDifferenceCalculator`
+   - :class:`ase.calculators.loggingcalc.LoggingCalculator`
+   - :class:`ase.calculators.mixing.LinearCombinationCalculator`
+   - :class:`ase.calculators.mixing.MixedCalculator`
+   - :class:`ase.calculators.mixing.SumCalculator`
+   - :class:`ase.calculators.mixing.AverageCalculator`
+   - :class:`ase.calculators.socketio.SocketIOCalculator`
+
+   - :ref:`Grimme-D3 <grimme>` potential
+
+   - QM/MM calculators
+
+     - :class:`~ase.calculators.qmmm.EIQMMM`
+     - :class:`~ase.calculators.qmmm.SimpleQMMM`
 
 ========================================= ===========================================
 name                                      description
@@ -119,8 +126,9 @@ elk                                       Full Potential LAPW code
 lj                                        Lennard-Jones potential
 morse                                     Morse potential
 :mod:`~ase.calculators.checkpoint`        Checkpoint calculator
-:mod:`~ase.calculators.socketio`          Socket-based interface to calculators
+:mod:`~ase.calculators.fd`                Finite-difference calculator
 :mod:`~ase.calculators.loggingcalc`       Logging calculator
+:mod:`~ase.calculators.socketio`          Socket-based interface to calculators
 :mod:`~ase.calculators.dftd3`             DFT-D3 dispersion correction calculator
 :class:`~ase.calculators.qmmm.EIQMMM`     Explicit Interaction QM/MM
 :class:`~ase.calculators.qmmm.SimpleQMMM` Subtractive (ONIOM style) QM/MM
@@ -255,8 +263,9 @@ to set the ``ASE_CONFIG_PATH`` to an empty string.
    vasp
    qmmm
    checkpointing
-   mixing
+   fd
    loggingcalc
+   mixing
    dftd3
    others
    test

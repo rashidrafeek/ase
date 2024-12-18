@@ -9,6 +9,7 @@ from scipy.spatial import ConvexHull
 
 import ase.units as units
 from ase.formula import Formula
+from ase.utils import deprecated
 
 _solvated: List[Tuple[str, Dict[str, int], float, bool, float]] = []
 
@@ -123,6 +124,9 @@ def print_results(results):
 
 
 class Pourbaix:
+    @deprecated(
+        'Use ase.pourbaix.Pourbaix.  '
+        'This class will be removed in a future version of ASE.')
     def __init__(self, references, formula=None, T=300.0, **kwargs):
         """Pourbaix object.
 
@@ -133,6 +137,8 @@ class Pourbaix:
             keyword arguments: ``Pourbaix(refs, Zn=1, O=1)``.
         T: float
             Temperature in Kelvin.
+
+        .. deprecated:: 3.24.0
         """
 
         if formula:
@@ -322,7 +328,7 @@ class Pourbaix:
         return a, compositions, text
 
     def colorfunction(self, U, pH, colors):
-        coefs, energy = self.decompose(U, pH, verbose=False)
+        coefs, _energy = self.decompose(U, pH, verbose=False)
         indices = tuple(sorted(np.where(abs(coefs) > 1e-3)[0]))
         color = colors.get(indices)
         if color is None:
@@ -471,7 +477,7 @@ class PhaseDiagram:
         coefs = []
         results = []
         for coef, s in zip(scaledcoefs, indices):
-            count, e, name, natoms = self.references[s]
+            _count, e, name, natoms = self.references[s]
             coef *= N / natoms
             coefs.append(coef)
             results.append((name, coef, e))

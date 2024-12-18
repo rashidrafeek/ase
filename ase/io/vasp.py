@@ -409,7 +409,6 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
         SinglePointDFTCalculator,
         SinglePointKPoint,
     )
-    from ase.constraints import FixAtoms, FixScaled
     from ase.units import GPa
 
     tree = ET.iterparse(filename, events=['start', 'end'])
@@ -482,7 +481,7 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
                         if flags.all():
                             fixed_indices.append(i)
                         elif flags.any():
-                            constraints.append(FixScaled(cell_init, i, flags))
+                            constraints.append(FixScaled(i, flags, cell_init))
 
                     if fixed_indices:
                         constraints.append(FixAtoms(fixed_indices))

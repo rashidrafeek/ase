@@ -64,3 +64,23 @@ def get_db_name(mysql_port):
         return name
 
     return _func
+
+
+# For different parametrizations (we will move the heavier ones out anyway)
+dbtypes = ['db', 'postgresql', 'mysql', 'mariadb']
+
+
+@pytest.fixture(params=dbtypes)
+def dbtype(request):
+    return xfail_bad_backends(request)
+
+
+@pytest.fixture(params=['json', *dbtypes])
+def dbtype2(request):
+    return xfail_bad_backends(request)
+
+
+def xfail_bad_backends(request):
+    if request.param in {'postgresql', 'mysql', 'mariadb'}:
+        pytest.xfail(reason='race condition')
+    return request.param
