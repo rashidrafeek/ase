@@ -1446,8 +1446,12 @@ End CASTEP Interface Documentation
         self._fetch_pspots(temp_dir)
         seed = 'dryrun'
 
-        self._write_cell(os.path.join(temp_dir, f'{seed}.cell'),
-                         self.atoms, castep_cell=self.cell)
+        magnetic_moments = ('initial' if
+                            self.param.spin_polarized.value == 'TRUE'
+                            else None)
+        self._write_cell(self._abs_path(f'{self._seed}.cell'),
+                         self.atoms, castep_cell=self.cell,
+                         magnetic_moments=magnetic_moments)
         # This part needs to be modified now that we rely on the new formats.py
         # interface
         if not os.path.isfile(os.path.join(temp_dir, f'{seed}.cell')):
