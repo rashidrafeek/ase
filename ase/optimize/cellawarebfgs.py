@@ -112,7 +112,8 @@ class CellAwareBFGS(BFGS):
         fmax = (forces ** 2).sum(axis=1).max() ** 0.5
         e = self.optimizable.get_potential_energy()
         T = time.localtime()
-        smax = abs(self.atoms.atoms.get_stress(voigt=False) * self.atoms.mask).max()
+        smax = abs(self.atoms.atoms.get_stress(voigt=False) *
+                   self.atoms.mask).max()
         volume = self.atoms.atoms.cell.volume
         if self.logfile is not None:
             name = self.__class__.__name__
