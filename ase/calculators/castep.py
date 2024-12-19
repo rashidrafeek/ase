@@ -1211,7 +1211,6 @@ End CASTEP Interface Documentation
                             else None)
         self._write_cell(self._abs_path(f'{self._seed}.cell'),
                          self.atoms, castep_cell=self.cell,
-                         force_write=force_write,
                          magnetic_moments=magnetic_moments)
 
         if self._export_settings:
