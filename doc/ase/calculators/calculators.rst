@@ -165,12 +165,12 @@ where ``abc`` is the module name and ``ABC`` is the class name.
 .. _DeePMD-kit: https://github.com/deepmodeling/deepmd-kit
 .. _DFTD4: https://github.com/dftd4/dftd4/tree/main/python
 .. _DFTD3: https://dftd3.readthedocs.io/en/latest/api/python.html#module-dftd3.ase
-.. _EquiFormerV2: https://github.com/FAIR-Chem/fairchem?tab=readme-ov-file#quick-start
+.. _EquiFormerV2: https://github.com/FAIR-Chem/fairchem#quick-start
 .. _FLEUR: https://github.com/JuDFTteam/ase-fleur
 .. _M3GNet: https://matgl.ai/matgl.ext.html#class-matglextasem3gnetcalculatorpotential-potential-state_attr-torchtensor--none--none-stress_weight-float--10-kwargs
 .. _MACE: https://mace-docs.readthedocs.io/en/latest/guide/ase.html
-.. _OrbModels: https://github.com/orbital-materials/orb-models/tree/main?tab=readme-ov-file#usage-with-ase-calculator
-.. _SevenNet: https://github.com/MDIL-SNU/SevenNet?tab=readme-ov-file#ase-calculator
+.. _OrbModels: https://github.com/orbital-materials/orb-models/tree/main#usage-with-ase-calculator
+.. _SevenNet: https://github.com/MDIL-SNU/SevenNet#ase-calculator
 .. _TBLite: https://tblite.readthedocs.io/en/latest/users/ase.html
 .. _XTB: https://xtb-python.readthedocs.io/en/latest/ase-calculator.html
 
