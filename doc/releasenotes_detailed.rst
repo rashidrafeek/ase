@@ -16,8 +16,8 @@ Requirements
 
 Atoms
 -----
-* New method :func:`Atoms.get_number_of_degrees_of_freedom()` (:mr:`3380`)
-* New methods :func:`Atoms.get_kinetic_stress()`, :func:`Atoms.get_kinetic_stresses()` (:mr:`3362`)
+* New method :func:`~ase.Atoms.get_number_of_degrees_of_freedom()` (:mr:`3380`)
+* New methods :func:`~ase.Atoms.get_kinetic_stress()`, :func:`~ase.Atoms.get_kinetic_stresses()` (:mr:`3362`)
 * Prevent truncation when printing Atoms objects with 1000 or more atoms (:mr:`2518`)
 
 DB
@@ -29,7 +29,7 @@ Structure tools
 
 * Add atom tagging to ``ase.build.general_surface`` (:mr:`2773`)
 * Fix bug where code could return the wrong lattice when trying to fix the handedness of a 2D lattice  (:mr:`3387`)
-* Major improvements to :func:`~ase.build.find_optimal_cell_shape`: improve target metric; ensure rotationally invariant results; avoid negative determinants; improved performance via vectorisation (:mr:`3404`, :mr:`3441`, :mr:`3474`). The ``norm`` argument to :func:`ase.build.supercells.get_deviation_from_optimal_cell_shape` is now deprecated.
+* Major improvements to :func:`~ase.build.find_optimal_cell_shape`: improve target metric; ensure rotationally invariant results; avoid negative determinants; improved performance via vectorisation (:mr:`3404`, :mr:`3441`, :mr:`3474`). The ``norm`` argument to :func:`~ase.build.supercells.get_deviation_from_optimal_cell_shape` is now deprecated.
 * Performance improvements to :class:`ase.spacegroup.spacegroup.Spacegroup` (:mr:`3434`, :mr:`3439`, :mr:`3448`)
 * Deprecated :func:`ase.spacegroup.spacegroup.get_spacegroup` as results can be misleading (:mr:`3455`).
   
