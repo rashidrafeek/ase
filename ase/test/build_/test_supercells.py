@@ -195,3 +195,20 @@ def test_find_optimal_cell_shape(
     assert np.isclose(cell_metric, 0.0)
     cell_lengths = np.linalg.norm(np.dot(supercell_matrix, cell), axis=1)
     assert np.allclose(cell_lengths, ref_lengths)
+
+
+def test_ideal_orientation() -> None:
+    """Test if the ideal orientation is selected among candidates."""
+    cell = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+    target_size = 2
+    target_shape = 'fcc'
+    supercell_matrix_ref = [[0, 1, 1], [1, 0, 1], [1, 1, 0]]
+    supercell_matrix = find_optimal_cell_shape(cell, target_size, target_shape)
+    np.testing.assert_array_equal(supercell_matrix, supercell_matrix_ref)
+
+    cell = [[0, 1, 1], [1, 0, 1], [1, 1, 0]]
+    target_size = 4
+    target_shape = 'sc'
+    supercell_matrix_ref = [[-1, 1, 1], [1, -1, 1], [1, 1, -1]]
+    supercell_matrix = find_optimal_cell_shape(cell, target_size, target_shape)
+    np.testing.assert_array_equal(supercell_matrix, supercell_matrix_ref)

@@ -173,6 +173,13 @@ def find_optimal_cell_shape(
     )
     imin = np.argmin(scores)
     best_score = scores[imin]
+
+    # screen candidates with the same best score
+    operations = operations[np.abs(scores - best_score) < 1e-6]
+
+    # select the one whose cell orientation is the closest to the target
+    # https://gitlab.com/ase/ase/-/merge_requests/3522
+    imin = np.argmin(np.add.reduce((operations - ideal_P)**2, axis=(-2, -1)))
     optimal_P = operations[imin]
 
     if np.linalg.det(optimal_P) <= 0:
