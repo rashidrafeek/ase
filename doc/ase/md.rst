@@ -291,7 +291,18 @@ the gromacs manual at www.gromacs.org.
   # Room temperature simulation (300K, 0.1 fs time step)
   dyn = NVTBerendsen(atoms, 0.1 * units.fs, 300, taut=0.5*1000*units.fs)
 
+Bussi dynamics
+--------------
 
+.. module:: ase.md.bussi
+
+.. autoclass:: Bussi
+
+The Bussi class implements the Bussi dynamics, where constant
+temperature is imposed by a stochastic velocity rescaling algorithm.
+The thermostat is conceptually very close to the Berendsen thermostat,
+but does sample the canonical ensemble correctly. Given that the thermostat
+is both correct and global, it is advised to use it for production runs.
 
 Constant NPT simulations (the isothermal-isobaric ensemble)
 ===========================================================
@@ -338,18 +349,6 @@ the gromacs manual at www.gromacs.org. or amber at ambermd.org
                      taut=100 * units.fs, pressure_au=1.01325 * units.bar,
                      taup=1000 * units.fs, compressibility_au=4.57e-5 / units.bar)
 
-Bussi dynamics
---------------
-
-.. module:: ase.md.bussi
-
-.. autoclass:: Bussi
-
-The Bussi class implements the Bussi dynamics, where constant
-temperature is imposed by a stochastic velocity rescaling algorithm.
-The thermostat is conceptually very close to the Berendsen thermostat,
-but does sample the canonical ensemble correctly. Given that the thermostat
-is both correct and global, it is advised to use it for production runs.
 
 Contour Exploration
 -------------------
