@@ -230,7 +230,7 @@ Andersen dynamics
 
 The Andersen class implements Andersen dynamics, where constant
 temperature is imposed by stochastic collisions with a heat bath.
-With a (small) probability (`andersen_prob`) the collisions act
+With a (small) probability (``andersen_prob``) the collisions act
 occasionally on velocity components of randomly selected particles
 Upon a collision the new velocity is drawn from the
 Maxwell-Boltzmann distribution at the corresponding temperature.
