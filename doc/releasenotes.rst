@@ -9,6 +9,14 @@ Git master branch
 
 :git:`master <>`.
 
+* No changes yet
+
+
+Version 3.24.0
+==============
+
+28 December 2024: :git:`3.24.0 <../3.24.0>`
+
 For a more comprehensive list of changes see :ref:`releasenotes_detailed`
 
 Requirements
