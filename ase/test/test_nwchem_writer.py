@@ -71,7 +71,6 @@ def test_write_nwchem_in_set_params(
     in the 'set' parameter, ensuring correct section order.
     Closes #1578
     """
-    atoms = Atoms('C2H6')
     cparams = calculator_parameters
     cparams['set'] = {'geom:dont_verify': True}
     with (tmp_path / 'nwchem.in').open('w') as fd:
