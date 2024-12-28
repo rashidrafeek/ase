@@ -2017,3 +2017,8 @@ Version 3.4.1
 =============
 
 11 August 2010: :git:`3.4.1 <../3.4.1>`.
+
+
+.. toctree::
+
+  releasenotes_detailed.rst
