@@ -242,13 +242,21 @@ pages:
     - master
 
 lint:
-  image: registry.gitlab.com/ase/ase:ase-paperwork
+  image: python:3.12.4-alpine
+  before_script:
+    - pip install .[lint]
+    - pip freeze
   script:
-    - cd $CI_PROJECT_DIR
     - mypy --version
     - mypy --color-output -p ase
     - python -We:invalid -m compileall -f -q ase/
     - ruff check
+  variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/pip-cache"
+  cache:
+    paths:
+      - $PIP_CACHE_DIR
+    key: $CI_PROJECT_ID
 
 coverage-combine:
   image: registry.gitlab.com/ase/ase:ase-paperwork
