@@ -28,7 +28,6 @@ commands = [
     ('ulm', 'ase.cli.ulm'),
     ('find', 'ase.cli.find'),
     ('nebplot', 'ase.cli.nebplot'),
-    ('nomad-get', 'ase.cli.nomadget'),
     ('convert', 'ase.cli.convert'),
     ('reciprocal', 'ase.cli.reciprocal'),
     ('completion', 'ase.cli.completion'),

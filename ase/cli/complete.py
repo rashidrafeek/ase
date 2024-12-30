@@ -73,8 +73,6 @@ commands = {
         ['--files', '-v', '--verbose', '--formats', '--calculators'],
     'nebplot':
         ['--nimages', '--share-x', '--share-y'],
-    'nomad-get':
-        [],
     'reciprocal':
         [],
     'run':
