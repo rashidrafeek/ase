@@ -75,8 +75,6 @@ commands = {
         ['--nimages', '--share-x', '--share-y'],
     'nomad-get':
         [],
-    'nomad-upload':
-        ['-t', '--token', '-n', '--no-save-token', '-0', '--dry-run'],
     'reciprocal':
         [],
     'run':
