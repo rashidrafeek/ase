@@ -701,7 +701,7 @@ def lazyproperty(meth):
 
 
 class IOContext:
-    @lazyproperty
+    @functools.cached_property
     def _exitstack(self):
         return ExitStack()
 

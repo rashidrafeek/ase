@@ -1,3 +1,5 @@
+from functools import cached_property
+
 import numpy as np
 
 from ase.calculators.calculator import (
@@ -7,7 +9,6 @@ from ase.calculators.calculator import (
     all_properties,
 )
 from ase.outputs import Properties
-from ase.utils import lazyproperty
 
 
 class SinglePointCalculator(Calculator):
@@ -227,7 +228,7 @@ def propertygetter(func):
         if value is None:
             raise PropertyNotPresent(func.__name__)
         return value
-    return lazyproperty(getter)
+    return cached_property(getter)
 
 
 class OutputPropertyWrapper:
