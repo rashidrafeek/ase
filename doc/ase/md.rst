@@ -376,8 +376,8 @@ be used at minima since the contour is a single point.
 
 References:
 
-[1] M. J. Waters and J. M. Rondinelli, `Contour Exploration with Potentiostatic
-Kinematics` ArXiv:2103.08054 (https://arxiv.org/abs/2103.08054)
+[1] M. J. Waters and J. M. Rondinelli, *Contour Exploration with Potentiostatic
+Kinematics* `arXiv:2103.08054 <https://arxiv.org/abs/2103.08054>`_.
 
 
 
