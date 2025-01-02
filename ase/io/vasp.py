@@ -875,7 +875,7 @@ def _handle_ase_constraints(atoms: Atoms) -> np.ndarray:
             mask = np.all(
                 np.abs(np.cross(constr.dir, atoms.cell)) < 1e-5, axis=1
             )
-            if sum(mask) != 1:
+            if mask.sum() != 1:
                 raise RuntimeError(
                     'VASP requires that the direction of FixedPlane '
                     'constraints is parallel with one of the cell axis'
@@ -886,7 +886,7 @@ def _handle_ase_constraints(atoms: Atoms) -> np.ndarray:
             mask = np.all(
                 np.abs(np.cross(constr.dir, atoms.cell)) < 1e-5, axis=1
             )
-            if sum(mask) != 1:
+            if mask.sum() != 1:
                 raise RuntimeError(
                     'VASP requires that the direction of FixedLine '
                     'constraints is parallel with one of the cell axis'
