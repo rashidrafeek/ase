@@ -136,7 +136,7 @@ def test_extract_from_table(testdir):
 def test_write_atoms_row(testdir):
     atoms = Atoms()
 
-    db = connect(('test.db')
+    db = connect('test.db')
     uid = db.write(
         atoms, external_tables={
             "insert_tab": {"rate": 12.0, "rate1": -10.0},
@@ -149,7 +149,7 @@ def test_write_atoms_row(testdir):
 
 
 def test_external_table_upon_update(testdir):
-    db = connect(('test.db')
+    db = connect('test.db')
     no_features = 500
     ext_table = {i: i for i in range(no_features)}
     atoms = Atoms('Pb', positions=[[0, 0, 0]])
@@ -158,7 +158,7 @@ def test_external_table_upon_update(testdir):
 
 
 def test_external_table_upon_update_with_float(testdir):
-    db = connect(('test.db')
+    db = connect('test.db')
     ext_table = {'value1': 1.0, 'value2': 2.0}
     atoms = Atoms('Pb', positions=[[0, 0, 0]])
     uid = db.write(atoms)
