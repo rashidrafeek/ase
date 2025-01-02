@@ -41,6 +41,7 @@ ase = 'ase.cli.main:main'
 docs = ['sphinx', 'sphinx_rtd_theme', 'pillow']
 test = ['pytest>=7.0.0', 'pytest-xdist>=2.1.0']
 spglib = ['spglib>=1.9']
+lint = ['mypy', 'ruff', 'coverage', 'types-docutils', 'types-PyMySQL', 'flake8']
 
 [tool.setuptools.package-data]
 ase = [
@@ -97,7 +98,6 @@ select = [
     "I"   # isort
 ]
 ignore = [
-    "F841",  # unused-variable
     "E741",  # ambiguous-variable-name
     "W505",  # doc-line-too-long
 ]

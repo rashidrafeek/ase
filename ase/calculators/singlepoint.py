@@ -77,7 +77,7 @@ def arrays_to_kpoints(eigenvalues, occupations, weights):
 
     Convert eigenvalue, occupation, and weight arrays to list of
     SinglePointKPoint objects."""
-    nspins, nkpts, nbands = eigenvalues.shape
+    nspins, nkpts, _nbands = eigenvalues.shape
     assert eigenvalues.shape == occupations.shape
     assert len(weights) == nkpts
     kpts = []

@@ -458,8 +458,8 @@ def irotate(rotation, initial=np.identity(3)):
     """Determine x, y, z rotation angles from rotation matrix."""
     a = np.dot(initial, rotation)
     cx, sx, rx = givens(a[2, 2], a[1, 2])
-    cy, sy, ry = givens(rx, a[0, 2])
-    cz, sz, rz = givens(cx * a[1, 1] - sx * a[2, 1],
+    cy, sy, _ry = givens(rx, a[0, 2])
+    cz, sz, _rz = givens(cx * a[1, 1] - sx * a[2, 1],
                         cy * a[0, 1] - sy * (sx * a[1, 1] + cx * a[2, 1]))
     x = degrees(atan2(sx, cx))
     y = degrees(atan2(-sy, cy))
