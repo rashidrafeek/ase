@@ -10,23 +10,8 @@ from ase.md.verlet import VelocityVerlet
 
 class Bussi(VelocityVerlet):
     """Bussi stochastic velocity rescaling (NVT) molecular dynamics.
-    Based on the paper from Bussi et al. (https://arxiv.org/abs/0803.4060)
 
-    Parameters
-    ----------
-    atoms : Atoms
-        The atoms object.
-    timestep : float
-        The time step in ASE time units.
-    temperature_K : float
-        The desired temperature, in Kelvin.
-    taut : float
-        Time constant for Bussi temperature coupling in ASE time units.
-    rng : numpy.random, optional
-        Random number generator.
-    **md_kwargs : dict, optional
-        Additional arguments passed to :class:~ase.md.md.MolecularDynamics
-        base class.
+    Based on the paper from Bussi et al. (https://arxiv.org/abs/0803.4060)
     """
 
     def __init__(
@@ -36,9 +21,26 @@ class Bussi(VelocityVerlet):
         temperature_K,
         taut,
         rng=np.random,
-        **md_kwargs,
+        **kwargs,
     ):
-        super().__init__(atoms, timestep, **md_kwargs)
+        """
+        Parameters
+        ----------
+        atoms : Atoms
+            The atoms object.
+        timestep : float
+            The time step in ASE time units.
+        temperature_K : float
+            The desired temperature, in Kelvin.
+        taut : float
+            Time constant for Bussi temperature coupling in ASE time units.
+        rng : numpy.random, optional
+            Random number generator.
+        **kwargs : dict, optional
+            Additional arguments are passed to
+            :class:~ase.md.md.MolecularDynamics base class.
+        """
+        super().__init__(atoms, timestep, **kwargs)
 
         self.temp = temperature_K * units.kB
         self.taut = taut
