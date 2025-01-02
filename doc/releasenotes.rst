@@ -43,7 +43,6 @@ Highlights
 * Added atom-projected partial phonon dos to :func:`ase.phonons.Phonons.get_dos` (:mr:`3460`)
 * New module :mod:`ase.pourbaix` written to replace
   :class:`ase.phasediagram.Pourbaix` (:mr:`3280`), with improved energy definition and visualisation
->>>>>>> master
 
 
 Version 3.23.0
