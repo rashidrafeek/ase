@@ -6,6 +6,7 @@ import numpy as np
 
 from ase import units
 from ase.md.verlet import VelocityVerlet
+from ase.parallel import world
 
 
 class Bussi(VelocityVerlet):
@@ -20,7 +21,8 @@ class Bussi(VelocityVerlet):
         timestep,
         temperature_K,
         taut,
-        rng=np.random,
+        rng=None,
+        communicator=world,
         **kwargs,
     ):
         """
@@ -34,8 +36,11 @@ class Bussi(VelocityVerlet):
             The desired temperature, in Kelvin.
         taut : float
             Time constant for Bussi temperature coupling in ASE time units.
-        rng : numpy.random, optional
-            Random number generator.
+        rng : RNG object, optional
+            Random number generator, by default numpy.random.
+        communicator: MPI communicator (optional)
+            Communicator used to distribute random numbers to all tasks.
+            Default: ase.parallel.world. Set to None to disable communication.
         **kwargs : dict, optional
             Additional arguments are passed to
             :class:~ase.md.md.MolecularDynamics base class.
@@ -44,7 +49,11 @@ class Bussi(VelocityVerlet):
 
         self.temp = temperature_K * units.kB
         self.taut = taut
-        self.rng = rng
+        if rng is None:
+            self.rng = np.random
+        else:
+            self.rng = rng
+        self.communicator = communicator
 
         self.ndof = self.atoms.get_number_of_degrees_of_freedom()
 
@@ -86,6 +95,12 @@ class Bussi(VelocityVerlet):
 
         # R1 in Eq. (A7)
         normal_noise = self.rng.standard_normal()
+        # ASE mpi interfaces can only broadcast arrays, not scalars
+        if self.communicator is not None:
+            noisearray = np.array([normal_noise,])
+            self.communicator.broadcast(noisearray, 0)
+            normal_noise = noisearray[0]
+
         # \sum_{i=2}^{Nf} R_i^2 in Eq. (A7)
         # 2 * standard_gamma(n / 2) is equal to chisquare(n)
         sum_of_noises = 2.0 * self.rng.standard_gamma(0.5 * (self.ndof - 1))
