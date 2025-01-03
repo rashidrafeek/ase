@@ -12,7 +12,8 @@ from ase.parallel import world
 class Bussi(VelocityVerlet):
     """Bussi stochastic velocity rescaling (NVT) molecular dynamics.
 
-    Based on the paper from Bussi et al. (https://arxiv.org/abs/0803.4060)
+    Based on the paper from Bussi et al. J. Chem. Phys. 126, 014101 (2007)
+    (also available from https://arxiv.org/abs/0803.4060).
     """
 
     def __init__(
