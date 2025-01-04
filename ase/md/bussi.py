@@ -23,7 +23,6 @@ class Bussi(VelocityVerlet):
         temperature_K,
         taut,
         rng=None,
-        communicator=world,
         **kwargs,
     ):
         """
@@ -54,7 +53,6 @@ class Bussi(VelocityVerlet):
             self.rng = np.random
         else:
             self.rng = rng
-        self.communicator = communicator
 
         self.ndof = self.atoms.get_number_of_degrees_of_freedom()
 
@@ -95,12 +93,10 @@ class Bussi(VelocityVerlet):
         )
 
         # R1 in Eq. (A7)
-        normal_noise = self.rng.standard_normal()
+        noisearray = self.rng.standard_normal(size=(1,))
         # ASE mpi interfaces can only broadcast arrays, not scalars
-        if self.communicator is not None:
-            noisearray = np.array([normal_noise,])
-            self.communicator.broadcast(noisearray, 0)
-            normal_noise = noisearray[0]
+        self.comm.broadcast(noisearray, 0)
+        normal_noise = noisearray[0]
 
         # \sum_{i=2}^{Nf} R_i^2 in Eq. (A7)
         # 2 * standard_gamma(n / 2) is equal to chisquare(n)
