@@ -6,7 +6,6 @@ import numpy as np
 
 from ase import units
 from ase.md.verlet import VelocityVerlet
-from ase.parallel import world
 
 
 class Bussi(VelocityVerlet):
