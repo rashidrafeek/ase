@@ -37,9 +37,6 @@ class Bussi(VelocityVerlet):
             Time constant for Bussi temperature coupling in ASE time units.
         rng : RNG object, optional
             Random number generator, by default numpy.random.
-        communicator: MPI communicator, optional
-            Communicator used to distribute random numbers to all tasks.
-            Default: ase.parallel.world. Set to None to disable communication.
         **kwargs : dict, optional
             Additional arguments are passed to
             :class:~ase.md.md.MolecularDynamics base class.
