@@ -189,7 +189,7 @@ class NoseHooverChainThermostat:
 
         return p
 
-    def _integrate_p_eta_j(self, p: np.ndarray, j: int, 
+    def _integrate_p_eta_j(self, p: np.ndarray, j: int,
                            delta2: float, delta4: float) -> None:
         if j < self._tchain - 1:
             self._p_eta[j] *= np.exp(
