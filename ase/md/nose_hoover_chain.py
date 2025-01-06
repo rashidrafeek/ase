@@ -86,7 +86,7 @@ class NoseHooverChainNVT(MolecularDynamics):
 
         num_atoms = self.atoms.get_global_number_of_atoms()
         self._thermostat = NoseHooverChainThermostat(
-            num_atoms=num_atoms,
+            num_atoms_global=num_atoms,
             masses=self.masses,
             temperature_K=temperature_K,
             tdamp=tdamp,
@@ -145,7 +145,7 @@ class NoseHooverChainThermostat:
     """
     def __init__(
         self,
-        num_atoms: int,
+        num_atoms_global: int,
         masses: np.ndarray,
         temperature_K: float,
         tdamp: float,
@@ -153,7 +153,7 @@ class NoseHooverChainThermostat:
         tloop: int = 1,
     ):
         """See `NoseHooverChainNVT` for the parameters."""
-        self._num_atoms = num_atoms
+        self._num_atoms_global = num_atoms_global
         self._masses = masses  # (num_atoms, 1)
         self._tdamp = tdamp
         self._tchain = tchain
@@ -163,7 +163,7 @@ class NoseHooverChainThermostat:
 
         assert tchain >= 1
         self._Q = np.zeros(tchain)
-        self._Q[0] = 3 * self._num_atoms * self._kT * tdamp**2
+        self._Q[0] = 3 * self._num_atoms_global * self._kT * tdamp**2
         self._Q[1:] = self._kT * tdamp**2
 
         # The following variables are updated during self.step()
@@ -173,7 +173,7 @@ class NoseHooverChainThermostat:
     def get_thermostat_energy(self) -> float:
         """Return energy-like contribution from the thermostat variables."""
         energy = (
-            3 * self._num_atoms * self._kT * self._eta[0]
+            3 * self._num_atoms_global * self._kT * self._eta[0]
             + self._kT * np.sum(self._eta[1:])
             + np.sum(0.5 * self._p_eta**2 / self._Q)
         )
@@ -198,7 +198,7 @@ class NoseHooverChainThermostat:
 
         if j == 0:
             g_j = np.sum(p**2 / self._masses) \
-                - 3 * self._num_atoms * self._kT
+                - 3 * self._num_atoms_global * self._kT
         else:
             g_j = self._p_eta[j - 1] ** 2 / self._Q[j - 1] - self._kT
         self._p_eta[j] += delta2 * g_j
