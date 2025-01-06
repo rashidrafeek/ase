@@ -154,7 +154,7 @@ class NoseHooverChainThermostat:
     ):
         """See `NoseHooverChainNVT` for the parameters."""
         self._num_atoms_global = num_atoms_global
-        self._masses = masses  # (num_atoms, 1)
+        self._masses = masses  # (len(atoms), 1)
         self._tdamp = tdamp
         self._tchain = tchain
         self._tloop = tloop
