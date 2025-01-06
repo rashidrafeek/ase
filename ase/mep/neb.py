@@ -1063,16 +1063,14 @@ def interpolate(images, mic=False, interpolate_cell=False,
                 unconstrained_image.set_positions(new_pos,
                                                   apply_constraint=False)
                 images[i].set_positions(new_pos, apply_constraint=True)
-                try:
-                    np.testing.assert_allclose(unconstrained_image.positions,
-                                               images[i].positions)
-                except AssertionError:
-                    raise RuntimeError(f"Constraint(s) in image number {i} \n"
+                if not np.allclose(unconstrained_image.positions,
+                                   images[i].positions):
+                    raise RuntimeError(f"Constraints in image {i}\n"
                                        "affect the interpolation results.\n"
-                                       "Please specify if you want to \n"
-                                       "apply or ignore the constraints \n"
-                                       "during the interpolation \n"
-                                       "with apply_constraint argument.")
+                                       "Please specify if you want to\n"
+                                       "apply or ignore the constraints\n"
+                                       "during the interpolation\n"
+                                       "with the apply_constraint argument.")
             else:
                 images[i].set_positions(new_pos,
                                         apply_constraint=apply_constraint)
