@@ -92,6 +92,11 @@ def main():
 
     print(f'New release: {version}')
 
+    if shutil.which('scriv') is None:
+        p.error('No "scriv" command in PATH.  Is scriv installed?')
+
+    runcmd(f'scriv collect --add --title "Version {version}"')
+
     txt = git('status')
     branch = re.match(r'On branch (\S+)', txt).group(1)
 
