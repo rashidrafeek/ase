@@ -7,6 +7,11 @@ Detailed release notes
 Git master branch
 =================
 
+.. scriv-auto-changelog-start
+
+.. scriv-auto-changelog-end
+
+
 Requirements
 ------------
 
