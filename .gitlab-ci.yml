@@ -200,7 +200,7 @@ doc:
     - which sphinx-build
     - cd $CI_PROJECT_DIR/doc
   script:
-    - scriv collect
+    - scriv collect --keep || echo Not compiling changelog then  # Avoid error
     - python -m ase.utils.sphinx run # test scripts
     - sphinx-build -W . build
   cache:
