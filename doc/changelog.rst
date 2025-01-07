@@ -1,4 +1,4 @@
-.. _releasenotes_detailed:
+.. _changelog:
 
 ======================
 Detailed release notes
