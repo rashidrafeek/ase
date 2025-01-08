@@ -17,7 +17,7 @@ Version 3.24.0
 
 28 December 2024: :git:`3.24.0 <../3.24.0>`
 
-For a more comprehensive list of changes see :ref:`releasenotes_detailed`
+For a more comprehensive list of changes see :ref:`changelog`
 
 Requirements
 ------------
@@ -2029,4 +2029,4 @@ Version 3.4.1
 
 .. toctree::
 
-  releasenotes_detailed.rst
+  changelog.rst

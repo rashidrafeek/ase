@@ -112,3 +112,17 @@ convention = "numpy"
 [tool.ruff.lint.isort]
 known-first-party = ["ase"]
 
+[tool.scriv]
+output_file = "doc/changelog.rst"
+insert_marker = "scriv-auto-changelog-start"
+end_marker = "scriv-auto-changelog-end"
+categories = [
+    "I/O",
+    "Calculators",
+    "Optimizers",
+    "Molecular dynamics",
+    "GUI",
+    "Development",
+    "Other changes",
+    "Bugfixes"
+]
