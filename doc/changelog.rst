@@ -1,4 +1,4 @@
-.. _releasenotes_detailed:
+.. _changelog:
 
 ======================
 Detailed release notes
@@ -6,6 +6,32 @@ Detailed release notes
 
 Git master branch
 =================
+
+.. CHANGELOG HOWTO.
+
+   To add an entry to the changelog, create a file named
+   <timestamp>_<subject>.rst inside the ase/changelog.d/ directory.
+   Timestamp should be at least YYYYMMDD.
+
+   You can also install scriv (https://pypi.org/project/scriv/) and run
+   "scriv create" to do this automatically, if you do this often.
+
+   Edit the file following a similar style to other changelog entries and
+   try to choose an existing section for the release note.
+
+   For example ase/changelog.d/20250108_amber_fix_velocities.rst with contents:
+
+     Calculators
+     -----------
+
+     - Amber: Fix scaling of velocities in restart files (:mr:`3427`)
+
+   For each release we generate a full changelog which is inserted below.
+
+.. scriv-auto-changelog-start
+
+.. scriv-auto-changelog-end
+
 
 Requirements
 ------------
