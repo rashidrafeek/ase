@@ -84,7 +84,9 @@ class NoseHooverChainNVT(MolecularDynamics):
         )
         assert self.masses.shape == (len(self.atoms), 1)
 
+        num_atoms = self.atoms.get_global_number_of_atoms()
         self._thermostat = NoseHooverChainThermostat(
+            num_atoms_global=num_atoms,
             masses=self.masses,
             temperature_K=temperature_K,
             tdamp=tdamp,
@@ -143,6 +145,7 @@ class NoseHooverChainThermostat:
     """
     def __init__(
         self,
+        num_atoms_global: int,
         masses: np.ndarray,
         temperature_K: float,
         tdamp: float,
@@ -150,8 +153,8 @@ class NoseHooverChainThermostat:
         tloop: int = 1,
     ):
         """See `NoseHooverChainNVT` for the parameters."""
-        self._num_atoms = masses.shape[0]
-        self._masses = masses  # (num_atoms, 1)
+        self._num_atoms_global = num_atoms_global
+        self._masses = masses  # (len(atoms), 1)
         self._tdamp = tdamp
         self._tchain = tchain
         self._tloop = tloop
@@ -160,7 +163,7 @@ class NoseHooverChainThermostat:
 
         assert tchain >= 1
         self._Q = np.zeros(tchain)
-        self._Q[0] = 3 * self._num_atoms * self._kT * tdamp**2
+        self._Q[0] = 3 * self._num_atoms_global * self._kT * tdamp**2
         self._Q[1:] = self._kT * tdamp**2
 
         # The following variables are updated during self.step()
@@ -170,7 +173,7 @@ class NoseHooverChainThermostat:
     def get_thermostat_energy(self) -> float:
         """Return energy-like contribution from the thermostat variables."""
         energy = (
-            3 * self._num_atoms * self._kT * self._eta[0]
+            3 * self._num_atoms_global * self._kT * self._eta[0]
             + self._kT * np.sum(self._eta[1:])
             + np.sum(0.5 * self._p_eta**2 / self._Q)
         )
@@ -186,39 +189,40 @@ class NoseHooverChainThermostat:
 
         return p
 
+    def _integrate_p_eta_j(self, p: np.ndarray, j: int,
+                           delta2: float, delta4: float) -> None:
+        if j < self._tchain - 1:
+            self._p_eta[j] *= np.exp(
+                -delta4 * self._p_eta[j + 1] / self._Q[j + 1]
+            )
+
+        if j == 0:
+            g_j = np.sum(p**2 / self._masses) \
+                - 3 * self._num_atoms_global * self._kT
+        else:
+            g_j = self._p_eta[j - 1] ** 2 / self._Q[j - 1] - self._kT
+        self._p_eta[j] += delta2 * g_j
+
+        if j < self._tchain - 1:
+            self._p_eta[j] *= np.exp(
+                -delta4 * self._p_eta[j + 1] / self._Q[j + 1]
+            )
+
+    def _integrate_eta(self, delta: float) -> None:
+        self._eta += delta * self._p_eta / self._Q
+
+    def _integrate_nhc_p(self, p: np.ndarray, delta: float) -> None:
+        p *= np.exp(-delta * self._p_eta[0] / self._Q[0])
+
     def _integrate_nhc_loop(self, p: np.ndarray, delta: float) -> np.ndarray:
         delta2 = delta / 2
         delta4 = delta / 4
 
-        def _integrate_p_eta_j(p: np.ndarray, j: int) -> None:
-            if j < self._tchain - 1:
-                self._p_eta[j] *= np.exp(
-                    -delta4 * self._p_eta[j + 1] / self._Q[j + 1]
-                )
-
-            if j == 0:
-                g_j = np.sum(p**2 / self._masses) \
-                    - 3 * self._num_atoms * self._kT
-            else:
-                g_j = self._p_eta[j - 1] ** 2 / self._Q[j - 1] - self._kT
-            self._p_eta[j] += delta2 * g_j
-
-            if j < self._tchain - 1:
-                self._p_eta[j] *= np.exp(
-                    -delta4 * self._p_eta[j + 1] / self._Q[j + 1]
-                )
-
-        def _integrate_eta() -> None:
-            self._eta += delta * self._p_eta / self._Q
-
-        def _integrate_nhc_p(p: np.ndarray) -> None:
-            p *= np.exp(-delta * self._p_eta[0] / self._Q[0])
-
         for j in range(self._tchain):
-            _integrate_p_eta_j(p, self._tchain - j - 1)
-        _integrate_eta()
-        _integrate_nhc_p(p)
+            self._integrate_p_eta_j(p, self._tchain - j - 1, delta2, delta4)
+        self._integrate_eta(delta)
+        self._integrate_nhc_p(p, delta)
         for j in range(self._tchain):
-            _integrate_p_eta_j(p, j)
+            self._integrate_p_eta_j(p, j, delta2, delta4)
 
         return p
