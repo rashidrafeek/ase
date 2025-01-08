@@ -23,6 +23,7 @@ Git master branch
 
      Calculators
      -----------
+
      - Amber: Fix scaling of velocities in restart files (:mr:`3427`)
 
    For each release we generate a full changelog which is inserted below.
