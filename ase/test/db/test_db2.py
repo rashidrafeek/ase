@@ -9,9 +9,9 @@ from ase.db import connect
 from ase.io import read
 
 
-def test_db2(testdir, dbtype2, get_db_name):
-    dbtype = dbtype2
-    name = get_db_name(dbtype)
+@pytest.mark.parametrize('dbtype', ['json', 'db'])
+def test_db2(testdir, dbtype):
+    name = f'testase.{dbtype}'
 
     c = connect(name)
     print(name, c)

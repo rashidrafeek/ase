@@ -9,9 +9,6 @@ Git master branch
 
 :git:`master <>`.
 
-* No changes yet
-
-
 Version 3.24.0
 ==============
 
@@ -289,10 +286,10 @@ Optimizers:
   (:mr:`2299`)
 
 * :func:`ase.optimize.optimize.Optimizers.irun` and
-  :func:`ase.optimize.optimize.Optimizers.run` now respect ``steps=0`` (:issue:`1183`; 
+  :func:`ase.optimize.optimize.Optimizers.run` now respect ``steps=0`` (:issue:`1183`;
   :issue:`1258`; :mr:`2922`).
 
-* Added the ``.trajectory`` attribute to :class:`ase.optimize.optimize.Dynamics` 
+* Added the ``.trajectory`` attribute to :class:`ase.optimize.optimize.Dynamics`
   (:mr:`2901`).
 
 * Fixed a bug when :class:`ase.optimize.precon.precon.PreconImages` is initialized with
