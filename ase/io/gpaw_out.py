@@ -12,7 +12,7 @@ from ase.calculators.singlepoint import (
 
 def index_startswith(lines: List[str], string: str) -> int:
     for i, line in enumerate(lines):
-        if line.startswith(string):
+        if line.strip().startswith(string):
             return i
     raise ValueError
 
@@ -56,7 +56,7 @@ def read_gpaw_out(fileobj, index):  # -> Union[Atoms, List[Atoms]]:
 
     # read charge
     try:
-        ii = index_startswith(lines, '  total charge:')
+        ii = index_startswith(lines, 'total charge:')
     except ValueError:
         q = None
     else:
@@ -159,11 +159,11 @@ def read_gpaw_out(fileobj, index):  # -> Union[Atoms, List[Atoms]]:
         # read Eigenvalues and occupations
         ii1 = ii2 = 1e32
         try:
-            ii1 = index_startswith(lines, ' band   eigenvalues  occupancy')
+            ii1 = index_startswith(lines, 'band   eigenvalues  occupancy')
         except ValueError:
             pass
         try:
-            ii2 = index_startswith(lines, ' band  eigenvalues  occupancy')
+            ii2 = index_startswith(lines, 'band  eigenvalues  occupancy')
         except ValueError:
             pass
         ii = min(ii1, ii2)
