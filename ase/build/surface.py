@@ -268,7 +268,7 @@ def add_vacuum(atoms, vacuum):
     atoms.set_cell(uc)
 
 
-def create_tags(size) -> np.array:
+def create_tags(size) -> np.ndarray:
     """ Function to create layer tags. """
     # tag atoms by layer
     # create blocks of descending integers of length size[0]*size[1]

@@ -109,7 +109,7 @@ class MorsePotential(Calculator):
 
         forces = np.zeros((number_of_atoms, 3))
 
-        i, j, d, D = neighbor_list('ijdD', atoms, rcut2)
+        i, _j, d, D = neighbor_list('ijdD', atoms, rcut2)
         dhat = (D / d[:, None]).T
 
         expf = np.exp(rho0 * (1.0 - d / r0))

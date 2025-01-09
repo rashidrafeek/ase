@@ -1,11 +1,7 @@
 from typing import Any, List, Optional
 
 import numpy as np
-
-try:
-    from numpy import trapezoid  # NumPy 2.0.0
-except ImportError:
-    from numpy import trapz as trapezoid
+from scipy.integrate import trapezoid
 
 from ase import Atoms
 from ase.calculators.mixing import MixedCalculator
