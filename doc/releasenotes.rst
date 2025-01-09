@@ -4,6 +4,8 @@
 Release notes
 =============
 
+A comprehensive list of changes can be found in the :ref:`changelog`.
+
 Git master branch
 =================
 
@@ -13,8 +15,6 @@ Version 3.24.0
 ==============
 
 28 December 2024: :git:`3.24.0 <../3.24.0>`
-
-For a more comprehensive list of changes see :ref:`changelog`
 
 Requirements
 ------------
