@@ -1,8 +1,8 @@
 .. _changelog:
 
-======================
-Detailed release notes
-======================
+=========
+Changelog
+=========
 
 Git master branch
 =================
@@ -32,6 +32,9 @@ Git master branch
 
 .. scriv-auto-changelog-end
 
+
+Version 3.24.0
+==============
 
 Requirements
 ------------
@@ -176,3 +179,8 @@ Maintenance and dev-ops
 * Further linting (:mr:`3396`, :mr:`3425`, :mr:`3430`, :mr:`3433`, :mr:`3469`, :mr:`3520`)
 * Refactoring of ``ase.build.bulk`` (:mr:`3390`), ``ase.spacegroup.spacegroup`` (:mr:`3429`)
 
+Earlier releases
+================
+
+Releases earlier than ASE 3.24.0 do not have separate release notes and changelog.
+Their changes are only listed in the :ref:`releasenotes`.
